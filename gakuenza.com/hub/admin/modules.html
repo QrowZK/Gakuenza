@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>モジュール — がくえん座 管理</title>
+<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="../hub-shell.css">
+<link rel="stylesheet" href="admin.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="page-frame" id="app-root">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="ac-page-head">
+      <h1 class="ac-page-title">モジュール</h1>
+    </div>
+    <p style="font-size:0.85rem;color:var(--ink-soft);margin:-8px 0 28px;">
+      プラットフォーム全体のモジュール一覧です。学校ごとの有効・無効の切り替えは、クラス詳細画面の「学校全体で有効」から行えます。
+    </p>
+
+    <!-- Read-only catalog, grouped by subject — no enable/assign actions
+         here on purpose (that's per-school, per-class, and already lives
+         in class-detail.html; this page is deliberately just "what
+         exists on the platform", per product decision 2026-07-09). -->
+    <div id="module-groups">
+      <div class="ac-card ac-skel" style="height:100px;"></div>
+    </div>
+  </main>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="admin-common.js"></script>
+<script>
+(async function () {
+  const H = window.HubCommon;
+  const AC = window.AdminCommon;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const session = await H.requireSession(sb);
+  if (!session) return;
+  const userId = session.user.id;
+
+  const admin = await AC.requireAdminAccess(sb, userId);
+  if (!admin) return;
+
+  const { data: profile } = await sb.from('profiles').select('display_name').eq('id', userId).maybeSingle();
+  AC.renderAdminSidebar(sb, profile, 'modules', admin);
+
+  const groupsEl = document.getElementById('module-groups');
+  // modules has RLS disabled entirely (global catalog, same as every
+  // other page in the app that reads it) — no school-scoping question
+  // here at all, which is exactly why this page can skip the picker
+  // that teachers.html and class-detail.html both need.
+  const { data: modules, error } = await sb
+    .from('modules').select('key, name, name_en, subject').order('name');
+
+  if (error) {
+    groupsEl.innerHTML = '<p class="ac-calm-msg">読み込めませんでした</p>';
+    return;
+  }
+  if (!modules || modules.length === 0) {
+    groupsEl.innerHTML = '<p class="ac-calm-msg">モジュールがまだ登録されていません。</p>';
+    return;
+  }
+
+  const bySubject = {};
+  for (const m of modules) (bySubject[m.subject] ||= []).push(m);
+
+  groupsEl.innerHTML = H.sortedSubjectKeys(bySubject).map(subject => `
+    <div class="ac-subject-group">
+      <div class="ac-subject-label">
+        <span style="width:10px;height:10px;border-radius:50%;background:${H.subjectVar(subject)};display:inline-block;flex:0 0 auto;"></span>
+        <span>${H.subjectLabel(subject)}</span>
+      </div>
+      <div class="ac-grid">
+        ${bySubject[subject].map(m => `
+          <div class="ac-card">
+            <div class="ac-assigned-title">${m.name}</div>
+            <div class="ac-assigned-meta">${m.name_en || ''}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+/* hub/admin/admin.css — self-contained CSS for the school-admin console.
+   Loaded ONLY on hub/admin/*.html pages, same isolation convention as the
+   eiken module's own CSS. Reuses shared shell classes from hub-shell.css
+   (.page-frame/.sidebar/.nav/.nav-item/.profile-block/.avatar/.brand-mark/
+   .brand-sub/.section-title/.main) unchanged, exactly as the design
+   handoff specifies.
+
+   Every class below is prefixed `ac-` (admin console) specifically
+   because the design mockup's bare class names (.card, .badge, .btn,
+   .btn-ghost) collide with unrelated existing rules:
+     - .card       → style.css: white auth-card component (login/settings)
+     - .badge      → style.css: eiken score badge (different shape/size)
+     - .btn-ghost  → hub-shell.css: the sidebar logout button
+   Reusing those names here would silently corrupt those other pages the
+   moment this stylesheet loaded alongside them — exactly the class of bug
+   flagged as a repeat lesson in the project's own module conventions. */
+
+.ac-page-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.ac-breadcrumb { font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 10px; }
+.ac-page-title { font-family: var(--font-display); font-size: 1.5rem; color: var(--ink); margin: 0; font-weight: 700; }
+
+.ac-stat-row { display: flex; gap: 12px; margin-bottom: 32px; }
+.ac-stat { background: var(--paper-dim); border-radius: 8px; padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 96px; }
+.ac-stat b { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink); font-weight: 700; }
+.ac-stat span { font-size: 0.72rem; color: var(--ink-soft); }
+.ac-stat.ac-stat-stub { opacity: 0.5; }
+
+.ac-split { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; }
+@media (max-width: 860px) { .ac-split { grid-template-columns: 1fr; } }
+
+.ac-card { background: var(--paper); border: 1px solid var(--mist); border-radius: var(--radius-md); padding: var(--space-5); }
+
+.ac-roster-list { display: flex; flex-direction: column; gap: 8px; }
+.ac-roster-row { display: flex; align-items: center; gap: 14px; padding: var(--space-4); }
+.ac-roster-name { font-family: var(--font-display); font-weight: 700; font-size: 0.88rem; color: var(--ink); }
+.ac-roster-number { font-size: 0.72rem; color: var(--ink-soft); }
+.ac-roster-progress { width: 90px; flex: 0 0 auto; }
+.ac-roster-more { text-align: center; padding: 8px; font-size: 0.78rem; color: var(--ink-soft); }
+.ac-avatar-sm { width: 34px; height: 34px; border-radius: 50%; background: var(--moss-tint); color: var(--moss-deep); font-family: var(--font-display); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+
+.ac-prog-track { width: 100%; height: 6px; border-radius: var(--radius-pill); background: var(--paper-dim); overflow: hidden; }
+.ac-prog-fill { height: 100%; border-radius: var(--radius-pill); background: var(--moss); }
+
+.ac-module-subhead { margin-bottom: 8px; font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
+.ac-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+.ac-toggle-row.ac-disabled { opacity: 0.5; }
+.ac-toggle-row span.ac-toggle-label { font-size: 0.84rem; color: var(--ink); }
+.ac-toggle { width: 34px; height: 19px; border-radius: var(--radius-pill); position: relative; flex: 0 0 auto; border: none; padding: 0; cursor: pointer; transition: background 140ms ease; }
+.ac-toggle.ac-on { background: var(--moss); }
+.ac-toggle.ac-off { background: var(--mist); }
+.ac-toggle .ac-knob { position: absolute; top: 2px; width: 15px; height: 15px; border-radius: 50%; background: #fff; transition: left 140ms ease, right 140ms ease; }
+.ac-toggle.ac-on .ac-knob { right: 2px; }
+.ac-toggle.ac-off .ac-knob { left: 2px; }
+.ac-toggle:disabled { cursor: wait; opacity: 0.6; }
+
+.ac-assigned-card { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ac-assigned-title { font-family: var(--font-display); font-weight: 700; font-size: 0.86rem; color: var(--ink); }
+.ac-assigned-meta { font-size: 0.72rem; color: var(--ink-soft); }
+
+/* ---- buttons (admin-console scoped — see file header for why) ---- */
+.ac-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: var(--radius-sm); font-family: inherit; font-weight: 600; cursor: pointer; transition: transform 140ms ease, background 140ms ease; width: auto; }
+.ac-btn:hover { transform: translateY(-1px); }
+.ac-btn:disabled { cursor: wait; opacity: 0.7; transform: none; }
+.ac-btn-md { padding: 8px 16px; font-size: 0.88rem; }
+.ac-btn-sm { padding: 4px 12px; font-size: 0.8rem; }
+.ac-btn-accent { background: var(--moss); color: var(--paper); }
+.ac-btn-accent:hover { background: var(--moss-deep); }
+.ac-btn-ghost-light { background: var(--paper-dim); color: var(--ink); }
+.ac-btn-ghost-light:hover { background: var(--mist); }
+.ac-btn-danger { background: transparent; color: var(--error); border: 1.5px solid var(--error); padding: 5px 11px; font-size: 0.8rem; border-radius: var(--radius-sm); width: auto; flex: 0 0 auto; cursor: pointer; }
+.ac-btn-danger:hover { background: rgba(162,59,46,0.08); }
+.ac-btn-block { width: 100%; }
+
+/* ---- badges (admin-console scoped — collides with style.css .badge) ---- */
+.ac-badge { display: inline-block; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 9px; border-radius: var(--radius-pill); line-height: 1.4; }
+.ac-badge-gold { background: var(--gold); color: var(--ink); }
+.ac-badge-moss { background: var(--moss-tint); color: var(--moss-deep); }
+
+/* ---- modal shell (new pattern, first use in Gakuenza) ---- */
+.ac-modal-backdrop { position: fixed; inset: 0; background: rgba(28,37,48,0.55); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.ac-modal { background: var(--paper); border-radius: var(--radius-lg); box-shadow: var(--shadow-float); padding: 32px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow-y: auto; }
+.ac-modal-eyebrow { font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 6px; }
+.ac-modal-title { font-family: var(--font-display); font-size: 1.15rem; color: var(--ink); margin: 0 0 22px; font-weight: 700; }
+.ac-field { margin-bottom: 16px; }
+.ac-field-label { font-size: 0.74rem; color: var(--ink-soft); margin-bottom: 6px; display: block; font-weight: 600; }
+.ac-field input, .ac-field select { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.88rem; color: var(--ink); background: var(--paper); font-family: inherit; box-sizing: border-box; }
+.ac-field input:focus, .ac-field select:focus { outline: 2px solid var(--moss); outline-offset: 1px; }
+.ac-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+.ac-modal-err { font-size: 0.8rem; color: var(--error); margin: -6px 0 16px; }
+
+.ac-modal-gold { border: 1.5px solid var(--gold); }
+.ac-identity-box { background: var(--paper-dim); border-radius: 10px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; margin-bottom: 22px; }
+.ac-identity-label { font-size: 0.7rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+.ac-identity-value { font-size: 0.95rem; color: var(--ink); font-weight: 600; }
+.ac-identity-value.ac-mono { font-family: ui-monospace, Menlo, monospace; letter-spacing: 0.03em; }
+.ac-password-value { font-size: 1.25rem; color: var(--ink); font-weight: 700; font-family: ui-monospace, Menlo, monospace; letter-spacing: 0.06em; user-select: all; }
+
+/* ---- empty / loading / error states (not in the design handoff — kept
+   visually consistent with the rest of the console; flag to design for a
+   real pass later) ---- */
+.ac-empty { text-align: center; padding: 32px 16px; color: var(--ink-soft); font-size: 0.85rem; }
+.ac-empty-cta { margin-top: 14px; }
+.ac-calm-msg { color: var(--ink-soft); font-size: 0.85rem; padding: 12px 0; }
+
+/* ---- card grid (teachers list, modules catalog — added 2026-07-09) ---- */
+.ac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.ac-person-card { display: flex; align-items: center; gap: 12px; }
+.ac-subject-group { margin-bottom: 28px; }
+.ac-subject-group:last-child { margin-bottom: 0; }
+.ac-subject-label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+.ac-skel { background: linear-gradient(90deg, var(--paper-dim) 25%, var(--mist) 37%, var(--paper-dim) 63%); background-size: 400% 100%; animation: ac-shimmer 1.4s ease infinite; border-radius: var(--radius-sm); }
+@keyframes ac-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }

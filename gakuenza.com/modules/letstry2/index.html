@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1565C0">
+  <meta name="description" content="Let's Try 2 — 小学4年生英語学習コンパニオン">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Let's Try 2">
+  <title>Let's Try 2 — がくえん座</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ── Module topbar (back-to-hub link) + account bubble — same
+       self-contained pattern as every other Gakuenza module. This module
+       owns its complete styling instead of depending on anything outside
+       its own folder (a shared root stylesheet's generic
+       `button{width:100%}` rule once leaked onto every button on a module
+       page — checked this file for that collision; none found, but each
+       module still stays self-contained on purpose). ── */
+    .module-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #d8d2c2; }
+    .module-back { font-size: 13px; font-weight: 600; color: #3a4555; text-decoration: none; white-space: nowrap; }
+    .module-back:hover { color: #1c2530; }
+    .module-name { font-size: 13px; color: #8a8570; }
+
+    .module-account { position: relative; }
+    .module-account-btn { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; border: 1px solid #d8d2c2; background: #fff; cursor: pointer; font-family: inherit; transition: border-color .15s, background .15s; }
+    .module-account-btn:hover { background: #f7f3ea; border-color: #8a8570; }
+    .module-account-avatar { width: 26px; height: 26px; border-radius: 50%; background: #e8ede6; color: #34503a; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .module-account-name { font-size: 13px; font-weight: 600; color: #1c2530; white-space: nowrap; }
+    .module-account-menu { position: absolute; top: calc(100% + 6px); right: 0; background: #fff; border: 1px solid #d8d2c2; border-radius: 10px; box-shadow: 0 4px 16px rgba(28,37,48,.12); min-width: 140px; overflow: hidden; z-index: 50; }
+    .module-account-menu.hidden { display: none; }
+    .module-account-signout { display: block; width: 100%; padding: 10px 14px; background: none; border: none; text-align: left; font-size: 13px; font-family: inherit; color: #a23b2e; cursor: pointer; }
+    .module-account-signout:hover { background: #fdecea; }
+
+    .results-sync { text-align: center; font-size: 13px; font-weight: 600; color: #2e7d32; margin: 4px 0 14px; min-height: 18px; }
+    .results-sync.error { color: #a23b2e; cursor: pointer; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F4F6F8; --surface: #fff; --surface2: #ECEFF1; --border: #e0e0e0;
+      --text: #212529; --text2: #607D8B; --text3: #90A4AE; --shadow: rgba(0,0,0,.06);
+      --accent: #1565C0; --accent2: #E3F2FD;
+    }
+    body.dark {
+      --bg: #1A1F23; --surface: #263238; --surface2: #2E3B42; --border: #37474F;
+      --text: #ECEFF1; --text2: #90A4AE; --text3: #546E7A; --shadow: rgba(0,0,0,.3);
+      --accent2: #1A2F3E;
+    }
+
+    html, body { height: 100%; }
+    body { font-family: 'Noto Sans JP', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background .2s, color .2s; }
+
+    .main-col { padding: 14px 14px 60px; max-width: 640px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header { text-align: center; padding: 18px 0 12px; }
+    .header-icon { display: inline-block; color: #fff; border-radius: 10px; padding: 7px 18px; font-size: 20px; font-weight: 800; letter-spacing: 2px; margin-bottom: 6px; background: #1565C0; }
+    .header h1 { font-size: 23px; font-weight: 800; margin: 5px 0 0; }
+    .header p { font-size: 13px; color: var(--text3); margin: 3px 0 0; }
+
+    .top-controls { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 12px; }
+    .theme-btn { padding: 8px 11px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); cursor: pointer; font-size: 16px; color: var(--text2); transition: all .15s; }
+    .theme-btn:hover { border-color: var(--text2); }
+
+    /* ── Unit tabs ── */
+    .unit-tabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
+    .unit-tab {
+      flex: 1; min-width: 60px; padding: 8px 4px; text-align: center;
+      border: 2px solid var(--border); border-radius: 8px; background: var(--surface);
+      cursor: pointer; font-weight: 700; font-size: 12px; color: var(--text2);
+      transition: all .15s; font-family: inherit;
+    }
+    .unit-tab.active { color: #fff; border-color: transparent; background: #1565C0; }
+    .unit-tab:hover:not(.active) { border-color: #90CAF9; }
+
+    /* ── Unit banner ── */
+    .unit-banner {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 6px var(--shadow);
+      border-left: 4px solid;
+    }
+    .unit-banner h2 { font-size: 16px; font-weight: 800; margin-bottom: 3px; }
+    .unit-banner p { font-size: 13px; color: var(--text2); }
+
+    /* ── Activity grid ── */
+    .act-grid { display: flex; flex-direction: column; gap: 9px; }
+    .act-card {
+      display: flex; align-items: center; gap: 12px; padding: 13px 15px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      cursor: pointer; text-align: left; box-shadow: 0 1px 3px var(--shadow);
+      transition: box-shadow .15s, transform .1s; font-family: inherit; color: var(--text); width: 100%;
+    }
+    .act-card:hover { box-shadow: 0 3px 10px var(--shadow); transform: translateY(-1px); }
+    .act-icon { font-size: 26px; flex-shrink: 0; }
+    .act-label { font-size: 15px; font-weight: 700; }
+    .act-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .act-badge { margin-left: auto; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; flex-shrink: 0; }
+
+    /* ── Section label ── */
+    .section-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin: 18px 0 8px; }
+
+    /* ── Generic top bar ── */
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+      background: none; border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer;
+      font-family: inherit; transition: all .15s;
+    }
+    .back-btn:hover { border-color: #c62828; color: #c62828; background: #FFF5F5; }
+    .progress-text { font-size: 13px; color: var(--text3); }
+
+    /* ── Progress bar ── */
+    .progress-wrap { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+    .progress-bar { height: 100%; border-radius: 3px; transition: width .3s; background: #1565C0; }
+
+    /* ── Question card ── */
+    .q-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 2px 6px var(--shadow); }
+    .q-badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 10px; margin-bottom: 8px; background: #E3F2FD; color: #1565C0; }
+    .q-text { font-size: 18px; line-height: 1.65; color: var(--text); font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .q-sub { font-size: 14px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
+
+    /* ── Options ── */
+    .opts { display: flex; flex-direction: column; gap: 8px; }
+    .opt-btn {
+      display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+      border-radius: 10px; border: 2px solid var(--border); cursor: pointer;
+      font-size: 15px; font-weight: 500; text-align: left; background: var(--surface);
+      transition: all .15s; font-family: inherit; color: var(--text);
+    }
+    .opt-btn:hover:not(.locked) { border-color: #90CAF9; background: var(--surface2); }
+    .opt-letter {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 7px; background: var(--surface2);
+      font-weight: 700; font-size: 13px; flex-shrink: 0;
+    }
+    .opt-btn.correct { background: #E8F5E9; border-color: #2E7D32; color: #1B5E20; }
+    .opt-btn.wrong   { background: #FFEBEE; border-color: #c62828; color: #b71c1c; }
+    .opt-btn.locked  { cursor: default; }
+
+    /* ── Feedback ── */
+    .feedback-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; flex-wrap: wrap; gap: 8px; }
+    .fb-text { font-size: 18px; }
+    .next-btn {
+      padding: 10px 22px; color: #fff; border: none; border-radius: 8px;
+      font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+      background: #1565C0; transition: background .15s;
+    }
+    .next-btn:hover { background: #0D47A1; }
+
+    /* ── Hint box ── */
+    .hint-box { background: #FFF8E1; border: 1px solid #FFE082; border-radius: 10px; padding: 11px 13px; margin-top: 10px; font-size: 14px; line-height: 1.6; color: #F57F17; }
+    body.dark .hint-box { background: #2E2600; border-color: #7C6C00; color: #FFD54F; }
+
+    /* ── Score circle ── */
+    .review-header { text-align: center; padding: 20px 0 10px; }
+    .score-circle { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; height: 120px; border-radius: 50%; border: 5px solid #1565C0; margin-bottom: 10px; }
+    .score-pct { font-size: 31px; font-weight: 800; color: #1565C0; }
+    .score-lbl { font-size: 13px; color: var(--text3); }
+    .grade-text { font-size: 20px; font-weight: 700; }
+
+    /* ── Result detail ── */
+    .result-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+    .result-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+    .result-q { font-size: 13px; font-weight: 600; color: var(--text2); }
+    .result-ans { font-size: 14px; margin-top: 3px; }
+
+    /* ── Matching activity ── */
+    .match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .match-col { display: flex; flex-direction: column; gap: 8px; }
+    .match-item {
+      padding: 10px 12px; border-radius: 10px; border: 2px solid var(--border);
+      background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 600;
+      text-align: center; transition: all .15s; font-family: inherit; color: var(--text);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .match-item:hover:not(.matched):not(.locked) { border-color: #90CAF9; background: var(--surface2); }
+    .match-item.selected { border-color: #1565C0; background: #E3F2FD; color: #1565C0; }
+    .match-item.matched { border-color: #2E7D32; background: #E8F5E9; color: #1B5E20; cursor: default; }
+    .match-item.wrong-flash { border-color: #c62828; background: #FFEBEE; }
+    .match-text { flex: 1; }
+
+    /* ── Word Arrange ── */
+    .word-bank { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; min-height: 44px; padding: 8px; background: var(--surface2); border-radius: 10px; }
+    .word-chip {
+      padding: 8px 14px; border-radius: 8px; border: 2px solid var(--border);
+      background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 600;
+      transition: all .15s; font-family: inherit; color: var(--text);
+    }
+    .word-chip:hover { border-color: #1565C0; background: var(--accent2); }
+    .word-chip.used { opacity: 0.3; cursor: default; pointer-events: none; }
+    .answer-row { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; padding: 8px; background: var(--surface); border: 2px dashed var(--border); border-radius: 10px; margin-bottom: 10px; align-items: center; }
+    .answer-row[data-empty="true"]::before { content: "単語をタップして並べよう"; color: var(--text3); font-size: 14px; font-style: italic; }
+    .answer-chip {
+      padding: 8px 14px; border-radius: 8px; border: 2px solid #1565C0;
+      background: var(--accent2); cursor: pointer; font-size: 15px; font-weight: 600;
+      color: var(--text); font-family: inherit;
+    }
+    .answer-chip:hover { background: #BBDEFB; }
+
+    /* ── Primary / action btns ── */
+    .primary-btn {
+      display: block; width: 100%; padding: 13px; background: #37474F; color: #fff;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+      margin-top: 14px; font-family: inherit; transition: background .15s;
+    }
+    .primary-btn:hover { background: #263238; }
+    .primary-btn.blue { background: #1565C0; }
+    .primary-btn.blue:hover { background: #0D47A1; }
+    .check-btn {
+      display: block; width: 100%; padding: 13px; background: #1565C0; color: #fff;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+      margin-top: 10px; font-family: inherit; transition: background .15s;
+    }
+    .check-btn:hover { background: #0D47A1; }
+    .check-btn:disabled { background: var(--border); color: var(--text3); cursor: default; }
+
+    /* ── Flashcard ── */
+    .flashcard-wrap { perspective: 1000px; margin: 20px auto; max-width: 400px; }
+    .flashcard {
+      width: 100%; height: 180px; position: relative; transform-style: preserve-3d;
+      transition: transform .5s; cursor: pointer; border-radius: 16px;
+    }
+    .flashcard.flipped { transform: rotateY(180deg); }
+    .fc-face {
+      position: absolute; inset: 0; border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      backface-visibility: hidden; padding: 20px;
+      border: 2px solid var(--border); box-shadow: 0 4px 16px var(--shadow);
+    }
+    .fc-front { background: var(--surface); }
+    .fc-back  { background: #E3F2FD; transform: rotateY(180deg); }
+    body.dark .fc-back { background: #1A2F3E; }
+    .fc-emoji { font-size: 42px; margin-bottom: 8px; }
+    .fc-word  { font-size: 22px; font-weight: 800; color: var(--text); display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+    .fc-hint  { font-size: 13px; color: var(--text3); margin-top: 4px; }
+    .fc-translation { font-size: 20px; font-weight: 700; color: #1565C0; }
+    .fc-nav { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 12px; }
+    .fc-nav-btn {
+      padding: 8px 18px; border-radius: 8px; border: 2px solid var(--border);
+      background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 600;
+      font-family: inherit; color: var(--text2); transition: all .15s;
+    }
+    .fc-nav-btn:hover { border-color: #1565C0; color: #1565C0; }
+    .fc-counter { font-size: 14px; color: var(--text3); min-width: 60px; text-align: center; }
+
+    /* ── Chant / Listening ── */
+    .chant-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px var(--shadow); }
+    .chant-title { font-size: 14px; font-weight: 700; color: #1565C0; margin-bottom: 10px; }
+    .chant-line { font-size: 16px; line-height: 1.8; color: var(--text); }
+    .chant-line.highlight { color: #1565C0; font-weight: 700; }
+    .play-btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px;
+      border-radius: 8px; border: 2px solid var(--border); background: var(--surface);
+      cursor: pointer; font-size: 14px; font-weight: 600; font-family: inherit;
+      color: var(--text2); transition: all .15s; margin-top: 8px;
+    }
+    .play-btn:hover { border-color: #1565C0; color: #1565C0; }
+
+    /* ── Day-of-week wheel ── */
+    .days-wheel { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+    .day-pill {
+      padding: 10px 14px; border-radius: 20px; border: 2px solid var(--border);
+      background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 700;
+      font-family: inherit; color: var(--text); transition: all .15s;
+    }
+    .day-pill.active { color: #fff; border-color: transparent; }
+
+    /* ── Clock activity ── */
+    .clock-svg { display: block; margin: 0 auto 14px; }
+    .time-display { text-align: center; font-size: 32px; font-weight: 800; color: #1565C0; margin-bottom: 8px; }
+
+    /* ── Weather icons ── */
+    .weather-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
+    .weather-card {
+      display: flex; flex-direction: column; align-items: center; padding: 12px 6px;
+      border-radius: 12px; border: 2px solid var(--border); background: var(--surface);
+      cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .weather-card:hover { border-color: #90CAF9; transform: translateY(-2px); }
+    .weather-card.selected { border-color: #1565C0; background: var(--accent2); }
+    .weather-icon { font-size: 32px; margin-bottom: 4px; }
+    .weather-word { font-size: 12px; font-weight: 700; color: var(--text2); }
+
+    .hidden { display: none !important; }
+
+    /* ── Stat card ── */
+    .stat-row { display: flex; gap: 12px; margin-bottom: 14px; }
+    .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; box-shadow: 0 1px 3px var(--shadow); }
+    .stat-num { font-size: 26px; font-weight: 800; color: #1565C0; }
+    .stat-lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+    /* ── Footer nav ── */
+    .footer-nav { text-align: center; color: var(--text3); font-size: 13px; margin-top: 20px; }
+
+    /* ── TTS speaker buttons (added) ───────────────────────────────────── */
+    .tts-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 1.5px solid var(--border); background: var(--surface2);
+      font-size: 15px; line-height: 1; cursor: pointer;
+      transition: all .15s; flex-shrink: 0; padding: 0;
+    }
+    .tts-btn:hover { border-color: #1565C0; }
+    .tts-btn.tts-playing { animation: tts-pulse .9s infinite; border-color: #1565C0; }
+    @keyframes tts-pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+  </style>
+</head>
+<body>
+<div class="module-topbar">
+  <a href="../../hub/index.html" class="module-back">← ホームへ</a>
+  <span class="module-name">Let's Try 2</span>
+  <div id="module-account-mount" style="margin-left:auto;"></div>
+</div>
+
+<div class="main-col" id="app">
+
+  <!-- ══════════════════════════════════════════ HOME ══ -->
+  <div id="home-screen">
+    <div class="header">
+      <div class="header-icon">Let's Try!</div>
+      <h1>Let's Try 2 練習</h1>
+      <p>Unit 1–9 · 小学校4年生向け · 自主練習ツール</p>
+    </div>
+
+    <div class="top-controls">
+      <button class="theme-btn" id="theme-btn">🌙</button>
+    </div>
+
+    <div class="unit-tabs" id="unit-tabs">
+      <button class="unit-tab active" data-unit="0">全</button>
+      <button class="unit-tab" data-unit="1">U1</button>
+      <button class="unit-tab" data-unit="2">U2</button>
+      <button class="unit-tab" data-unit="3">U3</button>
+      <button class="unit-tab" data-unit="4">U4</button>
+      <button class="unit-tab" data-unit="5">U5</button>
+      <button class="unit-tab" data-unit="6">U6</button>
+      <button class="unit-tab" data-unit="7">U7</button>
+      <button class="unit-tab" data-unit="8">U8</button>
+      <button class="unit-tab" data-unit="9">U9</button>
+    </div>
+
+    <div id="unit-banner" class="unit-banner hidden">
+      <h2 id="banner-title"></h2>
+      <p id="banner-sub"></p>
+    </div>
+
+    <p class="section-label">🎯 練習メニュー</p>
+    <div class="act-grid" id="act-grid"></div>
+
+
+  </div>
+
+  <!-- ══════════════════════════════════════════ VOCAB QUIZ ══ -->
+  <div id="quiz-screen" class="hidden">
+    <div class="topbar">
+      <button class="back-btn" id="quiz-back">← メニュー</button>
+      <span class="progress-text" id="quiz-prog-text"></span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="quiz-prog-bar"></div></div>
+
+    <div class="q-card">
+      <span class="q-badge" id="quiz-badge"></span>
+      <div class="q-text" id="quiz-q"></div>
+      <div class="q-sub" id="quiz-sub"></div>
+    </div>
+
+    <div class="opts" id="quiz-opts"></div>
+
+    <div class="hint-box hidden" id="quiz-hint"></div>
+
+    <div class="feedback-row hidden" id="quiz-feedback">
+      <span class="fb-text" id="quiz-fb-icon"></span>
+      <button class="next-btn" id="quiz-next">次へ →</button>
+    </div>
+    <div style="text-align:center;font-size:13px;color:var(--text3);margin-top:14px;padding-top:10px;border-top:1px solid var(--border)" id="quiz-run-score"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ FLASHCARDS ══ -->
+  <div id="flash-screen" class="hidden">
+    <div class="topbar">
+      <button class="back-btn" id="flash-back">← メニュー</button>
+      <span class="progress-text" id="flash-prog"></span>
+    </div>
+
+    <div class="flashcard-wrap">
+      <div class="flashcard" id="flashcard">
+        <div class="fc-face fc-front">
+          <div class="fc-emoji" id="fc-emoji"></div>
+          <div class="fc-word" id="fc-word"></div>
+          <div class="fc-hint">タップして日本語を見る</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-word" id="fc-word-back"></div>
+          <div class="fc-translation" id="fc-trans"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fc-nav">
+      <button class="fc-nav-btn" id="fc-prev">← 前</button>
+      <span class="fc-counter" id="fc-counter"></span>
+      <button class="fc-nav-btn" id="fc-next">次 →</button>
+    </div>
+    <button class="primary-btn blue" id="fc-shuffle" style="margin-top:16px">🔀 シャッフル</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════ MATCHING ══ -->
+  <div id="match-screen" class="hidden">
+    <div class="topbar">
+      <button class="back-btn" id="match-back">← メニュー</button>
+      <span class="progress-text" id="match-score-text"></span>
+    </div>
+    <div class="q-card" style="margin-bottom:10px">
+      <div class="q-text" id="match-instructions" style="font-size:15px;"></div>
+    </div>
+    <div class="match-grid">
+      <div class="match-col" id="match-left"></div>
+      <div class="match-col" id="match-right"></div>
+    </div>
+    <div class="hint-box hidden" id="match-result"></div>
+    <button class="primary-btn blue hidden" id="match-next-round">次のラウンド →</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════ SENTENCE BUILD ══ -->
+  <div id="build-screen" class="hidden">
+    <div class="topbar">
+      <button class="back-btn" id="build-back">← メニュー</button>
+      <span class="progress-text" id="build-prog"></span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="build-prog-bar"></div></div>
+
+    <div class="q-card">
+      <span class="q-badge">文を作ろう</span>
+      <div class="q-text" id="build-prompt" style="font-size:15px;color:var(--text2);font-weight:400;margin-bottom:6px;"></div>
+      <div class="q-text" id="build-jp" style="font-size:16px;"></div>
+    </div>
+
+    <div class="answer-row" id="build-answer" data-empty="true"></div>
+
+    <div class="word-bank" id="build-bank"></div>
+
+    <div class="hint-box hidden" id="build-hint"></div>
+
+    <button class="check-btn" id="build-check" disabled>答え合わせ</button>
+
+    <div class="feedback-row hidden" id="build-feedback">
+      <span class="fb-text" id="build-fb-icon"></span>
+      <button class="next-btn" id="build-next">次へ →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ REVIEW (results) ══ -->
+  <div id="review-screen" class="hidden">
+    <div class="review-header">
+      <div class="score-circle">
+        <div class="score-pct" id="rv-pct"></div>
+        <div class="score-lbl">正解率</div>
+      </div>
+      <h2 class="grade-text" id="rv-grade"></h2>
+    </div>
+
+    <div class="results-sync" id="rv-sync"></div>
+
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-num" id="rv-correct"></div><div class="stat-lbl">正解</div></div>
+      <div class="stat-card"><div class="stat-num" id="rv-wrong"></div><div class="stat-lbl">不正解</div></div>
+      <div class="stat-card"><div class="stat-num" id="rv-total"></div><div class="stat-lbl">合計</div></div>
+    </div>
+
+    <div class="result-list" id="rv-list"></div>
+    <button class="primary-btn blue" id="rv-retry">🔄 もう一度</button>
+    <button class="primary-btn" id="rv-menu">メニューに戻る</button>
+  </div>
+
+</div><!-- end main-col -->
+
+<script src="tts.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════
+// DATA — All units content
+// ══════════════════════════════════════════════════════════
+const UNITS = [
+  null, // index 0 unused
+  {
+    id: 1,
+    title: "Hello, world!",
+    titleJp: "世界のいろいろなことばであいさつをしよう",
+    color: "#E91E63",
+    activities: ["vocab","flash","match","build"],
+    vocab: [
+      { en:"Hello", jp:"こんにちは", emoji:"👋", hint:"世界中で使える挨拶" },
+      { en:"Good morning", jp:"おはようございます", emoji:"🌅", hint:"朝の挨拶" },
+      { en:"Good afternoon", jp:"こんにちは（昼）", emoji:"☀️", hint:"昼の挨拶" },
+      { en:"Good night", jp:"おやすみなさい", emoji:"🌙", hint:"寝る前の挨拶" },
+      { en:"Goodbye", jp:"さようなら", emoji:"👋", hint:"別れの挨拶" },
+      { en:"See you", jp:"またね", emoji:"😊", hint:"また会う時の言葉" },
+      { en:"I like strawberries", jp:"いちごが好きです", emoji:"🍓", hint:"好きなものを伝える" },
+      { en:"I like cats", jp:"ねこが好きです", emoji:"🐱", hint:"好きなものを伝える" },
+      { en:"Do you like soccer?", jp:"サッカーは好きですか？", emoji:"⚽", hint:"好きかどうか聞く" },
+      { en:"Yes, I do", jp:"はい、好きです", emoji:"✅", hint:"好きと答える" },
+      { en:"No, I don't", jp:"いいえ、好きではありません", emoji:"❌", hint:"好きでないと答える" },
+    ],
+    sentences: [
+      { jp:"こんにちは！私はクリスです。", words:["Hello", "I'm", "Chris"], hint:"Helloで始めて、I'mで名前を言おう" },
+      { jp:"いちごが好きです。", words:["I", "like", "strawberries"], hint:"I likeのあとに好きなものを言う" },
+      { jp:"サッカーは好きですか？", words:["Do", "you", "like", "soccer"], hint:"Do you like ~?で質問する" },
+      { jp:"おはようございます、グラハム先生。", words:["Good", "morning", "Graham", "sensei"], hint:"Goodのあとに時間帯を言う" },
+    ],
+    matchPairs: [
+      ["Hello","こんにちは"],["Good morning","おはようございます"],["Good night","おやすみなさい"],
+      ["Goodbye","さようなら"],["I like cats","ねこが好き"],["Yes, I do","はい、好きです"],
+    ],
+  },
+  {
+    id: 2,
+    title: "Let's play cards.",
+    titleJp: "すきな遊びをつたえよう",
+    color: "#2196F3",
+    activities: ["vocab","flash","match","build"],
+    vocab: [
+      { en:"sunny", jp:"晴れ", emoji:"☀️", hint:"天気の言葉" },
+      { en:"rainy", jp:"雨", emoji:"🌧️", hint:"天気の言葉" },
+      { en:"cloudy", jp:"曇り", emoji:"☁️", hint:"天気の言葉" },
+      { en:"snowy", jp:"雪", emoji:"❄️", hint:"天気の言葉" },
+      { en:"Let's play cards", jp:"トランプをしよう", emoji:"🃏", hint:"遊びに誘う表現" },
+      { en:"Let's play tag", jp:"おにごっこをしよう", emoji:"🏃", hint:"遊びに誘う表現" },
+      { en:"Let's play dodgeball", jp:"ドッジボールをしよう", emoji:"🏐", hint:"遊びに誘う表現" },
+      { en:"How's the weather?", jp:"天気はどうですか？", emoji:"🌤️", hint:"天気を聞く" },
+      { en:"It's sunny", jp:"晴れています", emoji:"☀️", hint:"天気を答える" },
+      { en:"Yes, let's", jp:"いいよ、やろう！", emoji:"🎉", hint:"誘いに乗る返事" },
+      { en:"Sorry", jp:"ごめんなさい", emoji:"😅", hint:"断る時の一言" },
+    ],
+    sentences: [
+      { jp:"天気はどうですか？", words:["How's", "the", "weather"], hint:"How'sで始める天気の質問" },
+      { jp:"晴れています。", words:["It's", "sunny"], hint:"It'sのあとに天気を言う" },
+      { jp:"トランプをしよう。", words:["Let's", "play", "cards"], hint:"Let's play ~で遊びに誘う" },
+      { jp:"外でドッジボールをしよう。", words:["Let's", "go", "outside", "and", "play", "dodgeball"], hint:"Let's go outside andのあとに遊びを言う" },
+    ],
+    matchPairs: [
+      ["sunny","☀️ 晴れ"],["rainy","🌧️ 雨"],["cloudy","☁️ 曇り"],["snowy","❄️ 雪"],
+      ["Let's play cards","トランプしよう"],["Yes, let's","いいよ！"],
+    ],
+  },
+  {
+    id: 3,
+    title: "I like Mondays.",
+    titleJp: "すきな曜日は何かな？",
+    color: "#4CAF50",
+    activities: ["vocab","flash","match","build"],
+    vocab: [
+      { en:"Monday", jp:"月曜日", emoji:"📅", hint:"週の始まり" },
+      { en:"Tuesday", jp:"火曜日", emoji:"📅", hint:"週の2日目" },
+      { en:"Wednesday", jp:"水曜日", emoji:"📅", hint:"週の3日目" },
+      { en:"Thursday", jp:"木曜日", emoji:"📅", hint:"週の4日目" },
+      { en:"Friday", jp:"金曜日", emoji:"📅", hint:"週の5日目" },
+      { en:"Saturday", jp:"土曜日", emoji:"📅", hint:"週末の始まり" },
+      { en:"Sunday", jp:"日曜日", emoji:"📅", hint:"週の最終日" },
+      { en:"What day is it?", jp:"今日は何曜日ですか？", emoji:"🗓️", hint:"曜日を聞く" },
+      { en:"I like Mondays", jp:"月曜日が好きです", emoji:"💚", hint:"好きな曜日を言う" },
+      { en:"mushroom", jp:"きのこ", emoji:"🍄", hint:"月曜日の食べ物チャント" },
+      { en:"soup", jp:"スープ", emoji:"🍲", hint:"火曜日の食べ物チャント" },
+    ],
+    sentences: [
+      { jp:"今日は何曜日ですか？", words:["What", "day", "is", "it"], hint:"What dayで始める" },
+      { jp:"今日は月曜日です。", words:["It's", "Monday"], hint:"It'sのあとに曜日を言う" },
+      { jp:"月曜日が好きです。", words:["I", "like", "Mondays"], hint:"I likeで好きな曜日を言う" },
+      { jp:"月曜日に友達と遊びます。", words:["I", "play", "with", "my", "friends", "on", "Mondays"], hint:"I … on ~で曜日にすることを言う" },
+    ],
+    matchPairs: [
+      ["Monday","月曜日"],["Tuesday","火曜日"],["Wednesday","水曜日"],
+      ["Thursday","木曜日"],["Friday","金曜日"],["Saturday","土曜日"],["Sunday","日曜日"],
+    ],
+  },
+  {
+    id: 4,
+    title: "What time is it?",
+    titleJp: "今何時？",
+    color: "#FF9800",
+    activities: ["vocab","flash","match","build"],
+    vocab: [
+      { en:"What time is it?", jp:"今何時ですか？", emoji:"🕐", hint:"時間を聞く" },
+      { en:"It's 6 a.m.", jp:"午前6時です", emoji:"🌅", hint:"起きる時間" },
+      { en:"It's 8:30", jp:"8時半です", emoji:"🕣", hint:"30分の表現" },
+      { en:"Wake-up Time", jp:"起きる時間", emoji:"⏰", hint:"朝の活動" },
+      { en:"Breakfast Time", jp:"朝ごはんの時間", emoji:"🍳", hint:"朝の活動" },
+      { en:"Lunch Time", jp:"昼ごはんの時間", emoji:"🍱", hint:"昼の活動" },
+      { en:"Snack Time", jp:"おやつの時間", emoji:"🍪", hint:"午後の活動" },
+      { en:"Homework Time", jp:"宿題の時間", emoji:"📚", hint:"放課後の活動" },
+      { en:"Bath Time", jp:"お風呂の時間", emoji:"🛁", hint:"夕方の活動" },
+      { en:"Dinner Time", jp:"夕ごはんの時間", emoji:"🍽️", hint:"夕方の活動" },
+      { en:"Bed Time", jp:"寝る時間", emoji:"🌙", hint:"夜の活動" },
+    ],
+    sentences: [
+      { jp:"今何時ですか？", words:["What", "time", "is", "it"], hint:"What timeで始める" },
+      { jp:"午前7時です。起きる時間です。", words:["It's", "7", "a.m.", "It's", "Wake-up", "Time"], hint:"It'sを2回使う" },
+      { jp:"昼ごはんの時間です。", words:["It's", "Lunch", "Time"], hint:"It'sのあとに時間の名前を言う" },
+      { jp:"午後9時です。寝る時間です。", words:["It's", "9", "p.m.", "It's", "Bed", "Time"], hint:"p.m.は午後を表す" },
+    ],
+    matchPairs: [
+      ["Wake-up Time","起きる時間 ⏰"],["Breakfast Time","朝ごはん 🍳"],["Lunch Time","昼ごはん 🍱"],
+      ["Snack Time","おやつ 🍪"],["Bath Time","お風呂 🛁"],["Bed Time","寝る時間 🌙"],
+    ],
+  },
+  {
+    id: 5,
+    title: "Do you have a pen?",
+    titleJp: "おきにいりのぶんぼうぐをつたえよう",
+    color: "#9C27B0",
+    activities: ["vocab","flash","match","build"],
+    vocab: [
+      { en:"pen", jp:"ペン", emoji:"🖊️", hint:"書く道具" },
+      { en:"pencil", jp:"えんぴつ", emoji:"✏️", hint:"書く道具" },
+      { en:"eraser", jp:"消しゴム", emoji:"🧹", hint:"消す道具" },
+      { en:"ruler", jp:"定規", emoji:"📏", hint:"長さを測る道具" },
+      { en:"pencil case", jp:"ふでばこ", emoji:"🎒", hint:"文具を入れる箱" },
+      { en:"marker", jp:"マーカー", emoji:"🖍️", hint:"太いペン" },
+      { en:"stapler", jp:"ホッチキス", emoji:"📎", hint:"紙をとめる道具" },
+      { en:"glue stick", jp:"のりスティック", emoji:"🔑", hint:"貼る道具" },
+      { en:"notebook", jp:"ノート", emoji:"📓", hint:"書き込む本" },
+      { en:"Do you have a pen?", jp:"ペンを持っていますか？", emoji:"🖊️", hint:"持っているか聞く" },
+      { en:"Yes, I do", jp:"はい、持っています", emoji:"✅", hint:"Yes/Noの答え" },
+      { en:"No, I don't", jp:"いいえ、持っていません", emoji:"❌", hint:"Yes/Noの答え" },
+    ],
+    sentences: [
+      { jp:"ペンを持っていますか？", words:["Do", "you", "have", "a", "pen"], hint:"Do you have a ~?で持っているか聞く" },
+      { jp:"はい、持っています。", words:["Yes", "I", "do"], hint:"Yes, I do. で答える" },
+      { jp:"消しゴムを持っていますか？", words:["Do", "you", "have", "an", "eraser"], hint:"母音の前はanを使う" },
+      { jp:"えんぴつを持っています。", words:["I", "have", "a", "pencil"], hint:"I have a ~で持ち物を言う" },
+    ],
+    matchPairs: [
+      ["pen","ペン ✏️"],["eraser","消しゴム"],["ruler","定規"],
+      ["pencil case","ふでばこ"],["stapler","ホッチキス"],["notebook","ノート"],
+    ],
+  },
+  {
+    id: 6,
+    title: "Alphabet",
+    titleJp: "アルファベットの文字を読んだり書いたりしよう",
+    color: "#F44336",
+    activities: ["vocab","flash","match","build"],
+    vocab: [
+      { en:"A is for Apple", jp:"AはApple（りんご）", emoji:"🍎", hint:"アルファベットA" },
+      { en:"B is for Book", jp:"BはBook（本）", emoji:"📚", hint:"アルファベットB" },
+      { en:"C is for Cat", jp:"CはCat（ねこ）", emoji:"🐱", hint:"アルファベットC" },
+      { en:"D is for Dog", jp:"DはDog（いぬ）", emoji:"🐶", hint:"アルファベットD" },
+      { en:"E is for Elephant", jp:"EはElephant（ぞう）", emoji:"🐘", hint:"アルファベットE" },
+      { en:"letter", jp:"文字", emoji:"🔤", hint:"アルファベットの一つひとつ" },
+      { en:"How many letters?", jp:"何文字ありますか？", emoji:"🔢", hint:"文字数を聞く" },
+      { en:"P-O-L-I-C-E", jp:"ポリス（警察）", emoji:"👮", hint:"アルファベットでつづる" },
+      { en:"Look", jp:"見てください", emoji:"👀", hint:"注目を呼びかける" },
+      { en:"What is that?", jp:"あれは何ですか？", emoji:"❓", hint:"物を聞く" },
+      { en:"taxi", jp:"タクシー", emoji:"🚕", hint:"街で見かける乗り物" },
+    ],
+    sentences: [
+      { jp:"あれは何ですか？", words:["What", "is", "that"], hint:"What isで始める" },
+      { jp:"何文字ありますか？", words:["How", "many", "letters"], hint:"How manyで数を聞く" },
+      { jp:"6文字あります。", words:["Six", "letters"], hint:"数字のあとにlettersを置く" },
+      { jp:"本屋さんへ行きましょう。", words:["Let's", "go", "to", "the", "bookstore"], hint:"Let's go to ~で行き先を言う" },
+    ],
+    matchPairs: [
+      ["A","Apple 🍎"],["B","Book 📚"],["C","Cat 🐱"],["D","Dog 🐶"],["E","Elephant 🐘"],["P","Police 👮"],
+    ],
+  },
+  {
+    id: 7,
+    title: "What do you want?",
+    titleJp: "自分のオリジナルピザを作ろう",
+    color: "#FF5722",
+    activities: ["vocab","flash","match","build"],
+    vocab: [
+      { en:"tomato", jp:"トマト", emoji:"🍅", hint:"赤い野菜" },
+      { en:"potato", jp:"じゃがいも", emoji:"🥔", hint:"茶色い野菜" },
+      { en:"corn", jp:"とうもろこし", emoji:"🌽", hint:"黄色い野菜" },
+      { en:"cabbage", jp:"キャベツ", emoji:"🥬", hint:"緑の野菜" },
+      { en:"mushroom", jp:"きのこ", emoji:"🍄", hint:"傘の形の野菜" },
+      { en:"sausage", jp:"ソーセージ", emoji:"🌭", hint:"肉系トッピング" },
+      { en:"cherry", jp:"さくらんぼ", emoji:"🍒", hint:"赤い果物" },
+      { en:"What do you want?", jp:"何が欲しいですか？", emoji:"🍕", hint:"欲しいものを聞く" },
+      { en:"I want potatoes", jp:"じゃがいもが欲しいです", emoji:"🥔", hint:"欲しいものを言う" },
+      { en:"How many?", jp:"何個ですか？", emoji:"🔢", hint:"数を聞く" },
+      { en:"Two, please", jp:"2個ください", emoji:"✌️", hint:"数を言って頼む" },
+    ],
+    sentences: [
+      { jp:"何が欲しいですか？", words:["What", "do", "you", "want"], hint:"What do you want?で欲しいものを聞く" },
+      { jp:"じゃがいもが欲しいです。", words:["I", "want", "potatoes", "please"], hint:"I want ~, pleaseで丁寧に頼む" },
+      { jp:"何個ですか？", words:["How", "many"], hint:"How many?で数を聞く" },
+      { jp:"3個ください。", words:["Three", "please"], hint:"数字のあとにpleaseを付ける" },
+    ],
+    matchPairs: [
+      ["tomato","トマト 🍅"],["potato","じゃがいも 🥔"],["corn","とうもろこし 🌽"],
+      ["cabbage","キャベツ 🥬"],["mushroom","きのこ 🍄"],["sausage","ソーセージ 🌭"],
+    ],
+  },
+  {
+    id: 8,
+    title: "This is my favorite place.",
+    titleJp: "学校をあんないしよう",
+    color: "#00BCD4",
+    activities: ["vocab","flash","match","build"],
+    vocab: [
+      { en:"gym", jp:"体育館", emoji:"🏋️", hint:"運動する場所" },
+      { en:"library", jp:"図書室", emoji:"📚", hint:"本を読む場所" },
+      { en:"science room", jp:"理科室", emoji:"🔬", hint:"理科の実験をする場所" },
+      { en:"music room", jp:"音楽室", emoji:"🎵", hint:"音楽を楽しむ場所" },
+      { en:"computer room", jp:"コンピュータ室", emoji:"💻", hint:"パソコンを使う場所" },
+      { en:"arts and crafts room", jp:"図工室", emoji:"🎨", hint:"絵や工作をする場所" },
+      { en:"lunch room", jp:"ランチルーム", emoji:"🍱", hint:"給食を食べる場所" },
+      { en:"Go straight", jp:"まっすぐ行ってください", emoji:"⬆️", hint:"道案内の言葉" },
+      { en:"Turn right", jp:"右に曲がってください", emoji:"➡️", hint:"道案内の言葉" },
+      { en:"Turn left", jp:"左に曲がってください", emoji:"⬅️", hint:"道案内の言葉" },
+      { en:"This is my favorite place", jp:"ここが私のお気に入りの場所です", emoji:"⭐", hint:"お気に入りを紹介する" },
+    ],
+    sentences: [
+      { jp:"まっすぐ行ってください。", words:["Go", "straight"], hint:"Goで始める道案内" },
+      { jp:"右に曲がってください。", words:["Turn", "right"], hint:"Turnのあとに方向を言う" },
+      { jp:"ここが音楽室です。", words:["This", "is", "the", "music", "room"], hint:"This is ~で場所を紹介する" },
+      { jp:"ここが私のお気に入りの場所です。", words:["This", "is", "my", "favorite", "place"], hint:"This is my favorite ~で言う" },
+    ],
+    matchPairs: [
+      ["gym","体育館 🏋️"],["library","図書室 📚"],["science room","理科室 🔬"],
+      ["music room","音楽室 🎵"],["Go straight","まっすぐ ⬆️"],["Turn right","右に曲がる ➡️"],
+    ],
+  },
+  {
+    id: 9,
+    title: "This is my day.",
+    titleJp: "一日の生活を発表しよう",
+    color: "#795548",
+    activities: ["vocab","flash","match","build"],
+    vocab: [
+      { en:"wake up", jp:"起きる", emoji:"⏰", hint:"朝の活動" },
+      { en:"wash my face", jp:"顔を洗う", emoji:"🚿", hint:"朝の活動" },
+      { en:"brush my teeth", jp:"歯をみがく", emoji:"🦷", hint:"朝の活動" },
+      { en:"have breakfast", jp:"朝ごはんを食べる", emoji:"🍳", hint:"朝の活動" },
+      { en:"go to school", jp:"学校に行く", emoji:"🏫", hint:"朝の活動" },
+      { en:"do my homework", jp:"宿題をする", emoji:"📚", hint:"放課後の活動" },
+      { en:"have dinner", jp:"夕ごはんを食べる", emoji:"🍽️", hint:"夜の活動" },
+      { en:"take a bath", jp:"お風呂に入る", emoji:"🛁", hint:"夜の活動" },
+      { en:"go to bed", jp:"寝る", emoji:"😴", hint:"夜の活動" },
+      { en:"I wake up at 6:00", jp:"6時に起きます", emoji:"🕕", hint:"時間と一緒に言う" },
+      { en:"wonderful", jp:"すばらしい", emoji:"✨", hint:"感想を表す言葉" },
+    ],
+    sentences: [
+      { jp:"私は6時に起きます。", words:["I", "wake", "up", "at", "6:00"], hint:"I wake up at ~で時間と一緒に言う" },
+      { jp:"顔を洗います。", words:["I", "wash", "my", "face"], hint:"I + 動詞で活動を言う" },
+      { jp:"学校に行きます。", words:["I", "go", "to", "school"], hint:"I go to ~で行き先を言う" },
+      { jp:"これが私の一日です。", words:["This", "is", "my", "day"], hint:"This is my ~で発表する" },
+    ],
+    matchPairs: [
+      ["wake up","起きる ⏰"],["wash my face","顔を洗う 🚿"],["brush my teeth","歯をみがく 🦷"],
+      ["have breakfast","朝ごはん 🍳"],["go to school","学校へ 🏫"],["go to bed","寝る 😴"],
+    ],
+  },
+];
+
+const ACTIVITY_DEFS = {
+  vocab:  { icon:"📝", label:"単語クイズ",     desc:"選択問題で単語を練習" },
+  flash:  { icon:"🃏", label:"フラッシュカード",desc:"単語カードをめくって覚える" },
+  match:  { icon:"🔗", label:"マッチング",      desc:"英語と日本語を結びつける" },
+  build:  { icon:"🧩", label:"文を作ろう",      desc:"単語を並べて文を完成させる" },
+};
+
+// ══════════════════════════════════════════════════════════
+// TTS HELPERS (uses tts.js — window.NHTTS)
+// ══════════════════════════════════════════════════════════
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Builds a speaker-icon button that reads `text` aloud. `text` is the RAW
+// (unescaped) string to be spoken; this escapes it for the data attribute.
+function ttsBtn(text, extraClass) {
+  if (!text) return '';
+  const safe = esc(text).replace(/"/g, '&quot;');
+  return `<button type="button" class="tts-btn${extraClass ? ' ' + extraClass : ''}" data-tts="${safe}" aria-label="発音を聞く" title="発音を聞く">🔊</button>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let currentUnit = 0; // 0 = all
+let currentActivity = null;
+let currentUnitData = null;
+
+// Quiz state
+let qItems = [], qIdx = 0, qScore = 0, qResults = [];
+let returnScreen = "home";
+
+// Flashcard state
+let fcItems = [], fcIdx = 0;
+
+// Match state
+let matchLeft = [], matchRight = [];
+let matchSelected = null; // {side:'L'|'R', idx}
+let matchScore = 0, matchTotal = 0, matchRound = 0;
+
+// Sentence build state
+let buildItems = [], buildIdx = 0, buildScore = 0;
+let buildAnswer = [], buildBank = [];
+
+// ══════════════════════════════════════════════════════════
+// THEME
+// ══════════════════════════════════════════════════════════
+const themeBtn = document.getElementById("theme-btn");
+const saved = localStorage.getItem("lt2-theme");
+if (saved === "dark") document.body.classList.add("dark");
+themeBtn.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+themeBtn.addEventListener("click", () => {
+  document.body.classList.toggle("dark");
+  themeBtn.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+  localStorage.setItem("lt2-theme", document.body.classList.contains("dark") ? "dark" : "light");
+});
+
+// ══════════════════════════════════════════════════════════
+// SCREEN MANAGEMENT
+// ══════════════════════════════════════════════════════════
+const screens = ["home-screen","quiz-screen","flash-screen","match-screen","build-screen","review-screen"];
+function showScreen(id) {
+  screens.forEach(s => document.getElementById(s).classList.toggle("hidden", s !== id));
+  if (window.NHTTS) NHTTS.stop();
+}
+
+// ══════════════════════════════════════════════════════════
+// HOME SCREEN
+// ══════════════════════════════════════════════════════════
+document.getElementById("unit-tabs").addEventListener("click", e => {
+  const tab = e.target.closest(".unit-tab");
+  if (!tab) return;
+  currentUnit = parseInt(tab.dataset.unit);
+  document.querySelectorAll(".unit-tab").forEach(t => t.classList.remove("active"));
+  tab.classList.add("active");
+  renderHome();
+});
+
+function getUnitsToShow() {
+  if (currentUnit === 0) return UNITS.filter(Boolean);
+  return [UNITS[currentUnit]].filter(Boolean);
+}
+
+function renderHome() {
+  const units = getUnitsToShow();
+  const banner = document.getElementById("unit-banner");
+  const bannerTitle = document.getElementById("banner-title");
+  const bannerSub = document.getElementById("banner-sub");
+
+  if (currentUnit !== 0 && units.length) {
+    const u = units[0];
+    banner.classList.remove("hidden");
+    banner.style.borderColor = u.color;
+    bannerTitle.textContent = `Unit ${u.id}: ${u.title}`;
+    bannerTitle.style.color = u.color;
+    bannerSub.textContent = u.titleJp;
+  } else {
+    banner.classList.add("hidden");
+  }
+
+  const grid = document.getElementById("act-grid");
+  grid.innerHTML = "";
+
+  if (currentUnit === 0) {
+    // Show all activity types across all units
+    Object.entries(ACTIVITY_DEFS).forEach(([key, def]) => {
+      const btn = document.createElement("button");
+      btn.className = "act-card";
+      const unitCount = UNITS.filter(Boolean).filter(u => u.activities.includes(key)).length;
+      btn.innerHTML = `
+        <span class="act-icon">${def.icon}</span>
+        <div>
+          <div class="act-label">${def.label}</div>
+          <div class="act-desc">${def.desc}</div>
+        </div>
+        <span class="act-badge" style="background:#E3F2FD;color:#1565C0">${unitCount} Units</span>
+      `;
+      btn.addEventListener("click", () => launchActivity(key, null));
+      grid.appendChild(btn);
+    });
+  } else {
+    const u = units[0];
+    u.activities.forEach(key => {
+      const def = ACTIVITY_DEFS[key];
+      const btn = document.createElement("button");
+      btn.className = "act-card";
+      const count = key === "vocab" ? u.vocab.length :
+                    key === "flash" ? u.vocab.length :
+                    key === "match" ? Math.floor(u.matchPairs.length/2)*2 :
+                    u.sentences.length;
+      btn.innerHTML = `
+        <span class="act-icon">${def.icon}</span>
+        <div>
+          <div class="act-label">${def.label}</div>
+          <div class="act-desc">${def.desc}</div>
+        </div>
+        <span class="act-badge" style="background:#E3F2FD;color:#1565C0">${count}問</span>
+      `;
+      btn.addEventListener("click", () => launchActivity(key, u));
+      grid.appendChild(btn);
+    });
+  }
+}
+
+function launchActivity(type, unitData) {
+  currentActivity = type;
+  currentUnitData = unitData;
+  if (type === "vocab")  startQuiz(unitData);
+  if (type === "flash")  startFlash(unitData);
+  if (type === "match")  startMatch(unitData);
+  if (type === "build")  startBuild(unitData);
+}
+
+// ══════════════════════════════════════════════════════════
+// VOCAB QUIZ
+// ══════════════════════════════════════════════════════════
+function buildQuizItems(unitData) {
+  const allVocab = unitData
+    ? unitData.vocab.map(v => ({...v, unit: unitData.id, unitTitle: unitData.title, unitColor: unitData.color}))
+    : UNITS.filter(Boolean).flatMap(u => u.vocab.map(v => ({...v, unit: u.id, unitTitle: u.title, unitColor: u.color})));
+
+  return shuffle(allVocab).slice(0, Math.min(15, allVocab.length)).map(item => {
+    // Build 4 choices: correct + 3 distractors
+    const pool = UNITS.filter(Boolean).flatMap(u => u.vocab).filter(v => v.jp !== item.jp);
+    const distractors = shuffle(pool).slice(0, 3).map(v => v.jp);
+    const choices = shuffle([item.jp, ...distractors]);
+    return { ...item, choices, correct: item.jp };
+  });
+}
+
+function startQuiz(unitData) {
+  qItems = buildQuizItems(unitData);
+  qIdx = 0; qScore = 0; qResults = [];
+  renderQuizQ();
+  showScreen("quiz-screen");
+}
+
+function renderQuizQ() {
+  if (window.NHTTS) NHTTS.stop();
+  const item = qItems[qIdx];
+  const total = qItems.length;
+  document.getElementById("quiz-badge").textContent = `Unit ${item.unit} · ${item.unitTitle}`;
+  document.getElementById("quiz-badge").style.background = item.unitColor + "22";
+  document.getElementById("quiz-badge").style.color = item.unitColor;
+  // quiz-q is the English prompt — gets a speaker button. (The four choices
+  // below are Japanese, so they don't.)
+  document.getElementById("quiz-q").innerHTML = `<span>${item.emoji}</span> <span>${esc(item.en)}</span>${ttsBtn(item.en, 'qword-tts')}`;
+  document.getElementById("quiz-sub").textContent = item.hint;
+  document.getElementById("quiz-prog-text").textContent = `${qIdx + 1} / ${total}`;
+  document.getElementById("quiz-prog-bar").style.width = `${((qIdx) / total) * 100}%`;
+  document.getElementById("quiz-hint").classList.add("hidden");
+  document.getElementById("quiz-feedback").classList.add("hidden");
+  document.getElementById("quiz-run-score").textContent = `現在の成績: ${qScore} / ${qIdx}`;
+
+  const opts = document.getElementById("quiz-opts");
+  opts.innerHTML = "";
+  const letters = ["A","B","C","D"];
+  item.choices.forEach((ch, i) => {
+    const btn = document.createElement("button");
+    btn.className = "opt-btn";
+    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span> ${ch}`;
+    btn.addEventListener("click", () => chooseQuizOpt(btn, ch, item));
+    opts.appendChild(btn);
+  });
+}
+
+function chooseQuizOpt(btn, choice, item) {
+  const correct = choice === item.correct;
+  document.querySelectorAll(".opt-btn").forEach(b => {
+    b.classList.add("locked");
+    if (b.textContent.trim().includes(item.correct)) b.classList.add("correct");
+  });
+  if (!correct) btn.classList.add("wrong");
+  if (correct) qScore++;
+  qResults.push({ item, correct, chosen: choice });
+  document.getElementById("quiz-hint").textContent = `💡 ${item.hint}`;
+  document.getElementById("quiz-hint").classList.remove("hidden");
+  document.getElementById("quiz-fb-icon").textContent = correct ? "⭕ 正解！" : "❌ 不正解";
+  document.getElementById("quiz-feedback").classList.remove("hidden");
+}
+
+document.getElementById("quiz-next").addEventListener("click", () => {
+  qIdx++;
+  if (qIdx >= qItems.length) showReview("quiz");
+  else renderQuizQ();
+});
+document.getElementById("quiz-back").addEventListener("click", () => showScreen("home-screen"));
+
+// ══════════════════════════════════════════════════════════
+// FLASHCARDS
+// ══════════════════════════════════════════════════════════
+function startFlash(unitData) {
+  fcItems = unitData
+    ? [...unitData.vocab]
+    : shuffle(UNITS.filter(Boolean).flatMap(u => u.vocab));
+  fcIdx = 0;
+  renderFlash();
+  showScreen("flash-screen");
+}
+
+function renderFlash() {
+  if (window.NHTTS) NHTTS.stop();
+  const card = document.getElementById("flashcard");
+  card.classList.remove("flipped");
+  const item = fcItems[fcIdx];
+  document.getElementById("fc-emoji").textContent = item.emoji;
+  // Both faces show English — both get a speaker button.
+  document.getElementById("fc-word").innerHTML = `${esc(item.en)}${ttsBtn(item.en, 'fc-tts')}`;
+  document.getElementById("fc-word-back").innerHTML = `${esc(item.en)}${ttsBtn(item.en, 'fc-tts')}`;
+  document.getElementById("fc-trans").textContent = item.jp;
+  document.getElementById("fc-counter").textContent = `${fcIdx + 1} / ${fcItems.length}`;
+  document.getElementById("flash-prog").textContent = `${fcIdx + 1} / ${fcItems.length}`;
+}
+
+document.getElementById("flashcard").addEventListener("click", (e) => {
+  // Don't flip the card when the tap was on a speaker icon. (The document-
+  // level handler in tts.js stops propagation too, but THIS listener sits
+  // closer to the target in the bubble path and would already have fired
+  // by the time that happens, so the check has to live here as well.)
+  if (e.target.closest('.tts-btn')) return;
+  document.getElementById("flashcard").classList.toggle("flipped");
+});
+document.getElementById("fc-prev").addEventListener("click", () => {
+  fcIdx = (fcIdx - 1 + fcItems.length) % fcItems.length;
+  renderFlash();
+});
+document.getElementById("fc-next").addEventListener("click", () => {
+  fcIdx = (fcIdx + 1) % fcItems.length;
+  renderFlash();
+});
+document.getElementById("fc-shuffle").addEventListener("click", () => {
+  fcItems = shuffle([...fcItems]);
+  fcIdx = 0;
+  renderFlash();
+});
+document.getElementById("flash-back").addEventListener("click", () => showScreen("home-screen"));
+
+// ══════════════════════════════════════════════════════════
+// MATCHING
+// ══════════════════════════════════════════════════════════
+function startMatch(unitData) {
+  matchScore = 0; matchTotal = 0; matchRound = 0; matchSelected = null;
+  const pairs = unitData ? unitData.matchPairs : UNITS.filter(Boolean).flatMap(u => u.matchPairs);
+  matchLeft = shuffle(pairs).slice(0, 6);
+  matchTotal = matchLeft.length;
+  renderMatchRound(matchLeft);
+  showScreen("match-screen");
+}
+
+function renderMatchRound(pairs) {
+  if (window.NHTTS) NHTTS.stop();
+  matchSelected = null;
+  const lefts = shuffle(pairs.map(p => p[0]));
+  const rights = shuffle(pairs.map(p => p[1]));
+  document.getElementById("match-instructions").textContent = "英語と日本語を結びつけよう！";
+  document.getElementById("match-score-text").textContent = `${matchScore} / ${matchTotal}`;
+  document.getElementById("match-result").classList.add("hidden");
+  document.getElementById("match-next-round").classList.add("hidden");
+
+  const leftCol = document.getElementById("match-left");
+  const rightCol = document.getElementById("match-right");
+  leftCol.innerHTML = ""; rightCol.innerHTML = "";
+
+  const pairMap = Object.fromEntries(pairs.map(p => [p[0], p[1]]));
+
+  // NOTE: matchPairs are always defined as [English, Japanese], and the
+  // "lefts"/"rights" arrays above are built from p[0]/p[1] respectively —
+  // so the LEFT column is always the English side, regardless of how each
+  // column gets independently shuffled. Only the left side gets a speaker.
+  //
+  // Left items are built as <div role="button"> rather than a real
+  // <button>, because we need to nest a speaker <button> inside them and
+  // HTML doesn't allow a <button> inside another <button> (browsers
+  // silently split/auto-close that markup, breaking the click handling).
+  // Right items (Japanese, no nested button) stay as plain <button>s.
+  function makeItem(text, side, idx) {
+    let el;
+    if (side === 'L') {
+      el = document.createElement('div');
+      el.setAttribute('role', 'button');
+      el.tabIndex = 0;
+      el.innerHTML = `<span class="match-text">${esc(text)}</span>${ttsBtn(text, 'match-tts')}`;
+      el.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (!e.target.closest('.tts-btn')) handleMatchClick(el, text, side, pairMap);
+        }
+      };
+    } else {
+      el = document.createElement('button');
+      el.textContent = text;
+    }
+    el.className = "match-item";
+    el.dataset.side = side;
+    el.dataset.idx = idx;
+    el.addEventListener("click", (e) => {
+      // Don't treat a tap on the speaker icon as a match selection.
+      if (e.target.closest('.tts-btn')) return;
+      handleMatchClick(el, text, side, pairMap);
+    });
+    return el;
+  }
+
+  lefts.forEach((t, i) => leftCol.appendChild(makeItem(t, "L", i)));
+  rights.forEach((t, i) => rightCol.appendChild(makeItem(t, "R", i)));
+}
+
+function handleMatchClick(el, text, side, pairMap) {
+  if (el.classList.contains("matched")) return;
+
+  if (!matchSelected) {
+    if (matchSelected && matchSelected.el === el) { el.classList.remove("selected"); matchSelected = null; return; }
+    document.querySelectorAll(".match-item.selected").forEach(e => e.classList.remove("selected"));
+    el.classList.add("selected");
+    matchSelected = { el, text, side };
+    return;
+  }
+
+  if (matchSelected.side === side) {
+    document.querySelectorAll(".match-item.selected").forEach(e => e.classList.remove("selected"));
+    el.classList.add("selected");
+    matchSelected = { el, text, side };
+    return;
+  }
+
+  // Attempt to match
+  const L = side === "L" ? text : matchSelected.text;
+  const R = side === "R" ? text : matchSelected.text;
+  const isCorrect = pairMap[L] === R;
+
+  if (isCorrect) {
+    matchSelected.el.classList.remove("selected");
+    matchSelected.el.classList.add("matched");
+    el.classList.add("matched");
+    matchScore++;
+    document.getElementById("match-score-text").textContent = `${matchScore} / ${matchTotal}`;
+    matchSelected = null;
+
+    // Check if round complete
+    const unmatched = document.querySelectorAll(".match-item:not(.matched)");
+    if (unmatched.length === 0) {
+      document.getElementById("match-result").textContent = "🎉 全部合っています！素晴らしい！";
+      document.getElementById("match-result").classList.remove("hidden");
+      document.getElementById("match-next-round").classList.remove("hidden");
+    }
+  } else {
+    [matchSelected.el, el].forEach(e => {
+      e.classList.add("wrong-flash");
+      setTimeout(() => { e.classList.remove("wrong-flash","selected"); }, 700);
+    });
+    matchSelected = null;
+  }
+}
+
+document.getElementById("match-next-round").addEventListener("click", () => {
+  const unitData = currentUnitData;
+  const pairs = unitData ? unitData.matchPairs : UNITS.filter(Boolean).flatMap(u => u.matchPairs);
+  const newPairs = shuffle(pairs).slice(0, 6);
+  matchTotal += newPairs.length;
+  renderMatchRound(newPairs);
+});
+document.getElementById("match-back").addEventListener("click", () => showScreen("home-screen"));
+
+// ══════════════════════════════════════════════════════════
+// SENTENCE BUILD
+// ══════════════════════════════════════════════════════════
+function startBuild(unitData) {
+  buildItems = unitData
+    ? [...unitData.sentences]
+    : shuffle(UNITS.filter(Boolean).flatMap(u => u.sentences));
+  buildIdx = 0; buildScore = 0; qResults = [];
+  renderBuildQ();
+  showScreen("build-screen");
+}
+
+function renderBuildQ() {
+  const item = buildItems[buildIdx];
+  const total = buildItems.length;
+  document.getElementById("build-jp").textContent = item.jp;
+  document.getElementById("build-prog").textContent = `${buildIdx + 1} / ${total}`;
+  document.getElementById("build-prog-bar").style.width = `${(buildIdx / total) * 100}%`;
+  document.getElementById("build-hint").classList.add("hidden");
+  document.getElementById("build-feedback").classList.add("hidden");
+  document.getElementById("build-check").disabled = true;
+
+  buildAnswer = [];
+  buildBank = shuffle([...item.words]);
+
+  renderBuildBankAndAnswer(item);
+}
+
+function renderBuildBankAndAnswer(item) {
+  const bankEl = document.getElementById("build-bank");
+  const answerEl = document.getElementById("build-answer");
+
+  bankEl.innerHTML = "";
+  answerEl.innerHTML = "";
+
+  // Show placeholder text via data attribute + CSS instead of moving a DOM node
+  answerEl.dataset.empty = buildAnswer.length === 0 ? "true" : "false";
+
+  buildBank.forEach((word, i) => {
+    const chip = document.createElement("button");
+    chip.className = "word-chip" + (buildAnswer.includes(i) ? " used" : "");
+    chip.textContent = word;
+    if (!buildAnswer.includes(i)) {
+      chip.addEventListener("click", () => {
+        buildAnswer.push(i);
+        renderBuildBankAndAnswer(item);
+        document.getElementById("build-check").disabled = buildAnswer.length !== buildBank.length;
+      });
+    }
+    bankEl.appendChild(chip);
+  });
+
+  buildAnswer.forEach((bankIdx, pos) => {
+    const chip = document.createElement("button");
+    chip.className = "answer-chip";
+    chip.textContent = buildBank[bankIdx];
+    chip.addEventListener("click", () => {
+      buildAnswer.splice(pos, 1);
+      renderBuildBankAndAnswer(item);
+      document.getElementById("build-check").disabled = buildAnswer.length !== buildBank.length;
+    });
+    answerEl.appendChild(chip);
+  });
+}
+
+document.getElementById("build-check").addEventListener("click", () => {
+  const item = buildItems[buildIdx];
+  const userAns = buildAnswer.map(i => buildBank[i]).join(" ");
+  const correct = userAns.toLowerCase() === item.words.join(" ").toLowerCase();
+  if (correct) buildScore++;
+  qResults.push({ item: { en: item.jp, emoji:"🧩" }, correct, chosen: userAns });
+
+  // Lock all chips
+  document.querySelectorAll(".word-chip, .answer-chip").forEach(c => { c.style.pointerEvents = "none"; });
+
+  document.getElementById("build-hint").textContent = correct
+    ? `✅ 正解！ → ${item.words.join(" ")}`
+    : `❌ 正しい答え: ${item.words.join(" ")} 💡 ${item.hint}`;
+  document.getElementById("build-hint").classList.remove("hidden");
+  document.getElementById("build-hint").style.color = correct ? "#2E7D32" : "#F57F17";
+  document.getElementById("build-hint").style.background = correct ? "#E8F5E9" : "#FFF8E1";
+  document.getElementById("build-hint").style.borderColor = correct ? "#A5D6A7" : "#FFE082";
+
+  document.getElementById("build-fb-icon").textContent = correct ? "⭕ 正解！" : "❌ 不正解";
+  document.getElementById("build-feedback").classList.remove("hidden");
+  document.getElementById("build-check").disabled = true;
+});
+
+document.getElementById("build-next").addEventListener("click", () => {
+  buildIdx++;
+  if (buildIdx >= buildItems.length) showReview("build");
+  else renderBuildQ();
+});
+document.getElementById("build-back").addEventListener("click", () => showScreen("home-screen"));
+
+// ══════════════════════════════════════════════════════════
+// REVIEW
+// ══════════════════════════════════════════════════════════
+async function showReview(from) {
+  const correct = qResults.filter(r => r.correct).length;
+  const total = qResults.length;
+  const pct = total ? Math.round((correct / total) * 100) : 0;
+
+  document.getElementById("rv-pct").textContent = pct + "%";
+  document.getElementById("rv-correct").textContent = correct;
+  document.getElementById("rv-wrong").textContent = total - correct;
+  document.getElementById("rv-total").textContent = total;
+  document.getElementById("rv-grade").textContent =
+    pct >= 90 ? "🌟 優秀！Excellent!" :
+    pct >= 70 ? "😊 よくできました！Good job!" :
+    pct >= 50 ? "📚 もう少し練習しよう！Keep trying!" :
+    "💪 頑張れ！Practice more!";
+
+  const list = document.getElementById("rv-list");
+  list.innerHTML = "";
+  qResults.forEach(r => {
+    const row = document.createElement("div");
+    row.className = "result-row";
+    row.innerHTML = `
+      <div class="result-q">${r.item.emoji || "📝"} ${r.item.en || r.item.jp || ""}</div>
+      <div class="result-ans">${r.correct ? "⭕" : "❌"} ${r.chosen}</div>
+    `;
+    list.appendChild(row);
+  });
+
+  document.getElementById("rv-retry").onclick = () => {
+    if (from === "quiz") startQuiz(currentUnitData);
+    else startBuild(currentUnitData);
+  };
+  document.getElementById("rv-menu").onclick = () => showScreen("home-screen");
+  showScreen("review-screen");
+
+  // ── Gakuenza sync ──────────────────────────────────────────
+  // The old bridge sniffed the DOM (MutationObserver + parsed text
+  // content) to figure out what just happened. We don't need that
+  // anymore: showReview() already knows the activity type (`from`,
+  // i.e. "quiz" or "build" — matching currentActivity) and the unit
+  // (currentUnit, 0 = all units) directly from app state.
+  const syncEl = document.getElementById("rv-sync");
+  syncEl.textContent = "";
+  syncEl.classList.remove("error");
+  if (typeof window.hk !== "undefined") {
+    try {
+      await window.hk.syncQuizResult({
+        level: "unit" + currentUnit,
+        setId: "unit" + currentUnit,
+        category: from,
+        correct,
+        total,
+        app_id: "letstry2",
+      });
+      syncEl.textContent = "✓ 成績を保存しました";
+    } catch (e) {
+      console.warn("[LetsTry2] sync error:", e.message);
+      syncEl.textContent = "⚠️ 保存に失敗しました";
+      syncEl.classList.add("error");
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+renderHome();
+
+// Handle PWA shortcut URLs (?activity=vocab etc.)
+(function handleShortcutURL() {
+  const params = new URLSearchParams(location.search);
+  const act = params.get('activity');
+  if (act && Object.keys(ACTIVITY_DEFS).includes(act)) {
+    launchActivity(act, null);
+  }
+})();
+
+// Register Service Worker
+// (removed — sw.js is PWA-only and intentionally not ported to this
+// Gakuenza module; none of the other modules register a service worker
+// either, and one scoped to a module subpath risks caching/scope
+// surprises for the rest of the site.)
+</script>
+<script src="../../hub/supabase.js"></script>
+<script src="../../hub/config.js"></script>
+<script src="../../hub/hub-common.js"></script>
+<script src="letstry2-report.js"></script>
+</body>
+</html>

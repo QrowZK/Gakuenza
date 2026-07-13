@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>成績 — がくえん座</title>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="hub-shell.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  .grd-module-card { margin-bottom: 12px; cursor: default; }
+  .grd-module-card:hover { transform: none; box-shadow: none; }
+  .grd-assign-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); gap: 12px; }
+  .grd-assign-row:first-of-type { border-top: none; }
+  .grd-assign-name { font-weight: 600; font-size: 0.88rem; }
+  .grd-score { font-weight: 700; font-size: 0.95rem; }
+  .grd-review-toggle { background: none; border: none; color: var(--moss-deep); font-size: 0.76rem; cursor: pointer; text-decoration: underline; padding: 0; }
+  .grd-review-box { display: none; margin: 4px 0 12px; padding: 12px 14px; background: var(--paper-dim); border-radius: 8px; }
+  .grd-review-box.grd-open { display: block; }
+  .grd-review-item { padding: 8px 0; border-top: 1px dotted var(--border); font-size: 0.82rem; }
+  .grd-review-item:first-child { border-top: none; padding-top: 0; }
+  .grd-review-prompt { font-weight: 600; margin-bottom: 3px; }
+  .grd-your-answer { color: var(--error); font-family: monospace; }
+  .grd-correct-answer { color: var(--moss-deep); font-family: monospace; }
+</style>
+</head>
+<body>
+
+<div class="page-frame">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="hub-section">
+      <h1 class="greeting-title">成績</h1>
+      <p class="greeting-date">今できるモジュールの、あなたの成績です</p>
+    </div>
+
+    <div id="grades-groups">
+      <div class="hub-card" style="height:60px;"></div>
+    </div>
+  </main>
+</div>
+
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="hub-common.js"></script>
+<script>
+(async function () {
+  const H = window.HubCommon;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const session = await H.requireSession(sb);
+  if (!session) return;
+  const userId = session.user.id;
+
+  await H.renderSidebar(sb, userId, 'grades');
+
+  // Same "which modules can I currently see" query as modules.html,
+  // intentionally byte-for-byte the same shape — grades are only shown
+  // for currently-enabled modules (per product decision 2026-07-09): if
+  // a module gets disabled later, its grades disappear from this view
+  // too, exactly mirroring what a student can currently play, not kept
+  // around as orphaned history.
+  const { data: enrollmentRows } = await sb
+    .from('enrollments').select('class_id').eq('user_id', userId).eq('role', 'student');
+  const classIds = (enrollmentRows || []).map(r => r.class_id);
+
+  let assigned = [];
+  let assignedErr = null;
+  if (classIds.length) {
+    const res = await sb
+      .from('class_modules')
+      .select('class_id, modules(id, key, name, name_en, subject)')
+      .in('class_id', classIds);
+    assigned = res.data || [];
+    assignedErr = res.error;
+  }
+  const seen = new Set();
+  assigned = assigned.filter(a => {
+    if (!a.modules || seen.has(a.modules.id)) return false;
+    seen.add(a.modules.id);
+    return true;
+  });
+
+  const groupsEl = document.getElementById('grades-groups');
+  if (assignedErr) {
+    groupsEl.innerHTML = '<p class="calm-msg">読み込めませんでした</p>';
+    return;
+  }
+  if (!assigned.length) {
+    groupsEl.innerHTML = '<p class="calm-msg">今のところ、成績を確認できるモジュールはありません。</p>';
+    return;
+  }
+
+  const enabledModuleIds = assigned.map(a => a.modules.id);
+
+  // Own results only (RLS already permits user_id = auth.uid() — this
+  // has always been readable, just never had a UI in front of it).
+  const { data: results, error: resultsErr } = await sb
+    .from('activity_results')
+    .select('id, module_id, activity_ref, score, max_score, payload, created_at')
+    .eq('user_id', userId)
+    .in('module_id', enabledModuleIds);
+
+  if (resultsErr) {
+    groupsEl.innerHTML = '<p class="calm-msg">読み込めませんでした</p>';
+    return;
+  }
+
+  // Best score per (module, assignment) — same "higher score wins, most
+  // recent breaks ties" convention as the teacher gradebook's spreadsheet
+  // view, so a student's own view and their teacher's agree on what
+  // "your grade" for a retried assignment actually means.
+  const bestByAssignment = {}; // `${module_id}::${assignmentKey}` -> result row
+  for (const r of (results || [])) {
+    const key = `${r.module_id}::${H.assignmentKeyFromRef(r.activity_ref)}`;
+    const cur = bestByAssignment[key];
+    if (!cur || r.score > cur.score || (r.score === cur.score && r.created_at > cur.created_at)) {
+      bestByAssignment[key] = r;
+    }
+  }
+  const bestResultIds = Object.values(bestByAssignment).map(r => r.id);
+
+  // Wrong items only, for the "what did I get wrong" review — right
+  // answers aren't shown here, matching the same "review your mistakes"
+  // pattern every module already shows right after a quiz, just made
+  // persistent and reachable anytime instead of disappearing.
+  let wrongItemsByResult = {};
+  if (bestResultIds.length) {
+    const { data: items } = await sb
+      .from('activity_result_items')
+      .select('activity_result_id, prompt, selected_answer, correct_answer')
+      .in('activity_result_id', bestResultIds)
+      .eq('correct', false);
+    for (const it of (items || [])) {
+      (wrongItemsByResult[it.activity_result_id] ||= []).push(it);
+    }
+  }
+
+  // Group modules by subject, matching モジュール一覧's own grouping so
+  // this page feels like the same app, not a bolted-on separate thing.
+  const bySubject = {};
+  for (const a of assigned) (bySubject[a.modules.subject] ||= []).push(a.modules);
+
+  const moduleHasGrades = (moduleId) =>
+    Object.keys(bestByAssignment).some(k => k.startsWith(`${moduleId}::`));
+
+  groupsEl.innerHTML = H.sortedSubjectKeys(bySubject).map(subject => {
+    const mods = bySubject[subject].filter(m => moduleHasGrades(m.id));
+    if (!mods.length) return '';
+    return `
+      <div class="subject-group">
+        <div class="subject-label">
+          <span class="subject-dot" style="background:${H.subjectVar(subject)};"></span>
+          <span class="name">${H.subjectLabel(subject)}</span>
+        </div>
+        ${mods.map(m => {
+          const assignEntries = Object.entries(bestByAssignment)
+            .filter(([k]) => k.startsWith(`${m.id}::`))
+            .map(([k, r]) => ({ key: k.split('::').slice(1).join('::'), r }));
+          return `
+            <div class="hub-card grd-module-card">
+              <div class="module-title">${m.name}${m.name_en ? ` <span class="recent-title-en">${m.name_en}</span>` : ''}</div>
+              ${assignEntries.map(({ key, r }) => {
+                const label = H.assignmentLabel(key, r.payload);
+                const wrongItems = wrongItemsByResult[r.id] || [];
+                const reviewId = `review-${r.id}`;
+                return `
+                  <div class="grd-assign-row">
+                    <div class="grd-assign-name">
+                      ${label}
+                      ${wrongItems.length ? `<br><button class="grd-review-toggle" data-target="${reviewId}" type="button">間違えた問題を見る（${wrongItems.length}問）</button>` : ''}
+                    </div>
+                    <div class="grd-score">${r.score} / ${r.max_score}</div>
+                  </div>
+                  ${wrongItems.length ? `
+                    <div class="grd-review-box" id="${reviewId}">
+                      ${wrongItems.map(it => `
+                        <div class="grd-review-item">
+                          <div class="grd-review-prompt">${it.prompt || ''}</div>
+                          <div>あなたの答え：<span class="grd-your-answer">${it.selected_answer || '(未回答)'}</span>　正解：<span class="grd-correct-answer">${it.correct_answer || ''}</span></div>
+                        </div>`).join('')}
+                    </div>` : ''}
+                `;
+              }).join('')}
+            </div>`;
+        }).join('')}
+      </div>`;
+  }).join('') || '<p class="calm-msg">今のところ、記録された成績はありません。モジュールに取り組むとここに表示されます。</p>';
+
+  document.querySelectorAll('.grd-review-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const box = document.getElementById(btn.dataset.target);
+      box.classList.toggle('grd-open');
+    });
+  });
+})();
+</script>
+</body>
+</html>

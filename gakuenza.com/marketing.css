@@ -1,0 +1,175 @@
+@charset "UTF-8";
+/* marketing.css — self-contained stylesheet for the public marketing site
+   (index.html, features.html, modules.html, onboarding.html at site root).
+
+   Deliberately NOT sharing style.css with the login/settings pages: this
+   is the third time in this project a shared root stylesheet's generic
+   `button { width:100%; ... }` rule has been the actual cause of a
+   layout bug elsewhere (see the admin console's delete-button incident,
+   and the module-topbar comment in every module's own style.css). The
+   marketing site has several real <button>/<a> CTAs of its own, so it
+   gets the same self-contained treatment as every module.
+
+   Token values are copied from style.css, not var()-inherited from it —
+   same reasoning: zero cross-file dependency, zero chance of a future
+   edit to one file silently changing the other. */
+
+:root {
+  --ink: #1c2530;
+  --ink-soft: #3a4555;
+  --paper: #f7f3ea;
+  --paper-dim: #efe9db;
+  --border: #d8d2c2;
+  --mist: #e4e0d4;
+  --moss: #4a6b4f;
+  --moss-deep: #34503a;
+  --moss-tint: #e8ede6;
+  --clay: #b5572e;
+  --gold: #c9a24b;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --shadow-float: 0 4px 16px rgba(28, 37, 48, 0.18);
+
+  --font-display: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', system-ui, -apple-system, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Segoe UI', Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-display); margin: 0; }
+p { margin: 0; line-height: 1.6; }
+a { color: var(--moss-deep); }
+img { max-width: 100%; display: block; }
+:focus-visible { outline: 2.5px solid var(--moss); outline-offset: 2px; }
+
+.mkt-wrap { max-width: 1080px; margin: 0 auto; padding-left: 32px; padding-right: 32px; }
+
+/* ---- header / nav ---- */
+.mkt-header { background: var(--ink); }
+.mkt-header-inner { max-width: 1080px; margin: 0 auto; padding: 18px 32px; display: flex; align-items: center; gap: 32px; }
+.mkt-brand { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--paper); letter-spacing: 0.01em; text-decoration: none; }
+
+/* ---- animated home mark (がくえん座 logo kit, added 2026-07-09) ----
+   Same dark-background treatment as hub-shell.css's sidebar version —
+   duplicated here rather than shared, matching this file's own
+   established "self-contained per zone" convention (see the header
+   comment at the top of this file for why that's a deliberate choice,
+   not an oversight). Dot colors are the dark-background palette
+   (paper-color), since .mkt-header has an ink background — NOT the
+   kit demo's light-mode colors. */
+.gz-home { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; flex-shrink: 0; }
+.gz-home svg { width: 30px; height: 30px; overflow: visible; flex: 0 0 auto; }
+.gz-home .mkt-brand { white-space: nowrap; }
+.gz-home .gz-seat { transform-box: fill-box; transform-origin: center; }
+.gz-home:hover .gz-seat { animation: gz-fly 0.45s cubic-bezier(0.22, 1.4, 0.36, 1) both; }
+.gz-home:hover .gz-seat:nth-of-type(1) { animation-delay: 0.03s; }
+.gz-home:hover .gz-seat:nth-of-type(2) { animation-delay: 0.09s; }
+.gz-home:hover .gz-seat:nth-of-type(3) { animation-delay: 0.15s; }
+.gz-home:hover .gz-seat:nth-of-type(4) { animation-delay: 0.21s; }
+.gz-home:hover .gz-seat:nth-of-type(5) { animation-delay: 0.27s; }
+.gz-home:hover .gz-seat:nth-of-type(6) { animation-delay: 0.33s; }
+.gz-home:hover .gz-ring { animation: gz-fadein-r 0.4s ease 0.45s both; }
+.gz-home .gz-star { transform-box: fill-box; transform-origin: center; }
+.gz-home:hover .gz-star { animation: gz-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.55s both; }
+@keyframes gz-fly { 0% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(0.3); } 70% { opacity: 1; transform: translate(0, 0) scale(1.18); } 100% { opacity: 1; transform: translate(0, 0) scale(1); } }
+@keyframes gz-fadein-r { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gz-pop { 0% { opacity: 0; transform: scale(0); } 60% { opacity: 1; transform: scale(1.25); } 100% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .gz-home:hover .gz-seat, .gz-home:hover .gz-ring, .gz-home:hover .gz-star { animation: none; }
+}
+
+/* ---- loading screen "つどう" (added 2026-07-09) — shown once per
+   session on the marketing homepage only (see index.html's own script
+   for the sessionStorage gate; the kit's own guidance explicitly warns
+   against showing this on every page transition). ---- */
+#gz-loader { position: fixed; inset: 0; z-index: 9999; background: var(--paper); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; transition: opacity 0.45s ease; }
+#gz-loader.gz-hide { opacity: 0; pointer-events: none; }
+#gz-loader .gz-mark { width: 130px; height: 130px; }
+#gz-loader .gz-seat { transform-box: fill-box; transform-origin: center; opacity: 0; animation: gz-loader-fly 0.7s cubic-bezier(0.22, 1.4, 0.36, 1) forwards; }
+#gz-loader .gz-seat:nth-of-type(1) { animation-delay: 0.15s; }
+#gz-loader .gz-seat:nth-of-type(2) { animation-delay: 0.27s; }
+#gz-loader .gz-seat:nth-of-type(3) { animation-delay: 0.39s; }
+#gz-loader .gz-seat:nth-of-type(4) { animation-delay: 0.51s; }
+#gz-loader .gz-seat:nth-of-type(5) { animation-delay: 0.63s; }
+#gz-loader .gz-seat:nth-of-type(6) { animation-delay: 0.75s; }
+#gz-loader .gz-ring { opacity: 0; animation: gz-fadein 0.6s ease 1.05s forwards; }
+#gz-loader .gz-star-pop { transform-box: fill-box; transform-origin: center; opacity: 0; animation: gz-loader-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 1.35s forwards; }
+#gz-loader .gz-star { transform-box: fill-box; transform-origin: center; animation: gz-twinkle 2.4s ease-in-out 2.35s infinite; }
+#gz-loader .gz-word { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; color: var(--ink); text-align: center; opacity: 0; animation: gz-rise 0.6s ease 1.75s forwards; }
+#gz-loader .gz-word .gz-za { color: var(--moss); }
+#gz-loader .gz-en { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 0.6rem; letter-spacing: 0.24em; color: var(--gold); font-weight: 700; margin-top: 4px; }
+#gz-loader .gz-wait { display: flex; gap: 6px; }
+#gz-loader .gz-wait i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-soft); opacity: 0.25; animation: gz-blink 1.2s ease infinite; }
+#gz-loader .gz-wait i:nth-child(2) { animation-delay: 0.2s; }
+#gz-loader .gz-wait i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes gz-loader-fly { 0% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(0.3); } 70% { opacity: 1; transform: translate(0, 0) scale(1.18); } 100% { opacity: 1; transform: translate(0, 0) scale(1); } }
+@keyframes gz-loader-pop { 0% { opacity: 0; transform: scale(0); } 60% { opacity: 1; transform: scale(1.25); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes gz-fadein { to { opacity: 1; } }
+@keyframes gz-twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.65; transform: scale(0.88); } }
+@keyframes gz-rise { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+@keyframes gz-blink { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
+@media (prefers-reduced-motion: reduce) {
+  #gz-loader .gz-seat, #gz-loader .gz-ring, #gz-loader .gz-star-pop,
+  #gz-loader .gz-star, #gz-loader .gz-word, #gz-loader .gz-wait i {
+    animation: none; opacity: 1; transform: none;
+  }
+}
+.mkt-nav { display: flex; gap: 26px; flex: 1; justify-content: flex-end; align-items: center; }
+.mkt-nav-link { font-size: 0.85rem; color: var(--paper); opacity: 0.8; text-decoration: none; }
+.mkt-nav-link:hover { opacity: 1; }
+.mkt-nav-link.active { opacity: 1; font-weight: 600; }
+
+/* ---- hero (dark gradient, shared by home + every sub-page) ---- */
+.mkt-hero { background: linear-gradient(135deg, var(--ink) 0%, #2a3a4a 100%); position: relative; overflow: hidden; }
+.mkt-hero::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, rgba(247,243,234,0.03) 0px, rgba(247,243,234,0.03) 1px, transparent 1px, transparent 9px); }
+.mkt-hero-inner { position: relative; max-width: 1080px; margin: 0 auto; padding: 88px 32px 96px; }
+.mkt-hero-inner.mkt-hero-sub { padding: 56px 32px 64px; }
+.mkt-eyebrow { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
+.mkt-hero h1 { font-weight: 700; color: var(--paper); letter-spacing: 0.01em; }
+
+/* ---- buttons — every instance in this design lives on a dark
+   background, so accent/ghost are both designed for that context. ---- */
+.mkt-btn { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: var(--radius-sm); font-family: var(--font-body); font-weight: 600; cursor: pointer; text-decoration: none; width: auto; transition: transform 140ms ease, background 140ms ease; }
+.mkt-btn:hover { transform: translateY(-1px); }
+.mkt-btn-sm { padding: 7px 16px; font-size: 0.83rem; }
+.mkt-btn-lg { padding: 13px 26px; font-size: 0.95rem; }
+.mkt-btn-accent { background: var(--moss); color: var(--paper); }
+.mkt-btn-accent:hover { background: var(--moss-deep); }
+.mkt-btn-ghost { background: rgba(247,243,234,0.12); color: var(--paper); border: 1.5px solid rgba(247,243,234,0.35); }
+.mkt-btn-ghost:hover { background: rgba(247,243,234,0.2); }
+.mkt-btn:disabled { cursor: not-allowed; }
+.mkt-btn:disabled:hover { transform: none; }
+
+/* ---- section header (title + dotted gold underline) — same visual
+   signature used throughout the hub, reproduced here self-contained ---- */
+.mkt-section-title { font-size: 1.5rem; font-weight: 700; color: var(--ink); position: relative; padding-bottom: var(--space-2, 8px); margin: 0 0 28px; }
+.mkt-section-title::after { content: ""; position: absolute; left: 0; bottom: 0; width: 56px; border-bottom: 2px dotted var(--gold); }
+
+/* ---- cards ---- */
+.mkt-card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 24px; }
+.mkt-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.mkt-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+/* ---- footer ---- */
+.mkt-footer { background: var(--ink); border-top: 1px solid rgba(247,243,234,0.1); }
+.mkt-footer-inner { max-width: 1080px; margin: 0 auto; padding: 40px 32px; text-align: center; }
+.mkt-footer-mark { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--paper); letter-spacing: 0.04em; }
+
+/* ---- responsive: not in the design pass (README explicitly flags this
+   as needing real design work), but a minimal single-column fallback
+   below 860px is cheap and better than a broken 4-up grid on a phone. ---- */
+@media (max-width: 860px) {
+  .mkt-grid-3, .mkt-grid-4 { grid-template-columns: 1fr; }
+  .mkt-hero-inner[style*="grid-template-columns"] { display: block !important; }
+}

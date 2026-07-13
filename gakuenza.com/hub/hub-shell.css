@@ -1,0 +1,142 @@
+/* hub-shell.css — shared page-frame + sidebar + card layout for every
+   hub/*.html page. Tokens themselves live in ../style.css; this is the
+   structural CSS built for the hub-home design (design_handoff_hub_home). */
+:root {
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-pill: 999px;
+  --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 48px;
+  --font-display: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+  /* added for the admin console (design_handoff_admin_console) */
+  --shadow-card: 0 2px 8px rgba(28,37,48,0.08), 0 8px 24px rgba(28,37,48,0.10);
+  --shadow-float: 0 4px 16px rgba(28,37,48,0.18);
+}
+body { margin: 0; background: #eae5d8; font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Segoe UI', Roboto, sans-serif; }
+
+.page-frame { max-width: 1120px; margin: 32px auto; background: var(--paper); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(28,37,48,0.12); display: flex; min-height: 820px; }
+
+.sidebar { width: 220px; flex: 0 0 auto; background: var(--ink); padding: 28px 20px; display: flex; flex-direction: column; }
+.brand-mark { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--paper); letter-spacing: 0.01em; }
+.brand-sub { font-size: 0.7rem; color: var(--paper); opacity: 0.55; letter-spacing: 0.03em; margin-top: 2px; }
+
+/* ---- animated home mark (がくえん座 logo kit, added 2026-07-09) ----
+   Adapted from the kit's home-button.html for this sidebar's dark (ink)
+   background — the kit's own demo assumes a light background, so the
+   dot colors here are the logo-dark.svg palette (paper-color dots, gold
+   ring/star unchanged), not a direct copy of the demo's light-mode SVG.
+   "つどう" (gathering) plays on hover, per the kit's animation guidance —
+   dot positions/count are never altered, only whether it's animating. */
+.gz-home { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; margin: -4px 0 0 -4px; padding: 4px; border-radius: 8px; transition: background 140ms ease; }
+.gz-home .brand-mark, .gz-home .brand-sub { white-space: nowrap; }
+.gz-home:hover { background: rgba(247,243,234,0.06); }
+.gz-home:focus-visible { outline: 2.5px solid var(--gold); outline-offset: 2px; }
+.gz-home svg { width: 30px; height: 30px; overflow: visible; flex: 0 0 auto; }
+.gz-home .gz-brandtext { display: flex; flex-direction: column; }
+.gz-home .brand-mark, .gz-home .brand-sub { margin: 0; }
+.gz-home .gz-seat { transform-box: fill-box; transform-origin: center; }
+.gz-home:hover .gz-seat { animation: gz-fly 0.45s cubic-bezier(0.22, 1.4, 0.36, 1) both; }
+.gz-home:hover .gz-seat:nth-of-type(1) { animation-delay: 0.03s; }
+.gz-home:hover .gz-seat:nth-of-type(2) { animation-delay: 0.09s; }
+.gz-home:hover .gz-seat:nth-of-type(3) { animation-delay: 0.15s; }
+.gz-home:hover .gz-seat:nth-of-type(4) { animation-delay: 0.21s; }
+.gz-home:hover .gz-seat:nth-of-type(5) { animation-delay: 0.27s; }
+.gz-home:hover .gz-seat:nth-of-type(6) { animation-delay: 0.33s; }
+.gz-home:hover .gz-ring { animation: gz-fadein-r 0.4s ease 0.45s both; }
+.gz-home .gz-star { transform-box: fill-box; transform-origin: center; }
+.gz-home:hover .gz-star { animation: gz-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.55s both; }
+@keyframes gz-fly { 0% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(0.3); } 70% { opacity: 1; transform: translate(0, 0) scale(1.18); } 100% { opacity: 1; transform: translate(0, 0) scale(1); } }
+@keyframes gz-fadein-r { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gz-pop { 0% { opacity: 0; transform: scale(0); } 60% { opacity: 1; transform: scale(1.25); } 100% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .gz-home:hover .gz-seat, .gz-home:hover .gz-ring, .gz-home:hover .gz-star { animation: none; }
+}
+
+.profile-block { display: flex; flex-direction: column; align-items: center; text-align: center; margin: 36px 0 32px; padding-bottom: 28px; border-bottom: 1px solid rgba(247,243,234,0.14); }
+.avatar { width: 56px; height: 56px; border-radius: 50%; background: #e8ede6; color: var(--moss-deep); font-family: var(--font-display); font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+.profile-name { margin-top: 10px; font-size: 0.88rem; color: var(--paper); }
+.profile-class { font-size: 0.72rem; color: var(--paper); opacity: 0.55; }
+
+.nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+
+/* ---- loading screen "つどう" (added 2026-07-09) — shown once, right
+   after a fresh login only (see hub/login.html + hub/index.html for the
+   sessionStorage-based trigger), not on every hub page visit. Token
+   variables (--ink, --paper, --moss, --gold, --ink-soft) come from
+   ../style.css, already loaded before this file — no need to redefine
+   them here the way marketing.css (a separate, self-contained context)
+   has to. ---- */
+#gz-loader { position: fixed; inset: 0; z-index: 9999; background: var(--paper); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; transition: opacity 0.45s ease; }
+#gz-loader.gz-hide { opacity: 0; pointer-events: none; }
+#gz-loader .gz-mark { width: 130px; height: 130px; }
+#gz-loader .gz-seat { transform-box: fill-box; transform-origin: center; opacity: 0; animation: gz-loader-fly 0.7s cubic-bezier(0.22, 1.4, 0.36, 1) forwards; }
+#gz-loader .gz-seat:nth-of-type(1) { animation-delay: 0.15s; }
+#gz-loader .gz-seat:nth-of-type(2) { animation-delay: 0.27s; }
+#gz-loader .gz-seat:nth-of-type(3) { animation-delay: 0.39s; }
+#gz-loader .gz-seat:nth-of-type(4) { animation-delay: 0.51s; }
+#gz-loader .gz-seat:nth-of-type(5) { animation-delay: 0.63s; }
+#gz-loader .gz-seat:nth-of-type(6) { animation-delay: 0.75s; }
+#gz-loader .gz-ring { opacity: 0; animation: gz-fadein 0.6s ease 1.05s forwards; }
+#gz-loader .gz-star-pop { transform-box: fill-box; transform-origin: center; opacity: 0; animation: gz-loader-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 1.35s forwards; }
+#gz-loader .gz-star { transform-box: fill-box; transform-origin: center; animation: gz-twinkle 2.4s ease-in-out 2.35s infinite; }
+#gz-loader .gz-word { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; color: var(--ink); text-align: center; opacity: 0; animation: gz-rise 0.6s ease 1.75s forwards; }
+#gz-loader .gz-word .gz-za { color: var(--moss); }
+#gz-loader .gz-en { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 0.6rem; letter-spacing: 0.24em; color: var(--gold); font-weight: 700; margin-top: 4px; }
+#gz-loader .gz-wait { display: flex; gap: 6px; }
+#gz-loader .gz-wait i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-soft); opacity: 0.25; animation: gz-blink 1.2s ease infinite; }
+#gz-loader .gz-wait i:nth-child(2) { animation-delay: 0.2s; }
+#gz-loader .gz-wait i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes gz-loader-fly { 0% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(0.3); } 70% { opacity: 1; transform: translate(0, 0) scale(1.18); } 100% { opacity: 1; transform: translate(0, 0) scale(1); } }
+@keyframes gz-loader-pop { 0% { opacity: 0; transform: scale(0); } 60% { opacity: 1; transform: scale(1.25); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes gz-fadein { to { opacity: 1; } }
+@keyframes gz-twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.65; transform: scale(0.88); } }
+@keyframes gz-rise { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+@keyframes gz-blink { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
+@media (prefers-reduced-motion: reduce) {
+  #gz-loader .gz-seat, #gz-loader .gz-ring, #gz-loader .gz-star-pop,
+  #gz-loader .gz-star, #gz-loader .gz-word, #gz-loader .gz-wait i {
+    animation: none; opacity: 1; transform: none;
+  }
+}
+.nav-item { display: block; padding: 9px 12px; border-radius: var(--radius-sm); color: var(--paper); opacity: 0.75; font-size: 0.85rem; text-decoration: none; }
+.nav-item.active { background: rgba(247,243,234,0.14); opacity: 1; font-weight: 600; }
+
+.hub-btn { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; transition: transform 140ms ease, background 140ms ease; }
+.hub-btn:hover { transform: translateY(-1px); }
+.btn-ghost { background: rgba(247,243,234,0.14); color: var(--paper); width: 100%; padding: 8px 16px; font-size: 0.8rem; }
+.btn-ghost:hover { background: rgba(247,243,234,0.22); }
+
+.main { flex: 1; background: var(--paper); padding: 36px 36px 48px; }
+
+.greeting-title { font-family: var(--font-display); font-size: 1.5rem; color: var(--ink); margin: 0 0 4px; font-weight: 700; }
+.greeting-date { font-size: 0.82rem; color: var(--ink-soft); margin: 0; }
+
+.hub-section { margin-bottom: 36px; }
+.section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-5); }
+.section-title { font-family: var(--font-display); font-size: 1.5rem; margin: 0; position: relative; padding-bottom: var(--space-2); font-weight: 700; color: var(--ink); }
+.section-title::after { content: ""; position: absolute; left: 0; bottom: 0; width: 56px; border-bottom: 2px dotted var(--gold); }
+
+.hub-card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-5); cursor: pointer; transition: transform 140ms ease, box-shadow 140ms ease; }
+.hub-card:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(28,37,48,0.08); }
+
+.recent-list { display: flex; flex-direction: column; gap: 10px; }
+.recent-row { display: flex; align-items: center; gap: 16px; }
+.subject-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.recent-title { font-family: var(--font-display); font-weight: 700; font-size: 0.92rem; color: var(--ink); }
+.recent-title-en { font-size: 0.82rem; color: var(--ink-soft); }
+.recent-meta { font-size: 0.74rem; color: var(--ink-soft); margin-top: 2px; }
+.recent-progress { width: 160px; flex: 0 0 auto; }
+
+.progress-track { width: 100%; height: 6px; border-radius: var(--radius-pill); background: var(--paper-dim); overflow: hidden; }
+.progress-fill { height: 100%; border-radius: var(--radius-pill); background: var(--moss); }
+.progress-pct { text-align: right; font-size: 0.74rem; color: var(--ink-soft); margin-top: 4px; }
+
+.subject-group { margin-bottom: 24px; }
+.subject-label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.subject-label span.name { font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+.subject-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.module-title { font-family: var(--font-display); font-weight: 700; font-size: 0.92rem; color: var(--ink); margin-bottom: 2px; }
+.module-meta { font-size: 0.74rem; color: var(--ink-soft); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+.hub-pill-badge { display: inline-block; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 9px; border-radius: var(--radius-pill); line-height: 1.4; }
+.badge-done { background: #e8ede6; color: var(--moss-deep); }
+.badge-progress { background: var(--gold); color: var(--ink); }
+
+.calm-msg { color: var(--ink-soft); font-size: 0.85rem; padding: 12px 0; }

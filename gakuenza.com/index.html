@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="がくえん座 — 学校向けの、小さくて正直な学習プラットフォーム。">
+<title>がくえん座 — 学校向け学習プラットフォーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="marketing.css">
+</head>
+<body>
+
+<!-- がくえん座 ロード画面「つどう」— shown once per browser session, only
+     on this page (the marketing homepage = a visitor's first load), per
+     the kit's own guidance against showing it on every page transition.
+     document.write is used deliberately here, not carelessly: it's the
+     one legitimate way to conditionally emit blocking content before
+     first paint on a static page with no server-side templating — the
+     alternative (always render + JS-hide) risks a visible flash. -->
+<script>
+  if (!sessionStorage.getItem('gz-loader-shown')) {
+    document.write(
+      '<div id="gz-loader" role="status" aria-label="読み込み中">' +
+        '<svg class="gz-mark" viewBox="0 0 100 100" style="overflow:visible;">' +
+          '<circle class="gz-seat" style="--fx:0px;--fy:-57px" cx="50" cy="20" r="5" fill="#4A6B4F"/>' +
+          '<circle class="gz-seat" style="--fx:49.4px;--fy:-28.5px" cx="76" cy="35" r="5" fill="#1C2530"/>' +
+          '<circle class="gz-seat" style="--fx:49.4px;--fy:28.5px" cx="76" cy="65" r="5" fill="#B5572E"/>' +
+          '<circle class="gz-seat" style="--fx:0px;--fy:57px" cx="50" cy="80" r="5" fill="#4A6B4F"/>' +
+          '<circle class="gz-seat" style="--fx:-49.4px;--fy:28.5px" cx="24" cy="65" r="5" fill="#1C2530"/>' +
+          '<circle class="gz-seat" style="--fx:-49.4px;--fy:-28.5px" cx="24" cy="35" r="5" fill="#7A6A53"/>' +
+          '<circle class="gz-ring" cx="50" cy="50" r="30" fill="none" stroke="#C9A24B" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.1 7.4"/>' +
+          '<g class="gz-star-pop"><path class="gz-star" d="M50 41.5 Q51.5 48.5 58.5 50 Q51.5 51.5 50 58.5 Q48.5 51.5 41.5 50 Q48.5 48.5 50 41.5 Z" fill="#C9A24B"/></g>' +
+        '</svg>' +
+        '<div class="gz-word">がくえん<span class="gz-za">座</span><div class="gz-en">GAKUENZA</div></div>' +
+        '<div class="gz-wait"><i></i><i></i><i></i></div>' +
+      '</div>'
+    );
+    sessionStorage.setItem('gz-loader-shown', '1');
+  }
+  window.GzLoader = {
+    hide() {
+      const el = document.getElementById('gz-loader');
+      if (!el) return;
+      el.classList.add('gz-hide');
+      setTimeout(() => el.remove(), 500);
+    }
+  };
+  // No real async loading on this static page — let the animation play
+  // its natural ~2s cycle (per the kit's guide) before closing, rather
+  // than tying it to a load event that would fire almost instantly.
+  //
+  // Defensive: don't rely solely on the DOMContentLoaded event firing —
+  // if it's already fired by the time this listener registers (this
+  // script runs this early specifically to avoid that, but the check
+  // costs nothing and closes off an entire class of "loader stuck
+  // forever" bug if that assumption is ever wrong), schedule the hide
+  // immediately instead of waiting for an event that will never come.
+  function scheduleLoaderHide() { setTimeout(() => GzLoader.hide(), 2000); }
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', scheduleLoaderHide);
+  } else {
+    scheduleLoaderHide();
+  }
+</script>
+
+<header class="mkt-header">
+  <div class="mkt-header-inner">
+    <a href="index.html" class="gz-home" title="ホームへ">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="gz-seat" style="--fx:0px;--fy:-48px"      cx="50" cy="20" r="6" fill="#F7F3EA"/>
+        <circle class="gz-seat" style="--fx:41.6px;--fy:-24px"   cx="76" cy="35" r="6" fill="#F7F3EA"/>
+        <circle class="gz-seat" style="--fx:41.6px;--fy:24px"    cx="76" cy="65" r="6" fill="#F7F3EA"/>
+        <circle class="gz-seat" style="--fx:0px;--fy:48px"       cx="50" cy="80" r="6" fill="#F7F3EA"/>
+        <circle class="gz-seat" style="--fx:-41.6px;--fy:24px"   cx="24" cy="65" r="6" fill="#F7F3EA"/>
+        <circle class="gz-seat" style="--fx:-41.6px;--fy:-24px"  cx="24" cy="35" r="6" fill="#F7F3EA"/>
+        <circle class="gz-ring" cx="50" cy="50" r="30" fill="none" stroke="#C9A24B" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="0.1 9"/>
+        <path class="gz-star" d="M50 40.2 Q51.7 48.3 59.8 50 Q51.7 51.7 50 59.8 Q48.3 51.7 40.2 50 Q48.3 48.3 50 40.2 Z" fill="#C9A24B"/>
+      </svg>
+      <span class="mkt-brand">がくえん座</span>
+    </a>
+    <nav class="mkt-nav">
+      <a href="features.html" class="mkt-nav-link">特長</a>
+      <a href="modules.html" class="mkt-nav-link">モジュール</a>
+      <a href="onboarding.html" class="mkt-nav-link">導入の流れ</a>
+      <a href="hub/login.html" class="mkt-nav-link">ログイン</a>
+      <!-- Inert on purpose — pricing/contact flow is out of scope per the
+           design handoff. Flagged as a follow-up, not silently wired to
+           a placeholder destination. -->
+      <button class="mkt-btn mkt-btn-accent mkt-btn-sm" type="button" disabled title="準備中">資料請求</button>
+    </nav>
+  </div>
+</header>
+
+<section class="mkt-hero">
+  <div class="mkt-hero-inner" style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:56px;align-items:center;">
+    <div>
+      <div class="mkt-eyebrow">学校向け学習プラットフォーム</div>
+      <h1 style="font-size:clamp(2rem, 3.4vw, 2.9rem);line-height:1.35;margin:0 0 20px;">毎日の学びが、<br>ちゃんと続く。</h1>
+      <p style="font-size:0.98rem;line-height:1.9;color:var(--paper);opacity:0.82;margin:0 0 32px;max-width:30em;">がくえん座は、ドリル型の学習モジュールをクラスごとに割り当て、一人ひとりの進み具合をそのまま見られる、小さくて正直な学習プラットフォームです。</p>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <button class="mkt-btn mkt-btn-accent mkt-btn-lg" type="button" disabled title="準備中">資料請求</button>
+        <a href="modules.html" class="mkt-btn mkt-btn-ghost mkt-btn-lg">モジュールを見る</a>
+      </div>
+      <div style="margin-top:22px;font-size:0.78rem;color:var(--paper);opacity:0.55;">ブラウザだけで動きます · アプリのインストール不要</div>
+    </div>
+
+    <!-- product miniature: the real student hub, shrunk -->
+    <div style="background:var(--paper);border-radius:var(--radius-lg);box-shadow:var(--shadow-float);overflow:hidden;transform:rotate(0.6deg);">
+      <div style="display:flex;">
+        <div style="width:72px;flex:0 0 auto;background:var(--ink);padding:16px 10px;display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.6rem;color:var(--paper);">がくえん座</div>
+          <div style="width:30px;height:30px;border-radius:50%;background:#e8ede6;color:var(--moss-deep);font-family:var(--font-display);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;">ゆ</div>
+          <div style="width:48px;height:6px;border-radius:999px;background:rgba(247,243,234,0.25);"></div>
+          <div style="width:48px;height:6px;border-radius:999px;background:rgba(247,243,234,0.12);"></div>
+          <div style="width:48px;height:6px;border-radius:999px;background:rgba(247,243,234,0.12);"></div>
+        </div>
+        <div style="flex:1;padding:18px 20px;">
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:2px;">ゆいさん、おかえりなさい</div>
+          <div style="font-size:0.6rem;color:var(--ink-soft);margin-bottom:14px;">2026年7月9日(木)</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:var(--paper);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:9px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#c9622a;flex:0 0 auto;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-family:var(--font-display);font-weight:700;font-size:0.66rem;color:var(--ink);">英検3級 対策ドリル</div>
+                <div style="font-size:0.56rem;color:var(--ink-soft);">3時間前にアクセス</div>
+              </div>
+              <div style="width:64px;">
+                <div style="height:5px;border-radius:999px;background:var(--paper-dim);overflow:hidden;"><div style="height:100%;width:78%;background:var(--moss);border-radius:999px;"></div></div>
+              </div>
+            </div>
+            <div style="background:var(--paper);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:9px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#4a6fa5;flex:0 0 auto;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-family:var(--font-display);font-weight:700;font-size:0.66rem;color:var(--ink);">算数 基礎ドリル</div>
+                <div style="font-size:0.56rem;color:var(--ink-soft);">昨日アクセス</div>
+              </div>
+              <div style="width:64px;">
+                <div style="height:5px;border-radius:999px;background:var(--paper-dim);overflow:hidden;"><div style="height:100%;width:34%;background:var(--moss);border-radius:999px;"></div></div>
+              </div>
+            </div>
+            <div style="background:var(--paper);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:9px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#7a6a53;flex:0 0 auto;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-family:var(--font-display);font-weight:700;font-size:0.66rem;color:var(--ink);">漢字マスタードリル</div>
+                <div style="font-size:0.56rem;color:var(--ink-soft);">3日前にアクセス</div>
+              </div>
+              <div style="display:flex;align-items:center;">
+                <span style="font-size:0.52rem;font-weight:700;background:#e8ede6;color:var(--moss-deep);border-radius:999px;padding:2px 7px;">完了</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mkt-wrap" style="padding-top:80px;padding-bottom:24px;">
+  <h2 class="mkt-section-title">がくえん座の考え方</h2>
+  <div class="mkt-grid-3">
+    <div class="mkt-card">
+      <div style="width:10px;height:10px;border-radius:50%;background:var(--moss);margin-bottom:14px;"></div>
+      <h3 style="font-size:1.02rem;margin:0 0 10px;">割り当ては、クラス単位で</h3>
+      <p style="font-size:0.86rem;line-height:1.8;color:var(--ink-soft);">学校で使うモジュールを選び、クラスに割り当てるだけ。期限をつけても、つけなくても。先生の準備は数分で終わります。</p>
+    </div>
+    <div class="mkt-card">
+      <div style="width:10px;height:10px;border-radius:50%;background:var(--gold);margin-bottom:14px;"></div>
+      <h3 style="font-size:1.02rem;margin:0 0 10px;">進み具合が、そのまま見える</h3>
+      <p style="font-size:0.86rem;line-height:1.8;color:var(--ink-soft);">完了・進行中・未着手。飾らない進捗表示で、声をかけるべき子がひと目でわかります。数字の水増しはしません。</p>
+    </div>
+    <div class="mkt-card">
+      <div style="width:10px;height:10px;border-radius:50%;background:var(--clay);margin-bottom:14px;"></div>
+      <h3 style="font-size:1.02rem;margin:0 0 10px;">子どもを引き止めない</h3>
+      <p style="font-size:0.86rem;line-height:1.8;color:var(--ink-soft);">連続ログインの煽りも、通知の嵐もありません。やるべきことを終えたら、ちゃんと「おしまい」になる設計です。</p>
+    </div>
+  </div>
+</section>
+
+<section class="mkt-wrap" style="padding-top:64px;padding-bottom:24px;">
+  <h2 class="mkt-section-title">学習モジュール</h2>
+  <p style="font-size:0.9rem;line-height:1.8;color:var(--ink-soft);margin:-8px 0 28px;max-width:44em;">教科ごとのドリル型モジュールを、学校単位で有効にして使います。必要なものだけを選べるので、画面が課題であふれることはありません。</p>
+  <div class="mkt-grid-4">
+    <div class="mkt-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:9px;height:9px;border-radius:50%;background:#c9622a;"></div><span style="font-size:0.78rem;font-weight:600;">英語 · English</span></div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:0.92rem;margin-bottom:4px;">英検3級 対策ドリル</div>
+      <div style="font-size:0.74rem;color:var(--ink-soft);">42問 · 語彙とリスニング</div>
+    </div>
+    <div class="mkt-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:9px;height:9px;border-radius:50%;background:#4a6fa5;"></div><span style="font-size:0.78rem;font-weight:600;">算数 · Math</span></div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:0.92rem;margin-bottom:4px;">算数 基礎ドリル</div>
+      <div style="font-size:0.74rem;color:var(--ink-soft);">30問 · 計算と文章題</div>
+    </div>
+    <div class="mkt-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:9px;height:9px;border-radius:50%;background:#7a6a53;"></div><span style="font-size:0.78rem;font-weight:600;">国語 · Japanese</span></div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:0.92rem;margin-bottom:4px;">漢字マスタードリル</div>
+      <div style="font-size:0.74rem;color:var(--ink-soft);">学年別 · 読み書き両方</div>
+    </div>
+    <div class="mkt-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:9px;height:9px;border-radius:50%;background:#5c8a3a;"></div><span style="font-size:0.78rem;font-weight:600;">理科 · Science</span></div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:0.92rem;margin-bottom:4px;">理科 実験ノート</div>
+      <div style="font-size:0.74rem;color:var(--ink-soft);">観察記録と確認クイズ</div>
+    </div>
+  </div>
+  <div style="margin-top:16px;font-size:0.8rem;color:var(--ink-soft);">モジュールは順次追加中です。<a href="modules.html">一覧を見る →</a></div>
+</section>
+
+<section class="mkt-wrap" style="padding-top:64px;padding-bottom:32px;">
+  <h2 class="mkt-section-title">導入の流れ</h2>
+  <div class="mkt-grid-3">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--gold);">1</div>
+      <h3 style="font-size:0.98rem;margin:0;">学校とクラスをつくる</h3>
+      <p style="font-size:0.84rem;line-height:1.8;color:var(--ink-soft);">管理画面から学校を登録し、クラスと先生を追加します。名簿はその場で入力するだけです。</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--gold);">2</div>
+      <h3 style="font-size:0.98rem;margin:0;">生徒に合言葉をわたす</h3>
+      <p style="font-size:0.84rem;line-height:1.8;color:var(--ink-soft);">生徒を追加すると、初回ログイン用のパスワードが一度だけ表示されます。紙にひかえて手渡すだけ。メールアドレスは要りません。</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:1.6rem;color:var(--gold);">3</div>
+      <h3 style="font-size:0.98rem;margin:0;">割り当てて、見守る</h3>
+      <p style="font-size:0.84rem;line-height:1.8;color:var(--ink-soft);">モジュールをクラスに割り当てれば準備完了。あとは子どもたちの進み具合を、静かに見守れます。</p>
+    </div>
+  </div>
+</section>
+
+<section class="mkt-hero" style="margin-top:48px;">
+  <div class="mkt-hero-inner" style="text-align:center;padding:72px 32px;">
+    <h2 style="font-size:1.7rem;margin:0 0 14px;">まずは、1クラスから。</h2>
+    <p style="font-size:0.92rem;line-height:1.8;color:var(--paper);opacity:0.78;margin:0 auto 30px;max-width:34em;">導入のご相談から、小さな試験運用まで。学校の規模に合わせてご案内します。</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button class="mkt-btn mkt-btn-accent mkt-btn-lg" type="button" disabled title="準備中">資料請求</button>
+      <button class="mkt-btn mkt-btn-ghost mkt-btn-lg" type="button" disabled title="準備中">お問い合わせ</button>
+    </div>
+  </div>
+</section>
+
+<footer class="mkt-footer">
+  <div class="mkt-footer-inner">
+    <span class="mkt-footer-mark">継続は力なり</span>
+  </div>
+</footer>
+
+</body>
+</html>

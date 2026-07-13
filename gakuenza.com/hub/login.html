@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ログイン — がくえん座</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Deliberately NOT loading ../style.css — this is the fourth time
+     its generic `button { width:100% }` rule has caused a real,
+     shipped bug (the show/hide password toggle stretching to fill the
+     input's full width instead of sizing to its own content — proven
+     directly: the button's rendered width matched the input's width
+     pixel-for-pixel). style.css also has bare `label {}` and `input,
+     select {}` rules that would just as easily interfere with
+     anything else on this page. Same reasoning as marketing.css's own
+     header comment: token VALUES are copied here, not inherited via
+     var() from a shared file, so this page has zero cross-file
+     dependency and nothing here can be silently changed by an edit to
+     style.css or vice versa. */
+  :root {
+    --ink: #1c2530;
+    --ink-soft: #3a4555;
+    --paper: #f7f3ea;
+    --paper-dim: #efe9db;
+    --border: #d8d2c2;
+    --moss: #4a6b4f;
+    --moss-deep: #34503a;
+    --gold: #c9a24b;
+    --error: #a23b2e;
+    --radius-sm: 6px;
+    --radius-lg: 16px;
+    --font-display: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Segoe UI", sans-serif; }
+  .login-page { min-height: 100vh; display: grid; place-items: center; padding: 48px 16px; box-sizing: border-box; }
+  .login-stack { display: flex; flex-direction: column; align-items: center; }
+  .login-mark { position: relative; width: 64px; height: 64px; }
+  .login-mark .seat { position: absolute; width: 11px; height: 11px; border-radius: 999px; }
+  .login-mark .star { position: absolute; inset: 0; display: grid; place-items: center; color: var(--gold); font-size: 20px; }
+  .login-wordmark { font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; color: var(--ink); margin: 12px 0 28px; letter-spacing: 0.02em; }
+  .login-card { width: 400px; max-width: 90vw; background: #fffcf5; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px 36px; box-sizing: border-box; }
+  .login-heading { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; color: var(--ink); }
+  .login-rule { width: 56px; border-bottom: 2px dotted var(--gold); margin: 8px 0 24px; }
+  .login-fields { display: flex; flex-direction: column; gap: 18px; }
+  .login-field label { display: block; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.05em; color: var(--ink-soft); margin-bottom: 6px; }
+  .login-field select, .login-field input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fdfaf3; font-size: 0.95rem; color: var(--ink); font-family: inherit; }
+  .login-field select { padding-right: 32px; appearance: none; }
+  .select-wrap { position: relative; }
+  .select-wrap .chev { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-soft); pointer-events: none; font-size: 0.8rem; }
+  .pw-wrap { position: relative; }
+  .pw-wrap input { padding-right: 64px; }
+  .pw-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: auto; background: var(--paper-dim); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 9px; font-size: 0.72rem; color: var(--ink-soft); font-family: inherit; cursor: pointer; white-space: nowrap; }
+  .login-submit { width: 100%; padding: 12px; background: var(--moss); color: #fff; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 1rem; font-family: inherit; cursor: pointer; margin-top: 4px; transition: background 140ms, transform 140ms; }
+  .login-submit:hover { background: var(--moss-deep); transform: translateY(-1px); }
+  .login-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .login-switch { margin-top: 20px; font-size: 0.85rem; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+  .login-err { display: none; background: rgba(162,59,46,0.08); border: 1px solid rgba(162,59,46,0.25); color: var(--error); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.82rem; margin-bottom: 16px; }
+  .login-test-signup { display: block; margin-top: 16px; font-size: 0.72rem; color: var(--ink-soft); opacity: 0.7; text-decoration: underline; text-underline-offset: 2px; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+  /* Google sign-in (staff view only). Self-contained like everything else
+     on this page — no width:100% leaking in from a shared stylesheet. The
+     button is explicitly width:100%, matching .login-submit, on purpose. */
+  .login-or { display: flex; align-items: center; gap: 10px; margin: 22px 0 6px; color: var(--ink-soft); font-size: 0.72rem; letter-spacing: 0.05em; }
+  .login-or::before, .login-or::after { content: ""; flex: 1; border-bottom: 1px solid var(--border); }
+  .login-google { width: 100%; padding: 11px; background: #fff; color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius-sm); font-weight: 600; font-size: 0.92rem; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: background 140ms; }
+  .login-google:hover { background: var(--paper-dim); }
+  .login-google:disabled { opacity: 0.6; cursor: not-allowed; }
+  .login-google .g-mark { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 999px; font-family: var(--font-display); font-weight: 700; font-size: 0.7rem; color: var(--moss-deep); }
+</style>
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-stack">
+    <div class="login-mark">
+      <span class="seat" style="background:#c9622a; left:26.5px; top:3px;"></span>
+      <span class="seat" style="background:#4a6fa5; left:46.8px; top:14.8px;"></span>
+      <span class="seat" style="background:#5c8a3a; left:46.8px; top:38.2px;"></span>
+      <span class="seat" style="background:#a67c3d; left:26.5px; top:50px;"></span>
+      <span class="seat" style="background:#4a8a8a; left:6.2px; top:38.2px;"></span>
+      <span class="seat" style="background:#7a6a53; left:6.2px; top:14.8px;"></span>
+      <span class="star">★</span>
+    </div>
+    <div class="login-wordmark">がくえん座</div>
+
+    <div class="login-card">
+      <div id="view-student">
+        <div class="login-heading">おかえりなさい</div>
+        <div class="login-rule"></div>
+        <div class="login-err" id="err-student"></div>
+        <form id="form-student">
+          <div class="login-fields">
+            <div class="login-field">
+              <label for="student-school">学校</label>
+              <div class="select-wrap">
+                <select id="student-school" required><option value="">読み込み中…</option></select>
+                <span class="chev">⌄</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <div class="login-field" style="flex:1;">
+                <label for="student-year">学年</label>
+                <div class="select-wrap">
+                  <select id="student-year" required disabled><option value="">—</option></select>
+                  <span class="chev">⌄</span>
+                </div>
+              </div>
+              <div class="login-field" style="flex:1;">
+                <label for="student-gumi">組</label>
+                <div class="select-wrap">
+                  <select id="student-gumi" required disabled><option value="">—</option></select>
+                  <span class="chev">⌄</span>
+                </div>
+              </div>
+            </div>
+            <!-- Special-education classes have no year/gumi, so they
+                 can't be reached through the two selects above — same
+                 dual-path structure as class-detail.html's own picker.
+                 Hidden entirely when a school has none. -->
+            <div class="login-field" id="student-special-wrap" style="display:none;">
+              <label for="student-special">特別支援学級など</label>
+              <div class="select-wrap">
+                <select id="student-special"><option value="">—</option></select>
+                <span class="chev">⌄</span>
+              </div>
+            </div>
+            <div class="login-field">
+              <label for="student-number">出席番号</label>
+              <input type="text" id="student-number" inputmode="numeric" placeholder="例：12" autocomplete="off" required disabled>
+            </div>
+            <div class="login-field">
+              <label for="student-password">パスワード</label>
+              <div class="pw-wrap">
+                <input type="password" id="student-password" autocomplete="current-password" required>
+                <button type="button" class="pw-toggle" data-target="student-password">表示</button>
+              </div>
+            </div>
+            <button type="submit" class="login-submit" id="student-submit">ログイン</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="view-staff" style="display:none;">
+        <div class="login-heading" id="staff-heading">教職員ログイン</div>
+        <div class="login-rule"></div>
+        <div class="login-err" id="err-staff"></div>
+        <form id="form-staff">
+          <div class="login-fields">
+            <div class="login-field">
+              <label for="staff-email">メールアドレス</label>
+              <input type="email" id="staff-email" autocomplete="email" required>
+            </div>
+            <div class="login-field">
+              <label for="staff-password">パスワード</label>
+              <div class="pw-wrap">
+                <input type="password" id="staff-password" autocomplete="current-password" required>
+                <button type="button" class="pw-toggle" data-target="staff-password">表示</button>
+              </div>
+            </div>
+            <button type="submit" class="login-submit" id="staff-submit">ログイン</button>
+          </div>
+        </form>
+        <div class="login-or">または</div>
+        <button type="button" class="login-google" id="btn-google">
+          <span class="g-mark">G</span>Google アカウントでログイン
+        </button>
+        <button type="button" class="login-test-signup" id="toggle-signup">はじめての方はこちら（テスト用アカウント作成）</button>
+      </div>
+    </div>
+
+    <button type="button" class="login-switch" id="switch-view">教職員の方はこちら</button>
+  </div>
+</div>
+
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(async function () {
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const viewStudent = document.getElementById('view-student');
+  const viewStaff = document.getElementById('view-staff');
+  const switchBtn = document.getElementById('switch-view');
+  let onStaffView = false;
+
+  function setView(staff) {
+    onStaffView = staff;
+    viewStudent.style.display = staff ? 'none' : 'block';
+    viewStaff.style.display = staff ? 'block' : 'none';
+    switchBtn.textContent = staff ? '生徒はこちら' : '教職員の方はこちら';
+  }
+  switchBtn.addEventListener('click', () => setView(!onStaffView));
+
+  document.querySelectorAll('.pw-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.textContent = showing ? '表示' : '非表示';
+    });
+  });
+
+  function showErr(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function clearErr(id) {
+    document.getElementById(id).style.display = 'none';
+  }
+
+  function goToHub() {
+    sessionStorage.setItem('gz-show-hub-loader', '1');
+    window.location.href = 'index.html';
+  }
+
+  // ── Google OAuth return handling ────────────────────────────────────
+  // Implicit flow lands back on THIS page with either tokens or an error
+  // in the URL hash. On tokens: detectSessionInUrl (on by default) parses
+  // them, so getSession() resolves to the session -> forward to the hub.
+  // On error (e.g. the before-user-created hook rejecting an unregistered
+  // Google account): surface it calmly on the staff view. Only OAuth
+  // returns are handled here; a normal visit with no hash is left alone,
+  // preserving the existing behavior of showing the login form.
+  {
+    const hp = new URLSearchParams(window.location.hash.slice(1));
+    const qp = new URLSearchParams(window.location.search);
+    const rawErr = hp.get('error_description') || qp.get('error_description')
+                || hp.get('error') || qp.get('error');
+    const isOAuthReturn = hp.has('access_token') || !!rawErr;
+    if (rawErr) {
+      setView(true);
+      showErr('err-staff', decodeURIComponent(rawErr).replace(/\+/g, ' '));
+      history.replaceState(null, '', window.location.pathname);
+    } else if (isOAuthReturn) {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) { history.replaceState(null, '', window.location.pathname); goToHub(); return; }
+    }
+  }
+
+  const schoolSelect = document.getElementById('student-school');
+  const yearSelect = document.getElementById('student-year');
+  const gumiSelect = document.getElementById('student-gumi');
+  const specialSelect = document.getElementById('student-special');
+  const specialWrap = document.getElementById('student-special-wrap');
+  const numberInput = document.getElementById('student-number');
+  let classesForSchool = [];
+  let resolvedClassId = '';
+
+  function setNumberEnabled(enabled) {
+    numberInput.disabled = !enabled;
+    if (!enabled) numberInput.value = '';
+  }
+
+  // Mirrors class-detail.html's own school -> year -> gumi cascading
+  // picker exactly (including the special-ed side path) — same shape,
+  // just reading from the public_classes view instead of the real
+  // (staff-only) classes table, since there's no session yet here.
+  async function loadClassesForSchool(schoolId) {
+    yearSelect.innerHTML = '<option value="">—</option>';
+    gumiSelect.innerHTML = '<option value="">—</option>';
+    yearSelect.disabled = true;
+    gumiSelect.disabled = true;
+    resolvedClassId = '';
+    setNumberEnabled(false);
+
+    const { data, error } = await sb
+      .from('public_classes').select('id, year, gumi, name')
+      .eq('school_id', schoolId).order('year').order('gumi');
+    classesForSchool = error ? [] : (data || []);
+
+    const years = [...new Set(classesForSchool.filter(c => c.year != null).map(c => c.year))].sort((a, b) => a - b);
+    yearSelect.innerHTML = '<option value="">—</option>' + years.map(y => `<option value="${y}">${y}年</option>`).join('');
+    yearSelect.disabled = years.length === 0;
+
+    const specials = classesForSchool.filter(c => c.year == null);
+    if (specials.length) {
+      specialWrap.style.display = '';
+      specialSelect.innerHTML = '<option value="">—</option>' + specials.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    } else {
+      specialWrap.style.display = 'none';
+      specialSelect.innerHTML = '<option value="">—</option>';
+    }
+  }
+
+  yearSelect.addEventListener('change', () => {
+    const year = Number(yearSelect.value);
+    resolvedClassId = '';
+    setNumberEnabled(false);
+    if (!year) {
+      gumiSelect.innerHTML = '<option value="">—</option>';
+      gumiSelect.disabled = true;
+      return;
+    }
+    const gumis = classesForSchool.filter(c => c.year === year);
+    gumiSelect.innerHTML = '<option value="">—</option>' + gumis.map(c => `<option value="${c.id}">${c.gumi}組</option>`).join('');
+    gumiSelect.disabled = false;
+  });
+  gumiSelect.addEventListener('change', () => {
+    resolvedClassId = gumiSelect.value;
+    setNumberEnabled(!!resolvedClassId);
+    if (resolvedClassId) { specialSelect.value = ''; }
+  });
+  specialSelect.addEventListener('change', () => {
+    resolvedClassId = specialSelect.value;
+    setNumberEnabled(!!resolvedClassId);
+    if (resolvedClassId) { yearSelect.value = ''; gumiSelect.innerHTML = '<option value="">—</option>'; gumiSelect.disabled = true; }
+  });
+  schoolSelect.addEventListener('change', () => loadClassesForSchool(schoolSelect.value));
+
+  try {
+    const { data: schools, error } = await sb.from('public_schools').select('id, name').order('name');
+    if (error || !schools || !schools.length) {
+      schoolSelect.innerHTML = '<option value="">学校が見つかりません</option>';
+    } else {
+      schoolSelect.innerHTML = schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      await loadClassesForSchool(schools[0].id);
+    }
+  } catch (e) {
+    schoolSelect.innerHTML = '<option value="">読み込みに失敗しました</option>';
+  }
+
+  document.getElementById('form-student').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErr('err-student');
+    const student_number = document.getElementById('student-number').value.trim();
+    const password = document.getElementById('student-password').value;
+    if (!resolvedClassId) { showErr('err-student', '学年・組を選択してください。'); return; }
+
+    const submitBtn = document.getElementById('student-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'ログイン中…';
+    try {
+      const res = await fetch(`${cfg.supabaseUrl}/functions/v1/student-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ class_id: resolvedClassId, student_number, password }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok || !body.session) {
+        showErr('err-student', body.error || 'ログインできませんでした。');
+        return;
+      }
+      const { error: setErr } = await sb.auth.setSession({
+        access_token: body.session.access_token,
+        refresh_token: body.session.refresh_token,
+      });
+      if (setErr) {
+        showErr('err-student', 'ログインできませんでした。');
+        return;
+      }
+      goToHub();
+    } catch (err) {
+      showErr('err-student', 'ネットワークエラーが発生しました。もう一度お試しください。');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'ログイン';
+    }
+  });
+
+  let staffSignupMode = false;
+  document.getElementById('toggle-signup').addEventListener('click', () => {
+    staffSignupMode = !staffSignupMode;
+    document.getElementById('staff-heading').textContent = staffSignupMode ? 'アカウント作成（テスト用）' : '教職員ログイン';
+    document.getElementById('staff-submit').textContent = staffSignupMode ? '作成する' : 'ログイン';
+    document.getElementById('toggle-signup').textContent = staffSignupMode ? 'すでにアカウントをお持ちの方はこちら' : 'はじめての方はこちら（テスト用アカウント作成）';
+    clearErr('err-staff');
+  });
+
+  document.getElementById('form-staff').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErr('err-staff');
+    const email = document.getElementById('staff-email').value;
+    const password = document.getElementById('staff-password').value;
+
+    const { data, error } = staffSignupMode
+      ? await sb.auth.signUp({ email, password })
+      : await sb.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      showErr('err-staff', (staffSignupMode ? '作成に失敗しました：' : 'ログインに失敗しました：') + error.message);
+      return;
+    }
+    if (!data.session) {
+      showErr('err-staff', 'メールアドレスの確認が必要です（このテスト環境では自動確認が有効なはずです）。');
+      return;
+    }
+    goToHub();
+  });
+
+  // Staff-only Google sign-in. Redirects back to this same page; the
+  // OAuth-return block above finishes the job on the way back.
+  document.getElementById('btn-google').addEventListener('click', async () => {
+    clearErr('err-staff');
+    const btn = document.getElementById('btn-google');
+    btn.disabled = true;
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + window.location.pathname },
+    });
+    if (error) {
+      showErr('err-staff', 'Google ログインを開始できませんでした。もう一度お試しください。');
+      btn.disabled = false;
+    }
+    // On success the browser navigates away to Google; nothing else runs.
+  });
+})();
+</script>
+</body>
+</html>

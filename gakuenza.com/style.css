@@ -1,0 +1,78 @@
+:root {
+  --ink: #1c2530;
+  --paper: #f7f3ea;
+  --moss: #4a6b4f;
+  --moss-deep: #34503a;
+  --clay: #b5572e;
+  --border: #d8d2c2;
+  --error: #a23b2e;
+
+  /* added for the hub-home design (design_handoff_hub_home) */
+  --ink-soft: #3a4555;
+  --paper-dim: #efe9db;
+  --gold: #c9a24b;
+  --subject-english: #c9622a;
+  --subject-math: #4a6fa5;
+  --subject-japanese: #7a6a53;
+  --subject-science: #5c8a3a;
+  --subject-social: #a67c3d;
+  --subject-sougou: #4a8a8a;
+  --subject-misc: #8a8570;
+
+  /* added for the admin console (design_handoff_admin_console) — these
+     existed in the bound design system's effects.css already, just never
+     copied into Gakuenza's own tokens until this pass needed them. */
+  --mist: #e4e0d4;
+  --moss-tint: #e8ede6;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+.wrap { max-width: 440px; margin: 0 auto; padding: 48px 20px; }
+.wrap-wide { max-width: 720px; margin: 0 auto; padding: 32px 20px; }
+h1 { font-size: 22px; font-weight: 800; margin: 0 0 4px; }
+p.sub { color: #5a6472; font-size: 14px; margin: 0 0 28px; }
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #444; }
+input, select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 14px;
+  background: #fdfcf9;
+}
+button {
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: 8px;
+  background: var(--moss);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+button:hover { background: var(--moss-deep); }
+button.secondary { background: #fff; color: var(--ink); border: 1.5px solid var(--border); }
+button.danger { background: #fff; color: var(--error); border: 1.5px solid var(--error); }
+.err { background: #fdecea; border: 1px solid var(--error); color: var(--error); border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 14px; display: none; }
+.divider { text-align: center; color: #999; font-size: 12px; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+th { color: #777; font-weight: 700; text-transform: uppercase; font-size: 11px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; background: #eef2ea; color: var(--moss-deep); }
+.row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.muted { color: #777; font-size: 13px; }
+a { color: var(--moss-deep); }

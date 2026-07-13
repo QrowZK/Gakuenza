@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生徒 — がくえん座 管理</title>
+<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="../hub-shell.css">
+<link rel="stylesheet" href="admin.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="page-frame" id="app-root">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="ac-card" id="picker-bar" style="margin-bottom:24px;">
+      <div style="display:flex;align-items:flex-end;gap:16px;justify-content:space-between;flex-wrap:wrap;">
+        <div class="ac-field" style="margin-bottom:0;max-width:280px;flex:1;">
+          <label class="ac-field-label" for="picker-school">学校</label>
+          <select id="picker-school"></select>
+        </div>
+        <button class="ac-btn ac-btn-ghost-light ac-btn-sm" type="button" id="btn-import-csv" disabled>CSVからインポート</button>
+      </div>
+    </div>
+
+    <div class="ac-page-head">
+      <h1 class="ac-page-title">生徒</h1>
+    </div>
+    <p style="font-size:0.85rem;color:var(--ink-soft);margin:-8px 0 24px;">この学校に在籍する生徒の一覧です。クラスごとの詳細・出欠番号や名前の編集は「クラス」画面から行えます。</p>
+
+    <div id="student-list">
+      <div class="ac-card ac-skel" style="height:56px;margin-bottom:8px;"></div>
+      <div class="ac-card ac-skel" style="height:56px;margin-bottom:8px;"></div>
+      <div class="ac-card ac-skel" style="height:56px;"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ============================================================ -->
+<!-- CSV import modal — file select + format guide + per-row results.
+     Available to every admin tier (coordinator's core job is exactly
+     this: getting students into classes), same as class CRUD. -->
+<!-- ============================================================ -->
+<div class="ac-modal-backdrop" id="modal-import" style="display:none;">
+  <div class="ac-modal" style="width:520px;">
+    <h2 class="ac-modal-title">CSVからインポート</h2>
+    <div id="import-step-select">
+      <p style="font-size:0.82rem;color:var(--ink-soft);line-height:1.7;margin:0 0 16px;">
+        1行目は見出し行として扱われます。必要な列：<code>student_number</code>（出席番号）、<code>display_name</code>（表示名）。
+        クラス指定は <code>year</code>・<code>gumi</code>（学年・組。例：5・2）の組み合わせ、
+        または特別支援学級などの場合は <code>class_name</code>（クラス名）のどちらかを指定してください。
+        存在しないクラスは自動的に作成されます。
+      </p>
+      <div class="ac-field">
+        <label class="ac-field-label" for="import-file">CSVファイル</label>
+        <input id="import-file" type="file" accept=".csv,text/csv">
+      </div>
+      <p class="ac-modal-err" id="import-select-err" style="display:none;"></p>
+      <div class="ac-modal-actions">
+        <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-import">キャンセル</button>
+        <button class="ac-btn ac-btn-accent ac-btn-md" type="button" id="btn-start-import" disabled>インポート開始</button>
+      </div>
+    </div>
+
+    <div id="import-step-progress" style="display:none;">
+      <p style="font-size:0.85rem;color:var(--ink-soft);" id="import-progress-text">処理中…</p>
+      <div style="height:6px;background:var(--paper-dim);border-radius:999px;overflow:hidden;">
+        <div id="import-progress-bar" style="height:100%;width:0%;background:var(--moss);border-radius:999px;transition:width 120ms ease;"></div>
+      </div>
+    </div>
+
+    <div id="import-step-results" style="display:none;">
+      <div style="margin-bottom:14px;"><span class="ac-badge ac-badge-gold">今だけ表示</span></div>
+      <p id="import-results-summary" style="font-size:0.85rem;margin:0 0 14px;"></p>
+      <p style="font-size:0.76rem;color:var(--error);margin:0 0 12px;">初期パスワードはこの画面でのみ表示されます。閉じると二度と表示できません。</p>
+      <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+          <thead>
+            <tr style="background:var(--paper-dim);">
+              <th style="text-align:left;padding:8px 10px;">出席番号</th>
+              <th style="text-align:left;padding:8px 10px;">氏名</th>
+              <th style="text-align:left;padding:8px 10px;">クラス</th>
+              <th style="text-align:left;padding:8px 10px;">初期パスワード / エラー</th>
+            </tr>
+          </thead>
+          <tbody id="import-results-body"></tbody>
+        </table>
+      </div>
+      <div class="ac-modal-actions">
+        <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-print-import">印刷する</button>
+        <button class="ac-btn ac-btn-accent ac-btn-md" type="button" id="btn-close-import">確認して閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="admin-common.js"></script>
+<script>
+(async function () {
+  const H = window.HubCommon;
+  const AC = window.AdminCommon;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const session = await H.requireSession(sb);
+  if (!session) return;
+  const userId = session.user.id;
+
+  const admin = await AC.requireAdminAccess(sb, userId);
+  if (!admin) return;
+
+  const { data: profile } = await sb.from('profiles').select('display_name').eq('id', userId).maybeSingle();
+  AC.renderAdminSidebar(sb, profile, 'students', admin);
+
+  const pickerSchool = document.getElementById('picker-school');
+  const listEl = document.getElementById('student-list');
+  const btnImport = document.getElementById('btn-import-csv');
+  let classesForSchool = [];
+
+  async function loadStudents(schoolId) {
+    listEl.innerHTML = `
+      <div class="ac-card ac-skel" style="height:56px;margin-bottom:8px;"></div>
+      <div class="ac-card ac-skel" style="height:56px;"></div>`;
+
+    const [classesRes, enrollRes] = await Promise.all([
+      sb.from('classes').select('id, name, year, gumi').eq('school_id', schoolId).order('year').order('gumi'),
+      sb.from('enrollments')
+        .select('user_id, class_id, profiles(display_name, student_number), classes!inner(name, school_id)')
+        .eq('role', 'student')
+        .eq('classes.school_id', schoolId),
+    ]);
+    classesForSchool = classesRes.data || [];
+
+    if (enrollRes.error) {
+      listEl.innerHTML = '<p class="ac-calm-msg">読み込めませんでした</p>';
+      return;
+    }
+    const students = enrollRes.data || [];
+    if (!students.length) {
+      listEl.innerHTML = '<p class="ac-calm-msg">この学校にはまだ生徒が登録されていません。</p>';
+      return;
+    }
+    const byClass = {};
+    for (const s of students) (byClass[s.class_id] ||= []).push(s);
+    const classOrder = classesForSchool.filter(c => byClass[c.id]);
+
+    listEl.innerHTML = classOrder.map(c => {
+      const rows = (byClass[c.id] || []).sort((a, b) =>
+        (a.profiles?.student_number || '').localeCompare(b.profiles?.student_number || ''));
+      return `
+        <div class="ac-subject-group">
+          <div class="ac-subject-label"><span>${c.name}</span><span style="color:var(--ink-soft);font-weight:400;">（${rows.length}名）</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${rows.map(s => `
+              <div class="ac-card ac-person-card" style="padding:10px 14px;">
+                <div class="ac-avatar-sm">${H.givenName(s.profiles?.display_name || '').slice(0, 2) || '?'}</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="ac-roster-name">${s.profiles?.display_name || '(表示名未設定)'}</div>
+                  <div style="font-size:0.72rem;color:var(--ink-soft);">出席番号 ${s.profiles?.student_number || '—'}</div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function refreshSchoolPicker() {
+    const schools = await AC.getAccessibleSchools(sb, admin);
+    if (!schools.length) {
+      document.getElementById('picker-bar').style.display = 'none';
+      listEl.innerHTML = '<p class="ac-calm-msg">学校が見つかりません。</p>';
+      return;
+    }
+    pickerSchool.innerHTML = schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    btnImport.disabled = false;
+    await loadStudents(pickerSchool.value);
+  }
+  pickerSchool.addEventListener('change', () => loadStudents(pickerSchool.value));
+
+  // ── CSV import ───────────────────────────────────────────────────────
+  function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (!lines.length) return { headers: [], rows: [] };
+    const parseLine = (line) => {
+      const cells = [];
+      let cur = '', inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (inQuotes) {
+          if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+          else if (ch === '"') { inQuotes = false; }
+          else cur += ch;
+        } else {
+          if (ch === '"') inQuotes = true;
+          else if (ch === ',') { cells.push(cur); cur = ''; }
+          else cur += ch;
+        }
+      }
+      cells.push(cur);
+      return cells.map(c => c.trim());
+    };
+    const headers = parseLine(lines[0]).map(h => h.toLowerCase());
+    const rows = lines.slice(1).map(parseLine);
+    return { headers, rows };
+  }
+
+  function openImportModal() {
+    document.getElementById('import-step-select').style.display = 'block';
+    document.getElementById('import-step-progress').style.display = 'none';
+    document.getElementById('import-step-results').style.display = 'none';
+    document.getElementById('import-file').value = '';
+    document.getElementById('btn-start-import').disabled = true;
+    document.getElementById('import-select-err').style.display = 'none';
+    document.getElementById('modal-import').style.display = 'flex';
+  }
+  btnImport.addEventListener('click', openImportModal);
+  document.getElementById('btn-cancel-import').addEventListener('click', () => {
+    document.getElementById('modal-import').style.display = 'none';
+  });
+  document.getElementById('import-file').addEventListener('change', (e) => {
+    document.getElementById('btn-start-import').disabled = !e.target.files.length;
+  });
+
+  // Finds an existing class matching the row's year+gumi or class_name,
+  // or creates one — same "auto-create missing classes" behavior agreed
+  // on for this feature. Mutates classesForSchool as new classes appear
+  // so later rows in the same import can reuse a class created moments
+  // earlier by an earlier row.
+  async function resolveClassId(schoolId, year, gumi, className) {
+    if (className) {
+      const existing = classesForSchool.find(c => c.year == null && c.name === className);
+      if (existing) return existing.id;
+      const { data, error } = await sb.from('classes').insert({ school_id: schoolId, name: className, year: null, gumi: null }).select('id, name, year, gumi').single();
+      if (error) throw new Error('クラスを作成できませんでした（' + className + '）');
+      classesForSchool.push(data);
+      return data.id;
+    }
+    const y = Number(year), g = Number(gumi);
+    const existing = classesForSchool.find(c => c.year === y && c.gumi === g);
+    if (existing) return existing.id;
+    const { data, error } = await sb.from('classes').insert({ school_id: schoolId, year: y, gumi: g }).select('id, name, year, gumi').single();
+    if (error) throw new Error(`クラスを作成できませんでした（${y}年${g}組）`);
+    classesForSchool.push(data);
+    return data.id;
+  }
+
+  document.getElementById('btn-start-import').addEventListener('click', async () => {
+    const fileInput = document.getElementById('import-file');
+    const file = fileInput.files[0];
+    const errEl = document.getElementById('import-select-err');
+    errEl.style.display = 'none';
+    if (!file) return;
+
+    const text = await file.text();
+    const { headers, rows } = parseCSV(text);
+    const idx = {
+      student_number: headers.indexOf('student_number'),
+      display_name: headers.indexOf('display_name'),
+      year: headers.indexOf('year'),
+      gumi: headers.indexOf('gumi'),
+      class_name: headers.indexOf('class_name'),
+    };
+    if (idx.student_number === -1 || idx.display_name === -1) {
+      errEl.textContent = '見出し行に student_number と display_name が必要です。';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!rows.length) {
+      errEl.textContent = 'データ行が見つかりません。';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('import-step-select').style.display = 'none';
+    document.getElementById('import-step-progress').style.display = 'block';
+    const progressText = document.getElementById('import-progress-text');
+    const progressBar = document.getElementById('import-progress-bar');
+
+    const results = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      progressText.textContent = `処理中… (${i + 1}/${rows.length})`;
+      progressBar.style.width = `${Math.round(((i + 1) / rows.length) * 100)}%`;
+
+      const studentNumber = row[idx.student_number] || '';
+      const displayName = row[idx.display_name] || '';
+      const year = idx.year !== -1 ? row[idx.year] : '';
+      const gumi = idx.gumi !== -1 ? row[idx.gumi] : '';
+      const className = idx.class_name !== -1 ? row[idx.class_name] : '';
+
+      if (!studentNumber || !displayName) {
+        results.push({ studentNumber, displayName, className: '—', error: '出席番号または表示名が空です' });
+        continue;
+      }
+      if (!className && (!year || !gumi)) {
+        results.push({ studentNumber, displayName, className: '—', error: 'year/gumi または class_name が必要です' });
+        continue;
+      }
+
+      try {
+        const classId = await resolveClassId(pickerSchool.value, year, gumi, className);
+        const classRowNow = classesForSchool.find(c => c.id === classId);
+        const res = await fetch(`${cfg.supabaseUrl}/functions/v1/provision-account`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({
+            kind: 'student', school_id: pickerSchool.value, class_id: classId,
+            student_number: studentNumber, display_name: displayName,
+          }),
+        });
+        const body = await res.json();
+        if (!res.ok || !body.ok) {
+          results.push({ studentNumber, displayName, className: classRowNow?.name || '—', error: body.error || '作成できませんでした' });
+        } else {
+          results.push({ studentNumber, displayName, className: classRowNow?.name || '—', password: body.initial_password });
+        }
+      } catch (err) {
+        results.push({ studentNumber, displayName, className: className || (year && gumi ? `${year}年${gumi}組` : '—'), error: err.message || '不明なエラー' });
+      }
+    }
+
+    document.getElementById('import-step-progress').style.display = 'none';
+    document.getElementById('import-step-results').style.display = 'block';
+    const successCount = results.filter(r => r.password).length;
+    const errorCount = results.length - successCount;
+    document.getElementById('import-results-summary').textContent =
+      `${results.length}件中 ${successCount}件成功${errorCount > 0 ? `、${errorCount}件失敗` : ''}。`;
+    document.getElementById('import-results-body').innerHTML = results.map(r => `
+      <tr style="border-top:1px solid var(--border);">
+        <td style="padding:6px 10px;">${r.studentNumber}</td>
+        <td style="padding:6px 10px;">${r.displayName}</td>
+        <td style="padding:6px 10px;">${r.className}</td>
+        <td style="padding:6px 10px;${r.error ? 'color:var(--error);' : 'font-family:monospace;'}">${r.error || r.password}</td>
+      </tr>`).join('');
+
+    await loadStudents(pickerSchool.value);
+  });
+
+  document.getElementById('btn-close-import').addEventListener('click', () => {
+    document.getElementById('import-results-body').innerHTML = '';
+    document.getElementById('modal-import').style.display = 'none';
+  });
+  document.getElementById('btn-print-import').addEventListener('click', () => window.print());
+
+  await refreshSchoolPicker();
+})();
+</script>
+</body>
+</html>

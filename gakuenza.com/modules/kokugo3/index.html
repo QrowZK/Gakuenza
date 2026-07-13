@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>国語 3年 — がくえん座</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="wrap">
+  <div class="k3-header">
+    <span class="k3-dot"></span>
+    <div>
+      <h1 class="k3-title">国語 3年</h1>
+      <p class="k3-sub" id="k3-subtitle">漢字・読解のれんしゅう</p>
+    </div>
+  </div>
+
+  <div id="view-select">
+    <div class="k3-card">
+      <div class="k3-mode-grid">
+        <button type="button" class="k3-mode-btn" id="btn-mode-kanji">
+          <h3>漢字れんしゅう</h3>
+          <p>3年生で習う200字から、読み方・漢字えらび・画数の問題が出ます。</p>
+        </button>
+        <button type="button" class="k3-mode-btn" id="btn-mode-reading">
+          <h3>読解れんしゅう</h3>
+          <p>教科書で読んだ文章について、内容をたしかめます。</p>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-unit-select" style="display:none;">
+    <div class="k3-card" id="unit-list"></div>
+    <button type="button" class="k3-btn-ghost" id="btn-back-1">もどる</button>
+  </div>
+
+  <div id="view-quiz" style="display:none;">
+    <div class="k3-progress" id="k3-progress"></div>
+    <div class="k3-note" id="k3-unit-note" style="display:none;"></div>
+    <div class="k3-card">
+      <span class="k3-cat" id="k3-cat"></span>
+      <p class="k3-prompt" id="k3-prompt"></p>
+      <div class="k3-options" id="k3-options"></div>
+    </div>
+  </div>
+
+  <div id="view-result" style="display:none;">
+    <div class="k3-card">
+      <div class="k3-result-score" id="k3-score"></div>
+      <div class="k3-result-label" id="k3-score-label"></div>
+      <div id="k3-review"></div>
+    </div>
+    <button type="button" class="k3-btn" id="btn-restart">もういちど</button>
+  </div>
+</div>
+
+<script src="kanji-data.js"></script>
+<script src="kanji-generator.js"></script>
+<script src="reading-units.js"></script>
+<script src="../../hub/supabase.js"></script>
+<script src="../../hub/config.js"></script>
+<script src="../../hub/hub-common.js"></script>
+<script src="kokugo3-report.js"></script>
+<script>
+(async function () {
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  const H = window.HubCommon;
+
+  const params = new URLSearchParams(window.location.search);
+  const classId = params.get('class_id') || null;
+
+  let ctx = { schoolId: null, classId, moduleId: null, userId: null };
+  let session = null;
+  try {
+    session = await H.requireSession(sb);
+    ctx.userId = session.user.id;
+    // Resolve school/class via enrollments -> classes, the established
+    // pattern every other module's report shim uses (shakai3, etc.) —
+    // deliberately NOT profiles.home_school_id, which is a column of
+    // genuinely unconfirmed purpose discovered elsewhere in this
+    // project and never verified as the right source for this.
+    const { data: enr } = await sb
+      .from('enrollments').select('class_id, classes ( id, school_id )')
+      .eq('user_id', session.user.id).eq('role', 'student').limit(1);
+    if (enr && enr.length && enr[0].classes) {
+      ctx.classId = ctx.classId || enr[0].class_id;
+      ctx.schoolId = enr[0].classes.school_id;
+    }
+    const { data: mod } = await sb.from('modules').select('id').eq('key', 'kokugo3').maybeSingle();
+    ctx.moduleId = mod?.id || null;
+  } catch (e) {
+    // If session/reporting context can't be resolved, the quiz itself
+    // still works — reporting is attempted best-effort at the end and
+    // silently skipped on failure, matching every other module's
+    // "never block the student's play experience" convention.
+  }
+
+  const viewSelect = document.getElementById('view-select');
+  const viewUnitSelect = document.getElementById('view-unit-select');
+  const viewQuiz = document.getElementById('view-quiz');
+  const viewResult = document.getElementById('view-result');
+  function showView(v) {
+    [viewSelect, viewUnitSelect, viewQuiz, viewResult].forEach(el => el.style.display = 'none');
+    v.style.display = 'block';
+  }
+
+  let currentMode = null;
+  let currentUnitKey = null;
+  let questions = [];
+  let qIndex = 0;
+  let results = [];
+
+  document.getElementById('btn-mode-kanji').addEventListener('click', () => {
+    currentMode = 'kanji';
+    questions = generateKanjiQuiz(KANJI3, 10);
+    startQuiz();
+  });
+
+  document.getElementById('btn-mode-reading').addEventListener('click', () => {
+    currentMode = 'reading';
+    const unitList = document.getElementById('unit-list');
+    const keys = Object.keys(READING_UNITS);
+    unitList.innerHTML = keys.map(key => {
+      const u = READING_UNITS[key];
+      return `<button type="button" class="k3-mode-btn" style="width:100%;margin-bottom:10px;" data-unit="${key}">
+        <h3>${u.title}</h3>
+        <p>${u.volume} ・ ${u.month} ・ ${u.author}</p>
+      </button>`;
+    }).join('');
+    unitList.querySelectorAll('[data-unit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentUnitKey = btn.dataset.unit;
+        const unit = READING_UNITS[currentUnitKey];
+        questions = unit.questions.map(q => ({ ...q, options: shuffleArr(q.options) }));
+        startQuiz(unit.note);
+      });
+    });
+    showView(viewUnitSelect);
+  });
+
+  document.getElementById('btn-back-1').addEventListener('click', () => showView(viewSelect));
+
+  function shuffleArr(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function startQuiz(note) {
+    qIndex = 0;
+    results = [];
+    const noteEl = document.getElementById('k3-unit-note');
+    if (note) { noteEl.textContent = note; noteEl.style.display = 'block'; }
+    else { noteEl.style.display = 'none'; }
+    showView(viewQuiz);
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    const q = questions[qIndex];
+    document.getElementById('k3-progress').textContent = `${qIndex + 1} / ${questions.length}`;
+    document.getElementById('k3-cat').textContent = q.category;
+    document.getElementById('k3-prompt').textContent = q.prompt;
+    const optsEl = document.getElementById('k3-options');
+    optsEl.innerHTML = '';
+    q.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'k3-opt';
+      btn.textContent = opt;
+      btn.addEventListener('click', () => selectAnswer(opt));
+      optsEl.appendChild(btn);
+    });
+  }
+
+  function selectAnswer(selected) {
+    const q = questions[qIndex];
+    const correct = selected === q.correctAnswer;
+    results.push({
+      itemRef: q.itemRef, category: q.category, prompt: q.prompt,
+      correct, selectedAnswer: selected, correctAnswer: q.correctAnswer,
+    });
+
+    document.querySelectorAll('.k3-opt').forEach(btn => {
+      btn.disabled = true;
+      if (btn.textContent === q.correctAnswer) btn.classList.add('correct');
+      else if (btn.textContent === selected) btn.classList.add('wrong');
+    });
+
+    setTimeout(() => {
+      qIndex++;
+      if (qIndex < questions.length) renderQuestion();
+      else finishQuiz();
+    }, 700);
+  }
+
+  async function finishQuiz() {
+    const score = results.filter(r => r.correct).length;
+    document.getElementById('k3-score').textContent = `${score} / ${results.length}`;
+    document.getElementById('k3-score-label').textContent = '正解数';
+
+    const wrong = results.filter(r => !r.correct);
+    const reviewEl = document.getElementById('k3-review');
+    if (wrong.length) {
+      reviewEl.innerHTML = wrong.map(r => `
+        <div class="k3-review-item">
+          <div class="prompt">${r.prompt}</div>
+          <div>あなたの答え：<span class="yours">${r.selectedAnswer}</span> 　正解：<span class="correct-ans">${r.correctAnswer}</span></div>
+        </div>`).join('');
+    } else {
+      reviewEl.innerHTML = '<p style="text-align:center;color:var(--ink-soft);font-size:0.85rem;">全問正解でした！</p>';
+    }
+    showView(viewResult);
+
+    if (ctx.userId && ctx.moduleId) {
+      try {
+        await window.Kokugo3Report.reportKokugo3(sb, ctx, { mode: currentMode, unitKey: currentUnitKey, results });
+      } catch (e) {
+        // best-effort — never block the result screen on a reporting failure
+      }
+    }
+  }
+
+  document.getElementById('btn-restart').addEventListener('click', () => showView(viewSelect));
+})();
+</script>
+</body>
+</html>

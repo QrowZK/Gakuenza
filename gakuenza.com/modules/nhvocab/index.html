@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="description" content="New Horizon Picture Dictionary Vocabulary Practice">
+  <title>New Horizons Vocabulary Practice App — がくえん座</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="module-topbar">
+  <a href="../../hub/index.html" class="module-back">← ホームへ</a>
+  <span class="module-name">New Horizons Vocabulary Practice App</span>
+  <div id="module-account-mount" style="margin-left:auto;"></div>
+</div>
+
+<!-- ── SCREENS ─────────────────────────────────────────────────────────────── -->
+
+<!-- Main menu -->
+<div id="screen-menu" class="screen active">
+  <header class="app-header">
+    <div class="header-left">
+      <span class="app-logo">📘</span>
+      <div>
+        <div class="app-title">New Horizons Vocabulary Practice App</div>
+        <div class="app-sub">New Horizon Picture Dictionary</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="theme-btn" id="theme-toggle" title="テーマ切替">🌙</button>
+    </div>
+  </header>
+
+  <main class="menu-main">
+    <section class="mode-section">
+      <h2 class="section-label">練習モード</h2>
+      <div class="mode-grid">
+        <button class="mode-card" data-mode="category">
+          <span class="mode-icon">📂</span>
+          <span class="mode-title">カテゴリー別</span>
+          <span class="mode-desc">テーマごとに練習</span>
+        </button>
+        <button class="mode-card" data-mode="grade5">
+          <span class="mode-icon">5️⃣</span>
+          <span class="mode-title">5年生 Units</span>
+          <span class="mode-desc">Unit 1〜8</span>
+        </button>
+        <button class="mode-card" data-mode="grade6">
+          <span class="mode-icon">6️⃣</span>
+          <span class="mode-title">6年生 Units</span>
+          <span class="mode-desc">Unit 1〜8</span>
+        </button>
+        <button class="mode-card mode-card--romaji" data-mode="romaji">
+          <span class="mode-icon">🔤</span>
+          <span class="mode-title">ローマ字</span>
+          <span class="mode-desc">ヘボン式を練習</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="stats-section" id="menu-stats" style="display:none">
+      <h2 class="section-label">あなたの成績</h2>
+      <div class="stats-row" id="stats-row"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Category select -->
+<div id="screen-category" class="screen">
+  <header class="sub-header">
+    <button class="back-btn" data-back="menu">← メニュー</button>
+    <h1 class="sub-title">カテゴリーを選ぼう</h1>
+  </header>
+  <div class="grid-scroll">
+    <div class="cat-grid" id="cat-grid"></div>
+  </div>
+</div>
+
+<!-- Unit select -->
+<div id="screen-unit" class="screen">
+  <header class="sub-header">
+    <button class="back-btn" data-back="menu">← メニュー</button>
+    <h1 class="sub-title" id="unit-screen-title">Unitを選ぼう</h1>
+  </header>
+  <div class="grid-scroll">
+    <div class="unit-grid" id="unit-grid"></div>
+  </div>
+</div>
+
+<!-- Quiz type select -->
+<div id="screen-qtype" class="screen">
+  <header class="sub-header">
+    <button class="back-btn" id="qtype-back">← もどる</button>
+    <h1 class="sub-title" id="qtype-title">練習方法</h1>
+  </header>
+  <div class="qtype-wrap">
+    <div class="qtype-info" id="qtype-info"></div>
+    <div class="qtype-grid">
+      <button class="qtype-card" data-qtype="en2ja">
+        <span class="qtype-icon">🇬🇧→🇯🇵</span>
+        <span class="qtype-title">英語→日本語</span>
+        <span class="qtype-desc">英語を見て日本語を選ぼう</span>
+      </button>
+      <button class="qtype-card" data-qtype="ja2en">
+        <span class="qtype-icon">🇯🇵→🇬🇧</span>
+        <span class="qtype-title">日本語→英語</span>
+        <span class="qtype-desc">日本語を見て英語を選ぼう</span>
+      </button>
+      <button class="qtype-card" data-qtype="flash">
+        <span class="qtype-icon">🃏</span>
+        <span class="qtype-title">フラッシュカード</span>
+        <span class="qtype-desc">カードをめくって覚えよう</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Quiz screen -->
+<div id="screen-quiz" class="screen">
+  <header class="quiz-header">
+    <button class="back-btn" id="quiz-back">✕</button>
+    <div class="quiz-progress">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <span class="progress-text" id="progress-text">0 / 10</span>
+    </div>
+    <div class="quiz-score" id="quiz-score">⭐ 0</div>
+  </header>
+
+  <div class="quiz-body">
+    <div class="question-card" id="question-card">
+      <div class="question-emoji" id="q-emoji"></div>
+      <div class="question-label" id="q-label"></div>
+      <div class="question-word" id="q-word"></div>
+      <div class="question-hint" id="q-hint"></div>
+    </div>
+
+    <div class="choices-grid" id="choices-grid"></div>
+
+    <div class="result-overlay hidden" id="result-overlay">
+      <div class="result-icon" id="result-icon"></div>
+      <div class="result-msg"  id="result-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Flash card screen -->
+<div id="screen-flash" class="screen">
+  <header class="quiz-header">
+    <button class="back-btn" id="flash-back">✕</button>
+    <div class="quiz-progress">
+      <div class="progress-bar"><div class="progress-fill" id="flash-fill"></div></div>
+      <span class="progress-text" id="flash-progress-text">0 / 0</span>
+    </div>
+    <div class="quiz-score" id="flash-count">0枚</div>
+  </header>
+  <div class="flash-body">
+    <div class="flashcard" id="flashcard" tabindex="0">
+      <div class="flashcard-inner" id="flashcard-inner">
+        <div class="flashcard-front">
+          <div class="flash-emoji" id="flash-emoji"></div>
+          <div class="flash-word" id="flash-en"></div>
+          <div class="flash-tap-hint">タップして日本語を確認</div>
+        </div>
+        <div class="flashcard-back">
+          <div class="flash-emoji" id="flash-emoji-back"></div>
+          <div class="flash-ja"   id="flash-ja"></div>
+          <div class="flash-en-small" id="flash-en-small"></div>
+        </div>
+      </div>
+    </div>
+    <div class="flash-controls">
+      <button class="flash-nav-btn" id="flash-prev">← まえ</button>
+      <button class="flash-nav-btn flash-nav-btn--next" id="flash-next">つぎ →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Romaji practice -->
+<div id="screen-romaji" class="screen">
+  <header class="sub-header">
+    <button class="back-btn" data-back="menu">← メニュー</button>
+    <h1 class="sub-title">ローマ字練習</h1>
+  </header>
+  <div class="romaji-wrap">
+    <div class="romaji-filter">
+      <label class="romaji-filter-label">行を選ぶ:</label>
+      <div class="row-chips" id="row-chips"></div>
+    </div>
+    <div class="quiz-body">
+      <div class="question-card">
+        <div class="question-label">このひらがなのローマ字は？</div>
+        <div class="question-word romaji-kana" id="romaji-kana"></div>
+      </div>
+      <div class="choices-grid" id="romaji-choices"></div>
+      <div class="result-overlay hidden" id="romaji-result">
+        <div class="result-icon" id="romaji-result-icon"></div>
+        <div class="result-msg"  id="romaji-result-msg"></div>
+      </div>
+    </div>
+    <div class="romaji-stats">
+      <span id="romaji-correct">✅ 0</span>
+      <span id="romaji-wrong">❌ 0</span>
+    </div>
+  </div>
+</div>
+
+<!-- Results screen -->
+<div id="screen-results" class="screen">
+  <div class="results-body">
+    <div class="results-emoji" id="results-emoji">🎉</div>
+    <h1 class="results-title">結果</h1>
+    <div class="results-score" id="results-score"></div>
+    <div class="results-bar-wrap">
+      <div class="results-bar" id="results-bar"></div>
+    </div>
+    <div class="results-msg" id="results-msg"></div>
+    <div class="sync-status" id="sync-status"></div>
+    <div class="results-actions">
+      <button class="results-btn results-btn--primary" id="results-retry">もう一度</button>
+      <button class="results-btn" id="results-menu">メニューへ</button>
+    </div>
+  </div>
+</div>
+
+<script src="vocab.js"></script>
+<script src="tts.js"></script>
+<script src="app.js"></script>
+<script src="../../hub/supabase.js"></script>
+<script src="../../hub/config.js"></script>
+<script src="../../hub/hub-common.js"></script>
+<script src="nhvocab-report.js"></script>
+</body>
+</html>

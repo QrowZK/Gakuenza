@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ホーム — がくえん座</title>
+<link rel="stylesheet" href="../style.css">
+<!-- Zen Maru Gothic: kept on Google Fonts CDN deliberately, unlike
+     supabase.js. font-display:swap means a blocked/slow font load only
+     costs decorative typography — text still renders immediately in the
+     system fallback. That's a fundamentally different failure mode than
+     supabase.js failing (which would break login entirely), so vendoring
+     the ~240-file full CJK font set here isn't worth the size cost. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --radius-sm: 6px; --radius-md: 10px; --radius-pill: 999px;
+    --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 48px;
+    --font-display: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+  }
+  body { margin: 0; background: #eae5d8; font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Segoe UI', Roboto, sans-serif; }
+
+  .page-frame { max-width: 1120px; margin: 32px auto; background: var(--paper); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(28,37,48,0.12); display: flex; min-height: 820px; }
+
+  .sidebar { width: 220px; flex: 0 0 auto; background: var(--ink); padding: 28px 20px; display: flex; flex-direction: column; }
+  .brand-mark { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--paper); letter-spacing: 0.01em; }
+  .brand-sub { font-size: 0.7rem; color: var(--paper); opacity: 0.55; letter-spacing: 0.03em; margin-top: 2px; }
+
+  .profile-block { display: flex; flex-direction: column; align-items: center; text-align: center; margin: 36px 0 32px; padding-bottom: 28px; border-bottom: 1px solid rgba(247,243,234,0.14); }
+  .avatar { width: 56px; height: 56px; border-radius: 50%; background: #e8ede6; color: var(--moss-deep); font-family: var(--font-display); font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+  .profile-name { margin-top: 10px; font-size: 0.88rem; color: var(--paper); }
+  .profile-class { font-size: 0.72rem; color: var(--paper); opacity: 0.55; }
+
+  .nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .nav-item { padding: 9px 12px; border-radius: var(--radius-sm); color: var(--paper); opacity: 0.75; font-size: 0.85rem; }
+  .nav-item.active { background: rgba(247,243,234,0.14); opacity: 1; font-weight: 600; }
+
+  .hub-btn { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; transition: transform 140ms ease, background 140ms ease; }
+  .hub-btn:hover { transform: translateY(-1px); }
+  .btn-ghost { background: rgba(247,243,234,0.14); color: var(--paper); width: 100%; padding: 8px 16px; font-size: 0.8rem; }
+  .btn-ghost:hover { background: rgba(247,243,234,0.22); }
+
+  .main { flex: 1; background: var(--paper); padding: 36px 36px 48px; }
+
+  .greeting-title { font-family: var(--font-display); font-size: 1.5rem; color: var(--ink); margin: 0 0 4px; font-weight: 700; }
+  .greeting-date { font-size: 0.82rem; color: var(--ink-soft); margin: 0; }
+
+  .hub-section { margin-bottom: 36px; }
+  .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-5); }
+  .section-title { font-family: var(--font-display); font-size: 1.5rem; margin: 0; position: relative; padding-bottom: var(--space-2); font-weight: 700; color: var(--ink); }
+  .section-title::after { content: ""; position: absolute; left: 0; bottom: 0; width: 56px; border-bottom: 2px dotted var(--gold); }
+
+  /* This page's cards are paper-on-paper with a border — deliberately
+     different from the white .card used on login/marketing pages, so
+     scoped here rather than changed in the shared stylesheet. */
+  .hub-card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-5); cursor: pointer; transition: transform 140ms ease, box-shadow 140ms ease; }
+  .hub-card:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(28,37,48,0.08); }
+
+  .recent-list { display: flex; flex-direction: column; gap: 10px; }
+  .recent-row { display: flex; align-items: center; gap: 16px; }
+  .subject-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+  .recent-title { font-family: var(--font-display); font-weight: 700; font-size: 0.92rem; color: var(--ink); }
+  .recent-title-en { font-size: 0.82rem; color: var(--ink-soft); }
+  .recent-meta { font-size: 0.74rem; color: var(--ink-soft); margin-top: 2px; }
+  .recent-progress { width: 160px; flex: 0 0 auto; }
+
+  .progress-track { width: 100%; height: 6px; border-radius: var(--radius-pill); background: var(--paper-dim); overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: var(--radius-pill); background: var(--moss); }
+  .progress-pct { text-align: right; font-size: 0.74rem; color: var(--ink-soft); margin-top: 4px; }
+
+  .subject-group { margin-bottom: 24px; }
+  .subject-label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .subject-label span.name { font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+  .subject-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .module-title { font-family: var(--font-display); font-weight: 700; font-size: 0.92rem; color: var(--ink); margin-bottom: 2px; }
+  .module-meta { font-size: 0.74rem; color: var(--ink-soft); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+  .hub-pill-badge { display: inline-block; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 9px; border-radius: var(--radius-pill); line-height: 1.4; }
+  .badge-done { background: #e8ede6; color: var(--moss-deep); }
+  .badge-progress { background: var(--gold); color: var(--ink); }
+
+  .calm-msg { color: var(--ink-soft); font-size: 0.85rem; padding: 12px 0; }
+</style>
+</head>
+<body>
+
+<div class="page-frame">
+  <aside class="sidebar">
+    <div>
+      <div class="brand-mark">がくえん座</div>
+      <div class="brand-sub">Gakuenza</div>
+    </div>
+
+    <div class="profile-block">
+      <div class="avatar" id="avatar">…</div>
+      <div class="profile-name" id="profile-name">…</div>
+      <div class="profile-class" id="profile-class"></div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-item active">ホーム</div>
+      <div class="nav-item" title="近日公開">モジュール一覧</div>
+      <div class="nav-item" title="近日公開">成績</div>
+      <div class="nav-item" title="近日公開">設定</div>
+    </nav>
+
+    <button class="hub-btn btn-ghost" id="logout-btn">ログアウト</button>
+  </aside>
+
+  <main class="main">
+    <div class="hub-section">
+      <h1 class="greeting-title" id="greeting">…</h1>
+      <p class="greeting-date" id="greeting-date"></p>
+    </div>
+
+    <div class="hub-section">
+      <div class="section-header"><h2 class="section-title">最近アクセスしたモジュール</h2></div>
+      <div class="recent-list" id="recent-list"></div>
+    </div>
+
+    <div>
+      <div class="section-header"><h2 class="section-title">割り当てられたモジュール</h2></div>
+      <div id="assigned-groups"></div>
+    </div>
+  </main>
+</div>
+
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(async function () {
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const SUBJECT_LABEL_JA = { english: '英語', math: '算数', japanese: '国語', science: '理科' };
+  const SUBJECT_LABEL_EN = { english: 'English', math: 'Math', japanese: 'Japanese', science: 'Science' };
+  const subjectVar = (s) => `var(--subject-${s || 'english'}, var(--border))`;
+  const subjectLabel = (s) => `${SUBJECT_LABEL_JA[s] || s} · ${SUBJECT_LABEL_EN[s] || s}`;
+
+  const WEEKDAY_JA = ['日','月','火','水','木','金','土'];
+  function givenName(name) {
+    if (!name) return '';
+    const parts = name.trim().split(/\s+/);
+    return parts.length > 1 ? parts[parts.length - 1] : parts[0];
+  }
+  function formatGreetingDate(d) {
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日(${WEEKDAY_JA[d.getDay()]})`;
+  }
+  function formatDueDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return `期限: ${d.getMonth() + 1}月${d.getDate()}日(${WEEKDAY_JA[d.getDay()]})`;
+  }
+  function relativeTime(iso) {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const diffH = diffMs / 3600000;
+    if (diffH < 1) return 'たった今アクセス';
+    if (diffH < 24) return `${Math.floor(diffH)}時間前にアクセス`;
+    const diffD = Math.floor(diffH / 24);
+    return diffD === 1 ? '昨日アクセス' : `${diffD}日前にアクセス`;
+  }
+  function progressBar(pct) {
+    if (pct === null) return '';
+    return `<div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>`;
+  }
+
+  // ── auth ──────────────────────────────────────────────────────────────
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  const userId = session.user.id;
+
+  document.getElementById('greeting-date').textContent = formatGreetingDate(new Date());
+
+  // ── profile + class ───────────────────────────────────────────────────
+  const { data: profile, error: profileErr } = await sb
+    .from('profiles').select('display_name, student_number').eq('id', userId).maybeSingle();
+
+  if (profileErr || !profile) {
+    document.getElementById('greeting').textContent = profileErr ? '読み込めませんでした' : 'プロフィールが未登録です';
+    document.getElementById('profile-name').textContent = profileErr ? '読み込めませんでした' : '未登録';
+    document.getElementById('avatar').textContent = '?';
+  } else {
+    const given = givenName(profile.display_name);
+    document.getElementById('greeting').textContent = `${given}さん、おかえりなさい`;
+    document.getElementById('profile-name').textContent = `${profile.display_name}さん`;
+    document.getElementById('avatar').textContent = given.charAt(0) || '?';
+  }
+
+  const { data: enrollmentRows } = await sb
+    .from('enrollments').select('class_id, classes(name)').eq('user_id', userId).eq('role', 'student');
+  const classIds = (enrollmentRows || []).map(r => r.class_id);
+  document.getElementById('profile-class').textContent = enrollmentRows?.[0]?.classes?.name || '';
+
+  // ── assigned modules (via this student's class(es)) ──────────────────
+  let assigned = [];
+  let assignedErr = null;
+  if (classIds.length) {
+    const res = await sb
+      .from('class_modules')
+      .select('class_id, due_date, total_items, modules(id, key, name, name_en, subject)')
+      .in('class_id', classIds);
+    assigned = res.data || [];
+    assignedErr = res.error;
+  }
+  // Dedupe by module id (a student enrolled in >1 class could see the same
+  // module assigned twice) — keep the first occurrence.
+  const seen = new Set();
+  assigned = assigned.filter(a => {
+    if (!a.modules || seen.has(a.modules.id)) return false;
+    seen.add(a.modules.id);
+    return true;
+  });
+
+  // ── this student's activity, for completion + recency ─────────────────
+  const { data: activity, error: activityErr } = await sb
+    .from('activity_results').select('module_id, activity_ref, created_at').eq('user_id', userId);
+
+  const attemptedByModule = {}, lastAccessByModule = {};
+  for (const a of (activity || [])) {
+    (attemptedByModule[a.module_id] ||= new Set()).add(a.activity_ref);
+    const t = new Date(a.created_at).getTime();
+    if (!lastAccessByModule[a.module_id] || t > lastAccessByModule[a.module_id]) lastAccessByModule[a.module_id] = t;
+  }
+  const totalItemsByModule = {};
+  for (const a of assigned) if (a.total_items != null) totalItemsByModule[a.modules.id] = a.total_items;
+
+  function computeStatus(moduleId) {
+    const attempted = attemptedByModule[moduleId]?.size || 0;
+    const total = totalItemsByModule[moduleId] ?? null;
+    const pct = total ? Math.min(100, Math.round((attempted / total) * 100)) : null;
+    let status = 'not_started';
+    if (pct !== null && pct >= 100) status = 'done';
+    else if (attempted > 0) status = 'progress';
+    return { attempted, pct, status };
+  }
+
+  // ── render: recently accessed (top 3 by last access) ──────────────────
+  const recentList = document.getElementById('recent-list');
+  if (activityErr) {
+    recentList.innerHTML = '<p class="calm-msg">読み込めませんでした</p>';
+  } else {
+    const moduleIdsWithActivity = Object.keys(lastAccessByModule);
+    if (moduleIdsWithActivity.length === 0) {
+      recentList.innerHTML = '<p class="calm-msg">まだアクセスした記録がありません。</p>';
+    } else {
+      const { data: recentModules } = await sb
+        .from('modules').select('id, name, name_en, subject').in('id', moduleIdsWithActivity);
+      const modInfo = Object.fromEntries((recentModules || []).map(m => [m.id, m]));
+      const top3 = moduleIdsWithActivity
+        .sort((a, b) => lastAccessByModule[b] - lastAccessByModule[a])
+        .slice(0, 3);
+      recentList.innerHTML = top3.map(mid => {
+        const m = modInfo[mid];
+        if (!m) return '';
+        const { pct } = computeStatus(mid);
+        return `
+          <div class="hub-card" data-module-key="${m.key || ''}">
+            <div class="recent-row">
+              <span class="subject-dot" style="background:${subjectVar(m.subject)};"></span>
+              <div style="flex:1; min-width:0;">
+                <div><span class="recent-title">${m.name}</span> ${m.name_en ? `<span class="recent-title-en">${m.name_en}</span>` : ''}</div>
+                <div class="recent-meta">${relativeTime(new Date(lastAccessByModule[mid]).toISOString())}</div>
+              </div>
+              <div class="recent-progress">
+                ${progressBar(pct)}
+                ${pct !== null ? `<div class="progress-pct">${pct}%</div>` : ''}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  // ── render: assigned modules grouped by subject ────────────────────────
+  const groupsEl = document.getElementById('assigned-groups');
+  if (assignedErr) {
+    groupsEl.innerHTML = '<p class="calm-msg">読み込めませんでした</p>';
+  } else if (assigned.length === 0) {
+    groupsEl.innerHTML = '<p class="calm-msg">割り当てられたモジュールはまだありません。</p>';
+  } else {
+    const bySubject = {};
+    for (const a of assigned) (bySubject[a.modules.subject] ||= []).push(a);
+
+    groupsEl.innerHTML = Object.entries(bySubject).map(([subject, mods]) => `
+      <div class="subject-group">
+        <div class="subject-label">
+          <span class="subject-dot" style="background:${subjectVar(subject)};"></span>
+          <span class="name">${subjectLabel(subject)}</span>
+        </div>
+        <div class="subject-grid">
+          ${mods.map(a => {
+            const m = a.modules;
+            const { pct, status, attempted } = computeStatus(m.id);
+            const lastAccess = lastAccessByModule[m.id];
+            let metaParts = [];
+            if (a.due_date) metaParts.push(formatDueDate(a.due_date));
+            else if (lastAccess) metaParts.push(relativeTime(new Date(lastAccess).toISOString()));
+            else metaParts.push('未着手');
+            let badge = '';
+            if (status === 'done') badge = '<span class="hub-pill-badge badge-done">完了</span>';
+            else if (status === 'progress') badge = '<span class="hub-pill-badge badge-progress">進行中</span>';
+            return `
+              <div class="hub-card" data-module-key="${m.key || ''}">
+                <div class="module-title">${m.name}</div>
+                <div class="module-meta">${metaParts.join(' ')} ${badge}</div>
+                ${progressBar(pct !== null ? pct : (attempted > 0 ? null : 0))}
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  // ── module launch: mechanism TBD, calm placeholder per brand principle ─
+  document.querySelectorAll('[data-module-key]').forEach(el => {
+    el.addEventListener('click', () => {
+      alert('このモジュールは近日公開予定です。');
+    });
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = 'login.html';
+  });
+})();
+</script>
+</body>
+</html>

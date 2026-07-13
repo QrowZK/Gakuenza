@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教員 — がくえん座 管理</title>
+<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="../hub-shell.css">
+<link rel="stylesheet" href="admin.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="page-frame" id="app-root">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <!-- Same school-picker convention as class-detail.html — always
+         shown, not just for platform admins with multiple schools, so
+         the UI doesn't change shape between admin types. Platform
+         admins additionally get a "+ 学校を追加" button here — creating
+         a school is platform-admin-only (enforced by RLS, not just this
+         button being hidden), since a scoped admin has no legitimate
+         reason to spin up more schools. -->
+    <div class="ac-card" id="picker-bar" style="margin-bottom:24px;">
+      <div style="display:flex;align-items:flex-end;gap:16px;justify-content:space-between;">
+        <div class="ac-field" style="margin-bottom:0;max-width:280px;flex:1;">
+          <label class="ac-field-label" for="picker-school">学校</label>
+          <select id="picker-school"></select>
+        </div>
+        <button class="ac-btn ac-btn-ghost-light ac-btn-sm" type="button" id="btn-add-school" style="display:none;">+ 学校を追加</button>
+      </div>
+    </div>
+
+    <div class="ac-page-head">
+      <h1 class="ac-page-title">教員</h1>
+      <button class="ac-btn ac-btn-accent ac-btn-sm" type="button" id="btn-add-teacher" disabled style="display:none;">+ 教員を追加</button>
+    </div>
+
+    <div id="teacher-list" class="ac-grid">
+      <div class="ac-card ac-skel" style="height:64px;"></div>
+      <div class="ac-card ac-skel" style="height:64px;"></div>
+      <div class="ac-card ac-skel" style="height:64px;"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ============================================================ -->
+<!-- Create-school modal (platform admin only) -->
+<!-- ============================================================ -->
+<div class="ac-modal-backdrop" id="modal-add-school" style="display:none;">
+  <div class="ac-modal" style="width:400px;">
+    <h2 class="ac-modal-title">学校を追加</h2>
+    <form id="form-add-school">
+      <div class="ac-field" style="margin-bottom:20px;">
+        <label class="ac-field-label" for="input-school-name">学校名</label>
+        <input id="input-school-name" required maxlength="100" autocomplete="off">
+      </div>
+      <p class="ac-modal-err" id="add-school-err" style="display:none;"></p>
+      <div class="ac-modal-actions">
+        <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-add-school">キャンセル</button>
+        <button class="ac-btn ac-btn-accent ac-btn-md" type="submit" id="btn-submit-add-school">作成する</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Create-teacher/admin modal — same one-time-password-reveal
+     pattern as add-student in class-detail.html, adapted for a real
+     email login instead of a synthetic one. -->
+<!-- ============================================================ -->
+<div class="ac-modal-backdrop" id="modal-add-teacher" style="display:none;">
+  <div class="ac-modal" style="width:420px;">
+    <div class="ac-modal-eyebrow" id="add-teacher-school-name">…</div>
+    <h2 class="ac-modal-title">教員を追加</h2>
+    <form id="form-add-teacher">
+      <div class="ac-field">
+        <label class="ac-field-label" for="input-teacher-email">メールアドレス</label>
+        <input id="input-teacher-email" type="email" required maxlength="120" autocomplete="off">
+      </div>
+      <div class="ac-field">
+        <label class="ac-field-label" for="input-teacher-name">表示名</label>
+        <input id="input-teacher-name" required maxlength="80" autocomplete="off">
+      </div>
+      <div class="ac-field" style="margin-bottom:20px;">
+        <label class="ac-field-label" for="select-teacher-role">役割</label>
+        <select id="select-teacher-role">
+          <option value="teacher">教員</option>
+          <option value="admin">管理者</option>
+        </select>
+      </div>
+      <p class="ac-modal-err" id="add-teacher-err" style="display:none;"></p>
+      <p style="font-size:0.76rem;color:var(--ink-soft);line-height:1.5;margin:0;">作成すると、ログイン用の初期パスワードが自動生成されます。次の画面で一度だけ表示されます。</p>
+      <div class="ac-modal-actions">
+        <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-add-teacher">キャンセル</button>
+        <button class="ac-btn ac-btn-accent ac-btn-md" type="submit" id="btn-submit-add-teacher">作成する</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Edit-teacher modal (added 2026-07-09) — top-tier only, both by UI
+     gating and by update-teacher's own server-side authorization.
+     Admin-typed password, same convention as edit-student. -->
+<!-- ============================================================ -->
+<div class="ac-modal-backdrop" id="modal-edit-teacher" style="display:none;">
+  <div class="ac-modal" style="width:400px;">
+    <h2 class="ac-modal-title">教員情報を編集</h2>
+    <form id="form-edit-teacher">
+      <div class="ac-field">
+        <label class="ac-field-label" for="edit-teacher-name">表示名</label>
+        <input id="edit-teacher-name" required maxlength="80" autocomplete="off">
+      </div>
+      <div class="ac-field" style="margin-bottom:20px;">
+        <label class="ac-field-label" for="edit-teacher-password">新しいパスワード（変更する場合のみ）</label>
+        <input id="edit-teacher-password" type="password" autocomplete="new-password" placeholder="変更しない場合は空欄のまま">
+      </div>
+      <p class="ac-modal-err" id="edit-teacher-err" style="display:none;"></p>
+      <div class="ac-modal-actions">
+        <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-edit-teacher">キャンセル</button>
+        <button class="ac-btn ac-btn-accent ac-btn-md" type="submit" id="btn-submit-edit-teacher">保存する</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- One-time password reveal — same gold-bordered, no-backdrop-close
+     pattern as class-detail.html's student version. Kept as its own
+     copy on this page rather than shared markup across pages, same as
+     every other admin page so far. -->
+<!-- ============================================================ -->
+<div class="ac-modal-backdrop" id="modal-password" style="display:none;">
+  <div class="ac-modal ac-modal-gold" style="width:460px;">
+    <div style="margin-bottom:14px;"><span class="ac-badge ac-badge-gold">今だけ表示</span></div>
+    <h2 class="ac-modal-title" style="margin-bottom:6px;">教員を追加しました</h2>
+    <p style="font-size:0.82rem;color:var(--ink-soft);margin:0 0 20px;line-height:1.55;">このログイン情報を書き写すか、そのまま本人に伝えてください。<strong style="color:var(--error);">閉じると二度と表示できません。</strong></p>
+
+    <div class="ac-identity-box">
+      <div>
+        <div class="ac-identity-label">学校</div>
+        <div class="ac-identity-value" id="reveal-school">…</div>
+      </div>
+      <div>
+        <div class="ac-identity-label">メールアドレス</div>
+        <div class="ac-identity-value ac-mono" id="reveal-email">…</div>
+      </div>
+      <div>
+        <div class="ac-identity-label">初期パスワード</div>
+        <div class="ac-password-value" id="reveal-password">…</div>
+      </div>
+    </div>
+
+    <p style="font-size:0.74rem;color:var(--ink-soft);margin:0 0 20px;">パスワードの再表示はできません。</p>
+
+    <div class="ac-modal-actions" style="margin-top:0;">
+      <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-print-reveal">印刷する</button>
+      <button class="ac-btn ac-btn-accent ac-btn-md" type="button" id="btn-close-reveal">確認して閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="admin-common.js"></script>
+<script>
+(async function () {
+  const H = window.HubCommon;
+  const AC = window.AdminCommon;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const session = await H.requireSession(sb);
+  if (!session) return;
+  const userId = session.user.id;
+
+  const admin = await AC.requireAdminAccess(sb, userId);
+  if (!admin) return;
+
+  const { data: profile } = await sb.from('profiles').select('display_name').eq('id', userId).maybeSingle();
+  AC.renderAdminSidebar(sb, profile, 'teachers', admin);
+
+  const pickerSchool = document.getElementById('picker-school');
+  const listEl = document.getElementById('teacher-list');
+  const btnAddTeacher = document.getElementById('btn-add-teacher');
+  let schools = [];
+  let currentSchoolName = '';
+
+  async function loadTeachers(schoolId) {
+    listEl.innerHTML = `
+      <div class="ac-card ac-skel" style="height:64px;"></div>
+      <div class="ac-card ac-skel" style="height:64px;"></div>`;
+    const { data, error } = await sb
+      .from('school_members')
+      .select('user_id, role, profiles(display_name)')
+      .eq('school_id', schoolId)
+      .in('role', ['school_admin', 'coordinator', 'educator'])
+      .order('role');
+
+    if (error) {
+      listEl.innerHTML = '<p class="ac-calm-msg">読み込めませんでした</p>';
+      return;
+    }
+    if (!data || data.length === 0) {
+      listEl.innerHTML = '<p class="ac-calm-msg">この学校にはまだ教員が登録されていません。</p>';
+      return;
+    }
+    listEl.innerHTML = data.map(m => {
+      const name = m.profiles?.display_name || '(表示名未設定)';
+      const given = H.givenName(name);
+      const isAdmin = m.role === 'school_admin';
+      const roleLabel = isAdmin ? '管理者' : m.role === 'coordinator' ? 'コーディネーター' : '教員';
+      const editBtn = admin.canManageStaff
+        ? `<button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-teacher" data-user-id="${m.user_id}" data-name="${name.replace(/"/g, '')}" type="button">編集</button>`
+        : '';
+      return `
+        <div class="ac-card ac-person-card">
+          <div class="ac-avatar-sm">${given.slice(0, 2) || '?'}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="ac-roster-name">${name}</div>
+          </div>
+          <span class="ac-badge ${isAdmin ? 'ac-badge-gold' : 'ac-badge-moss'}">${roleLabel}</span>
+          ${editBtn}
+        </div>`;
+    }).join('');
+    if (admin.canManageStaff) {
+      listEl.querySelectorAll('[data-action="edit-teacher"]').forEach(btn => {
+        btn.addEventListener('click', () => openEditTeacherModal(btn.dataset.userId, btn.dataset.name));
+      });
+    }
+  }
+
+  async function refreshSchoolPicker(selectId) {
+    schools = await AC.getAccessibleSchools(sb, admin);
+    if (!schools.length) {
+      document.getElementById('picker-bar').style.display = 'none';
+      listEl.innerHTML = '<p class="ac-calm-msg">学校が見つかりません。</p>';
+      btnAddTeacher.disabled = true;
+      return;
+    }
+    pickerSchool.innerHTML = schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    const target = schools.find(s => s.id === selectId) || schools[0];
+    pickerSchool.value = target.id;
+    currentSchoolName = target.name;
+    btnAddTeacher.disabled = false;
+    await loadTeachers(target.id);
+  }
+  pickerSchool.addEventListener('change', async () => {
+    currentSchoolName = schools.find(s => s.id === pickerSchool.value)?.name || '';
+    await loadTeachers(pickerSchool.value);
+  });
+
+  // ── create school (platform admin only — button hidden for scoped
+  //    admins; RLS is the real boundary either way) ─────────────────────
+  if (admin.isPlatformAdmin) {
+    document.getElementById('btn-add-school').style.display = '';
+  }
+  document.getElementById('btn-add-school').addEventListener('click', () => {
+    document.getElementById('form-add-school').reset();
+    document.getElementById('add-school-err').style.display = 'none';
+    document.getElementById('modal-add-school').style.display = 'flex';
+    document.getElementById('input-school-name').focus();
+  });
+  document.getElementById('btn-cancel-add-school').addEventListener('click', () => {
+    document.getElementById('modal-add-school').style.display = 'none';
+  });
+  document.getElementById('form-add-school').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('input-school-name').value.trim();
+    const errEl = document.getElementById('add-school-err');
+    const submitBtn = document.getElementById('btn-submit-add-school');
+    errEl.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = '作成中…';
+    const { data, error } = await sb.from('schools').insert({ name }).select('id').single();
+    submitBtn.disabled = false;
+    submitBtn.textContent = '作成する';
+    if (error) {
+      errEl.textContent = '作成できませんでした。';
+      errEl.style.display = 'block';
+      return;
+    }
+    document.getElementById('modal-add-school').style.display = 'none';
+    await refreshSchoolPicker(data.id);
+  });
+
+  // ── create teacher / admin (top-tier only — mirrors provision-account's
+  //    own server-side authorization, this is just the honest UI reflection
+  //    of it, not the actual security boundary) ─────────────────────────
+  if (admin.canManageStaff) {
+    btnAddTeacher.style.display = '';
+  }
+  btnAddTeacher.addEventListener('click', () => {
+    document.getElementById('form-add-teacher').reset();
+    document.getElementById('add-teacher-err').style.display = 'none';
+    document.getElementById('add-teacher-school-name').textContent = currentSchoolName;
+    document.getElementById('modal-add-teacher').style.display = 'flex';
+    document.getElementById('input-teacher-email').focus();
+  });
+  document.getElementById('btn-cancel-add-teacher').addEventListener('click', () => {
+    document.getElementById('modal-add-teacher').style.display = 'none';
+  });
+  document.getElementById('form-add-teacher').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('input-teacher-email').value.trim();
+    const displayName = document.getElementById('input-teacher-name').value.trim();
+    const kind = document.getElementById('select-teacher-role').value; // 'teacher' | 'admin'
+    const errEl = document.getElementById('add-teacher-err');
+    const submitBtn = document.getElementById('btn-submit-add-teacher');
+    errEl.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = '作成中…';
+
+    try {
+      const res = await fetch(`${cfg.supabaseUrl}/functions/v1/provision-account`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          kind,
+          school_id: pickerSchool.value,
+          email,
+          display_name: displayName,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok) {
+        errEl.textContent = body.error || '作成できませんでした。';
+        errEl.style.display = 'block';
+        return;
+      }
+      document.getElementById('modal-add-teacher').style.display = 'none';
+      document.getElementById('reveal-school').textContent = currentSchoolName || '—';
+      document.getElementById('reveal-email').textContent = body.login || email;
+      document.getElementById('reveal-password').textContent = body.initial_password || '—';
+      document.getElementById('modal-password').style.display = 'flex';
+      await loadTeachers(pickerSchool.value);
+    } catch (err) {
+      errEl.textContent = 'ネットワークエラーが発生しました。もう一度お試しください。';
+      errEl.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '作成する';
+    }
+  });
+
+  // ── edit teacher / admin (top-tier only) ────────────────────────────
+  let editingStaffId = null;
+  function openEditTeacherModal(userId, name) {
+    editingStaffId = userId;
+    document.getElementById('edit-teacher-err').style.display = 'none';
+    document.getElementById('edit-teacher-name').value = name || '';
+    document.getElementById('edit-teacher-password').value = '';
+    document.getElementById('modal-edit-teacher').style.display = 'flex';
+  }
+  document.getElementById('btn-cancel-edit-teacher').addEventListener('click', () => {
+    document.getElementById('modal-edit-teacher').style.display = 'none';
+    editingStaffId = null;
+  });
+  document.getElementById('form-edit-teacher').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!editingStaffId) return;
+    const displayName = document.getElementById('edit-teacher-name').value.trim();
+    const newPassword = document.getElementById('edit-teacher-password').value;
+    const errEl = document.getElementById('edit-teacher-err');
+    const submitBtn = document.getElementById('btn-submit-edit-teacher');
+    errEl.style.display = 'none';
+
+    if (newPassword && newPassword.trim().length > 0 && newPassword.trim().length < 8) {
+      errEl.textContent = 'パスワードは8文字以上にしてください。';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '保存中…';
+    try {
+      const res = await fetch(`${cfg.supabaseUrl}/functions/v1/update-teacher`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          staff_id: editingStaffId,
+          school_id: pickerSchool.value,
+          display_name: displayName,
+          password: newPassword && newPassword.trim().length > 0 ? newPassword.trim() : undefined,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok) {
+        errEl.textContent = body.error || '保存できませんでした。';
+        errEl.style.display = 'block';
+        return;
+      }
+      document.getElementById('modal-edit-teacher').style.display = 'none';
+      editingStaffId = null;
+      await loadTeachers(pickerSchool.value);
+    } catch (err) {
+      errEl.textContent = 'ネットワークエラーが発生しました。もう一度お試しください。';
+      errEl.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '保存する';
+    }
+  });
+
+  // Same discipline as class-detail.html's password reveal: no backdrop-
+  // click-to-close, cleared from the DOM on explicit dismissal only.
+  document.getElementById('btn-close-reveal').addEventListener('click', () => {
+    document.getElementById('reveal-password').textContent = '';
+    document.getElementById('modal-password').style.display = 'none';
+  });
+  document.getElementById('btn-print-reveal').addEventListener('click', () => window.print());
+
+  await refreshSchoolPicker(null);
+})();
+</script>
+</body>
+</html>
