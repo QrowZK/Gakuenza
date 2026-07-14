@@ -163,8 +163,8 @@ function buildMenu(){
   // itself is left intact/unused rather than deleted, in case it's wanted
   // again later; only its entry point is gone.
 
-  // Interview button — only for levels 3 and P
-  if(currentLevel==='3'||currentLevel==='P'){
+  // Interview button — only for levels with a speaking component (3級 and up)
+  if(currentLevel==='3'||currentLevel==='P'||currentLevel==='Q'||currentLevel==='2'){
     const ib=document.createElement("button");ib.className="menu-card";
     ib.style.borderLeft="4px solid #FF6F00";
     ib.innerHTML='<span class="menu-icon">🎤</span><div>'
@@ -360,5 +360,5 @@ $("stats-reset-btn").onclick=resetStatsConfirm;
 applyDark();
 // Support ?level= URL shortcut (from manifest shortcuts)
 const _urlLevel = new URLSearchParams(window.location.search).get('level');
-const _validLevels = ['5','4','3','P'];
+const _validLevels = ['5','4','3','P','Q','2'];
 switchLevel(_validLevels.includes(_urlLevel) ? _urlLevel : '5');
