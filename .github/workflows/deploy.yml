@@ -1,0 +1,27 @@
+name: Deploy to DreamHost
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via rsync over SSH
+        uses: easingthemes/ssh-deploy@v5.1.0
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          TARGET: ${{ secrets.REMOTE_TARGET }}
+          SOURCE: "./gakuenza.com/"
+          # No EXCLUDE needed — .git, .github, README.md, and anything
+          # else at repo root are outside this SOURCE path entirely, so
+          # they're never in scope for rsync in the first place. If you
+          # ever put something non-deployable INSIDE gakuenza.com/ itself
+          # (unlikely, but possible), add EXCLUDE back in for that case.
+          ARGS: "-rltgoDzvc"
