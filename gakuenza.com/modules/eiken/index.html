@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="英検 Practice — 英検5級から準2級まで1,428問の練習問題">
+  <meta name="description" content="英検 Practice — 英検5級から2級まで2,142問の練習問題">
   <title>英検 Practice — がくえん座</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +23,7 @@
     <div class="header">
       <div class="header-icon" id="hdr-icon">英検</div>
       <h1 id="hdr-title">英検 Practice</h1>
-      <p id="hdr-sub">1,428 問題 · 4 レベル · 3 セット</p>
+      <p id="hdr-sub">2,142 問題 · 6 レベル · 3 セット</p>
     </div>
 
     <!-- Level tabs + theme toggle -->
@@ -33,6 +33,8 @@
         <button class="level-tab" data-level="4">4級</button>
         <button class="level-tab" data-level="3">3級</button>
         <button class="level-tab" data-level="P">準2級</button>
+        <button class="level-tab" data-level="Q">準2級＋</button>
+        <button class="level-tab" data-level="2">2級</button>
       </div>
       <button class="theme-btn" id="theme-btn" title="ライト/ダークモード">🌙</button>
     </div>
@@ -126,6 +128,22 @@
       <div class="iv-level-info">
         <div class="iv-level-name" style="color:#00897B">英検準2級 面接</div>
         <div class="iv-level-desc">パッセージ・2イラスト・意見 / 10セッション</div>
+      </div>
+    </button>
+    <button class="iv-level-btn" data-iv-level="Q"
+      style="border-color:#EF6C00">
+      <span class="iv-level-badge" style="background:#EF6C00">準2級＋</span>
+      <div class="iv-level-info">
+        <div class="iv-level-name" style="color:#EF6C00">英検準2級プラス 面接</div>
+        <div class="iv-level-desc">パッセージ・2イラスト・意見 / 10セッション</div>
+      </div>
+    </button>
+    <button class="iv-level-btn" data-iv-level="2"
+      style="border-color:#283593">
+      <span class="iv-level-badge" style="background:#283593">2級</span>
+      <div class="iv-level-info">
+        <div class="iv-level-name" style="color:#283593">英検2級 面接</div>
+        <div class="iv-level-desc">パッセージ・イラスト・意見 / 10セッション</div>
       </div>
     </button>
   </div>
