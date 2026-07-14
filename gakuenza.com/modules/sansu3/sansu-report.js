@@ -115,10 +115,47 @@
     return ctx ? ctx.profile : null;
   }
 
+  // Unit-scoped pacing (focus_units). Returns the union of the focus-unit
+  // key lists set on this module across every class the student is enrolled
+  // in, or null meaning "all units" (the module then behaves exactly as
+  // before). Rule: if this module is assigned to a class with focus_units =
+  // null ("all units for that class"), or isn't assigned at all, we return
+  // null and foreground nothing — we only foreground when the scope is
+  // unambiguous. Fails soft: any error resolves to null (no regression).
+  async function getFocusUnits() {
+    try {
+      const ctx = await getContext();
+      if (!ctx || !ctx.moduleId) return null;
+      const sb = getClient();
+      if (!sb) return null;
+      const { data: enr } = await sb
+        .from('enrollments').select('class_id').eq('user_id', ctx.userId);
+      const classIds = (enr || []).map(function (r) { return r.class_id; });
+      if (!classIds.length) return null;
+      const { data, error } = await sb
+        .from('class_modules')
+        .select('focus_units, class_id')
+        .eq('module_id', ctx.moduleId)
+        .in('class_id', classIds);
+      if (error || !data || !data.length) return null;
+      const keys = new Set();
+      for (const row of data) {
+        // A null focus list on any assigned class means "all units" — the
+        // union with any subset is still "all", so foreground nothing.
+        if (row.focus_units == null) return null;
+        if (Array.isArray(row.focus_units)) row.focus_units.forEach(function (k) { keys.add(k); });
+      }
+      return keys.size ? Array.from(keys) : null;
+    } catch (e) {
+      console.log('[Sansu3Report] focus-units resolution failed:', e && e.message);
+      return null;
+    }
+  }
+
   async function signOut() {
     const sb = getClient();
     if (sb) await sb.auth.signOut();
   }
 
-  window.Sansu3Report = { report, getProfile, signOut, MODULE_KEY };
+  window.Sansu3Report = { report, getProfile, getFocusUnits, signOut, MODULE_KEY };
 })();

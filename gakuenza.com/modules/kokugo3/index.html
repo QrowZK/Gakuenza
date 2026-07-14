@@ -107,6 +107,43 @@
     // "never block the student's play experience" convention.
   }
 
+  // Unit-scoped pacing (focus_units): foreground this week's units without
+  // hiding the rest. kokugo3's unit keys are the READING_UNITS keys plus the
+  // literal 'kanji' for the kanji drill (see hub/module-units.js). Fails soft:
+  // any error leaves the set empty and nothing is foregrounded (no regression).
+  const focusUnits = new Set();
+  try {
+    if (ctx.moduleId && ctx.userId) {
+      const { data: enrAll } = await sb.from('enrollments').select('class_id').eq('user_id', ctx.userId);
+      const classIds = (enrAll || []).map(r => r.class_id);
+      if (classIds.length) {
+        const { data: cms } = await sb.from('class_modules')
+          .select('focus_units, class_id').eq('module_id', ctx.moduleId).in('class_id', classIds);
+        let anyAll = false, hasRow = false;
+        (cms || []).forEach(row => {
+          hasRow = true;
+          // A null focus on any assigned class means "all units" for it; the
+          // union with any subset is still "all", so foreground nothing.
+          if (row.focus_units == null) anyAll = true;
+          else if (Array.isArray(row.focus_units)) row.focus_units.forEach(k => focusUnits.add(k));
+        });
+        if (!hasRow || anyAll) focusUnits.clear();
+      }
+    }
+  } catch (e) { focusUnits.clear(); }
+
+  function markFocus(btn) {
+    if (!btn || btn.querySelector('.k3-focus-badge')) return;
+    btn.classList.add('k3-focus');
+    const h = btn.querySelector('h3');
+    if (h) h.insertAdjacentHTML('beforeend', ' <span class="k3-focus-badge">今週</span>');
+  }
+  (function applyModeFocus() {
+    const readingKeys = Object.keys(READING_UNITS);
+    if (focusUnits.has('kanji')) markFocus(document.getElementById('btn-mode-kanji'));
+    if (readingKeys.some(k => focusUnits.has(k))) markFocus(document.getElementById('btn-mode-reading'));
+  })();
+
   const viewSelect = document.getElementById('view-select');
   const viewUnitSelect = document.getElementById('view-unit-select');
   const viewQuiz = document.getElementById('view-quiz');
@@ -134,8 +171,9 @@
     const keys = Object.keys(READING_UNITS);
     unitList.innerHTML = keys.map(key => {
       const u = READING_UNITS[key];
-      return `<button type="button" class="k3-mode-btn" style="width:100%;margin-bottom:10px;" data-unit="${key}">
-        <h3>${u.title}</h3>
+      const foc = focusUnits.has(key);
+      return `<button type="button" class="k3-mode-btn${foc ? ' k3-focus' : ''}" style="width:100%;margin-bottom:10px;" data-unit="${key}">
+        <h3>${u.title}${foc ? ' <span class="k3-focus-badge">今週</span>' : ''}</h3>
         <p>${u.volume} ・ ${u.month} ・ ${u.author}</p>
       </button>`;
     }).join('');

@@ -4,6 +4,14 @@
 
   const UNITS = window.SANSU3_DATA.UNITS;
 
+  // ---------- unit-scoped pacing (focus_units) ----------
+  // Canonical unit key = 'u' + zero-padded unit number (u01..u17). These are
+  // the keys stored in class_modules.focus_units and offered by the
+  // assignment UI (see hub/module-units.js). null focus = all units (today's
+  // behavior); a populated set foregrounds those units without hiding others.
+  function unitKey(u) { return 'u' + String(u.num).padStart(2, '0'); }
+  let focusUnits = null; // null = show all normally; Set = foreground these
+
   // ---------- answer normalization ----------
   // Handles: full-width digits/letters (NFKC), whitespace, trailing
   // punctuation, unit words the question already shows, katakana→hiragana.
@@ -59,11 +67,57 @@
   }
 
   // ---------- menu ----------
+  function unitCard(u) {
+    const card = document.createElement('div');
+    card.className = 'unit-card';
+    if (focusUnits && focusUnits.has(unitKey(u))) card.classList.add('unit-card--focus');
+    const head = document.createElement('div');
+    head.className = 'unit-head';
+    const badge = (focusUnits && focusUnits.has(unitKey(u)))
+      ? '<span class="unit-focus-badge">今週</span>' : '';
+    head.innerHTML = '<span class="unit-num">' + u.num + '</span><span class="unit-title">' + esc(u.title) + '</span>' + badge;
+    card.appendChild(head);
+    u.sections.forEach(function (s) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sec-btn';
+      const done = state.completed[s.id];
+      btn.innerHTML = '<span class="sec-title">' + esc(s.title) + '</span>' +
+        '<span class="sec-meta">' + (done ? 'さいごの結果 ' + esc(done) : '全' + s.n + '問') + '</span>';
+      btn.addEventListener('click', function () { startSection(u, s); });
+      card.appendChild(btn);
+    });
+    return card;
+  }
+
   function renderMenu() {
     const root = $('unitList');
     root.innerHTML = '';
+
+    // Foreground pass: when the class is focused on specific units, relocate
+    // those to the top under "今週の単元"; the rest stay fully reachable below
+    // under "ほかの単元" (foreground, don't hide — a curious child can still
+    // explore ahead; nothing is removed, just reordered).
+    const foregrounding = !!(focusUnits && focusUnits.size &&
+      UNITS.some(function (u) { return focusUnits.has(unitKey(u)); }));
+    if (foregrounding) {
+      const fh = document.createElement('h2');
+      fh.className = 'vol-head vol-head--focus';
+      fh.textContent = '今週の単元';
+      root.appendChild(fh);
+      UNITS.filter(function (u) { return focusUnits.has(unitKey(u)); })
+        .forEach(function (u) { root.appendChild(unitCard(u)); });
+      const rh = document.createElement('h2');
+      rh.className = 'vol-head';
+      rh.textContent = 'ほかの単元';
+      root.appendChild(rh);
+    }
+
+    // Main list. When foregrounding, the focused units are already shown above,
+    // so skip them here (relocated, not duplicated).
     let currentVol = null;
     UNITS.forEach(function (u) {
+      if (foregrounding && focusUnits.has(unitKey(u))) return;
       if (u.vol !== currentVol) {
         currentVol = u.vol;
         const h = document.createElement('h2');
@@ -71,23 +125,7 @@
         h.textContent = currentVol === '上' ? '3年 上' : '3年 下';
         root.appendChild(h);
       }
-      const card = document.createElement('div');
-      card.className = 'unit-card';
-      const head = document.createElement('div');
-      head.className = 'unit-head';
-      head.innerHTML = '<span class="unit-num">' + u.num + '</span><span class="unit-title">' + esc(u.title) + '</span>';
-      card.appendChild(head);
-      u.sections.forEach(function (s) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'sec-btn';
-        const done = state.completed[s.id];
-        btn.innerHTML = '<span class="sec-title">' + esc(s.title) + '</span>' +
-          '<span class="sec-meta">' + (done ? 'さいごの結果 ' + esc(done) : '全' + s.n + '問') + '</span>';
-        btn.addEventListener('click', function () { startSection(u, s); });
-        card.appendChild(btn);
-      });
-      root.appendChild(card);
+      root.appendChild(unitCard(u));
     });
   }
 
@@ -283,6 +321,15 @@
   document.addEventListener('DOMContentLoaded', function () {
     renderMenu();
     initAccount();
+
+    // Load this class's focus units, then re-render to foreground them. Async
+    // and non-blocking: the menu is already usable with all units; if the
+    // fetch fails or returns null, nothing changes (no regression).
+    if (window.Sansu3Report && window.Sansu3Report.getFocusUnits) {
+      window.Sansu3Report.getFocusUnits().then(function (keys) {
+        if (keys && keys.length) { focusUnits = new Set(keys); renderMenu(); }
+      });
+    }
 
     $('checkBtn').addEventListener('click', function () {
       if (!state.answered) grade($('answerInput').value);
