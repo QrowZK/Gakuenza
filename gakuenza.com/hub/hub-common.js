@@ -9,6 +9,16 @@ window.HubCommon = (function () {
   // a consistent, predictable order rather than whatever order modules
   // happened to be fetched in.
   const SUBJECT_ORDER = ['english', 'math', 'japanese', 'science', 'social', 'sougou', 'misc'];
+  // Escapes text for safe interpolation into innerHTML. Every value that
+  // originated in the database — student-typed answers, prompts, category
+  // labels, display names, module names — MUST pass through this before
+  // being placed in an HTML string, or a student can store markup/script
+  // that executes in a teacher's or admin's session (stored XSS).
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
   const subjectVar = (s) => `var(--subject-${s || 'misc'}, var(--border))`;
   const subjectLabel = (s) => `${SUBJECT_LABEL_JA[s] || s} · ${SUBJECT_LABEL_EN[s] || s}`;
   // Sorts the keys of a {subject: [...]} grouping object into
@@ -233,6 +243,7 @@ window.HubCommon = (function () {
   }
 
   return {
+    escapeHtml,
     subjectVar, subjectLabel, sortedSubjectKeys, givenName, formatGreetingDate, formatDueDate,
     relativeTime, progressBar, requireSession, renderSidebar, reportActivityWithItems,
     assignmentKeyFromRef, assignmentLabel,
