@@ -58,7 +58,7 @@
 
   /* ── Signature motifs ── */
   .eyebrow { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: .09em; color: var(--gold-deep, #A8843A); text-transform: uppercase; }
-  .dot-rule { border-bottom: 2px dotted var(--gold); margin: 12px 0 0; }
+  .dot-rule { border-bottom: 2px dotted var(--gold); margin: 12px 0 16px; }
 
   /* ── Menu (1a): head, level-card grid, set list, chips, interview CTA ── */
   .menu-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 30px; }
