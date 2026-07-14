@@ -10,6 +10,13 @@
 <link rel="stylesheet" href="admin.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* focus-unit checkboxes (shared markup from module-assign-common.js) */
+  .ma-focus-field { border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+  .ma-focus-hint { font-size:0.72rem; color:var(--ink-soft); margin-bottom:6px; }
+  .ma-focus-opt { display:flex; align-items:center; gap:7px; padding:3px 0; font-size:0.8rem; cursor:pointer; }
+  .ac-assigned-card .ac-btn { margin-left:6px; }
+</style>
 </head>
 <body>
 
@@ -307,10 +314,11 @@
         <label class="ac-field-label" for="input-total-items">問題数</label>
         <input id="input-total-items" type="number" min="1" required>
       </div>
-      <div class="ac-field" style="margin-bottom:20px;">
+      <div class="ac-field">
         <label class="ac-field-label" for="input-due-date">期限（任意）</label>
         <input id="input-due-date" type="date">
       </div>
+      <div class="ac-field" id="assign-focus-slot" style="margin-bottom:20px;"></div>
       <p class="ac-modal-err" id="assign-err" style="display:none;"></p>
       <div class="ac-modal-actions">
         <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-assign">キャンセル</button>
@@ -323,10 +331,13 @@
 <script src="../supabase.js"></script>
 <script src="../config.js"></script>
 <script src="../hub-common.js"></script>
+<script src="../module-units.js"></script>
+<script src="../module-assign-common.js"></script>
 <script src="admin-common.js"></script>
 <script>
 (async function () {
   const H = window.HubCommon;
+  const MA = window.ModuleAssign;
   const AC = window.AdminCommon;
   const cfg = window.GAKUENZA_CONFIG;
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
@@ -886,11 +897,27 @@
             <div class="ac-assigned-meta" id="assigned-meta-${a.module_id}">${fmtAssignedMeta(a)}</div>
           </div>
           <button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-due" data-module-id="${a.module_id}" type="button">変更</button>
+          <button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="unassign" data-module-id="${a.module_id}" type="button">解除</button>
         </div>`).join('');
       el.querySelectorAll('[data-action="edit-due"]').forEach(btn => {
         btn.addEventListener('click', () => editDueDate(btn.dataset.moduleId));
       });
+      el.querySelectorAll('[data-action="unassign"]').forEach(btn => {
+        btn.addEventListener('click', () => unassignModule(btn.dataset.moduleId));
+      });
     }
+  }
+
+  async function unassignModule(moduleId) {
+    const a = (assigned || []).find(x => x.module_id === moduleId);
+    const name = a && a.modules ? a.modules.name : 'このモジュール';
+    const ok = window.confirm(
+      `「${name}」の割り当てを解除しますか？\n\n` +
+      `解除すると、このクラスの児童の画面からこのモジュールが消え、これまでの成績も児童には表示されなくなります（記録自体は残ります）。`);
+    if (!ok) return;
+    const { error } = await MA.unassignModule(sb, { classId: classRow.id, moduleId });
+    if (error) { alert('解除できませんでした。'); return; }
+    await refetchAndRender();
   }
 
   function editDueDate(moduleId) {
@@ -1121,8 +1148,17 @@
         </optgroup>`).join('');
       document.getElementById('btn-submit-assign').disabled = false;
     }
+    renderAssignFocus();
     document.getElementById('modal-assign').style.display = 'flex';
   }
+  // Focus-unit checkboxes follow the currently-selected module in the picker.
+  function renderAssignFocus() {
+    const sel = document.getElementById('select-assign-module');
+    const mod = catalog.find(m => m.id === sel.value);
+    document.getElementById('assign-focus-slot').innerHTML =
+      (mod ? MA.focusUnitsFieldHtml(mod.key, []) : '') || '';
+  }
+  document.getElementById('select-assign-module').addEventListener('change', renderAssignFocus);
   document.getElementById('btn-assign-module').addEventListener('click', openAssignModal);
   document.getElementById('btn-cancel-assign').addEventListener('click', () => {
     document.getElementById('modal-assign').style.display = 'none';
@@ -1135,9 +1171,10 @@
     const errEl = document.getElementById('assign-err');
     const btn = document.getElementById('btn-submit-assign');
     if (!moduleId) return;
+    const focusUnits = MA.readFocusUnitsField(document.getElementById('assign-focus-slot'));
     btn.disabled = true;
-    const { error } = await sb.from('class_modules').insert({
-      class_id: classRow.id, module_id: moduleId, total_items: totalItems, due_date: dueDate,
+    const { error } = await MA.assignModule(sb, {
+      classId: classRow.id, moduleId, totalItems, dueDate, focusUnits,
     });
     if (error) {
       errEl.textContent = '割り当てできませんでした。';

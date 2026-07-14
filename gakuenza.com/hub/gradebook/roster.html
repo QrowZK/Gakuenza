@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>名簿 — がくえん座 成績簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gradebook.css">
+<style>
+  .ro-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--mist); }
+  .ro-row:last-child { border-bottom:none; }
+  .ro-num { flex:0 0 auto; width:34px; height:34px; border-radius:8px; background:var(--paper-dim); display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:700; color:var(--ink-soft); }
+  .ro-name { font-weight:700; font-size:13.5px; }
+  .ma-backdrop { position:fixed; inset:0; background:rgba(28,37,48,0.32); display:none; align-items:center; justify-content:center; z-index:50; }
+  .ma-modal { background:#fffdf8; border-radius:14px; padding:24px; width:400px; max-width:92vw; box-shadow:0 8px 40px rgba(28,37,48,0.22); }
+  .ma-modal h2 { font-family:"Zen Maru Gothic",sans-serif; font-size:16px; margin:0 0 8px; }
+  .ma-modal p.hint { font-size:12px; color:var(--ink-soft); margin:0 0 18px; line-height:1.55; }
+  .ma-field label { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:5px; font-weight:500; }
+  .ma-field input { width:100%; padding:8px 10px; border:1px solid var(--mist); border-radius:8px; font-family:inherit; font-size:13px; }
+  .ma-modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+  .ma-err { color:var(--clay); font-size:12px; margin:12px 0 0; display:none; }
+  .ma-progress { font-size:12px; color:var(--ink-soft); margin:12px 0 0; display:none; }
+</style>
+</head>
+<body>
+<div class="gb-frame" id="app-root">
+  <aside class="gb-sidebar" id="gb-sidebar"></aside>
+  <main class="gb-main" id="gb-main">
+    <div class="gb-head">
+      <div><h1 class="gb-title">名簿</h1></div>
+      <div class="gb-head-filters" id="gb-filters"></div>
+      <div class="gb-head-meta" id="gb-meta"></div>
+    </div>
+    <hr class="gb-rule">
+    <div id="gb-body">
+      <div class="gb-card">
+        <h2 class="gb-card-head">クラスの児童 <span class="gb-sub" id="roster-count"></span></h2>
+        <div style="margin:0 0 14px;">
+          <button class="gb-btn" id="btn-bulk-password" type="button" disabled>パスワードを一括設定</button>
+        </div>
+        <div id="roster-list"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="ma-backdrop" id="bp-backdrop">
+  <div class="ma-modal">
+    <h2>パスワードを一括設定</h2>
+    <p class="hint">このクラスの児童 <strong id="bp-count">全員</strong> に、同じパスワードを設定します。児童にはログイン後の変更をうながしてください。</p>
+    <div class="ma-field">
+      <label for="bp-input">新しいパスワード</label>
+      <input type="text" id="bp-input" minlength="8" autocomplete="off" placeholder="8文字以上">
+    </div>
+    <p class="ma-err" id="bp-err"></p>
+    <p class="ma-progress" id="bp-progress"></p>
+    <div class="ma-modal-actions">
+      <button class="ma-btn-sm" id="bp-cancel" type="button" style="font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid var(--mist);background:var(--paper);cursor:pointer;font-family:inherit;">キャンセル</button>
+      <button class="gb-btn" id="bp-submit" type="button">設定する</button>
+    </div>
+  </div>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="../admin/admin-common.js"></script>
+<script src="../module-assign-common.js"></script>
+<script src="gradebook-common.js"></script>
+<script>
+(async function () {
+  const GB = window.Gradebook;
+  const MA = window.ModuleAssign;
+  const esc = GB.esc;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const ctxWrap = await GB.requireContext(sb);
+  if (!ctxWrap) return;
+  const { ctx, profile } = ctxWrap;
+  const { data: { session } } = await sb.auth.getSession();
+
+  const classes = await GB.loadClasses(sb, ctx);
+  let classId = GB.getCurrentClassId(classes);
+  const snap = await GB.loadSnapshotStatus(sb, classId);
+  GB.renderSidebar(sb, profile, 'roster', ctx, snap);
+
+  document.getElementById('gb-meta').innerHTML = `${esc(GB.fullDate(new Date().toISOString()))}<br>成績簿 · Gradebook`;
+  document.getElementById('gb-filters').innerHTML = GB.classChipHtml(classes, classId);
+  const classChip = document.getElementById('gb-class-chip');
+  if (classChip) classChip.addEventListener('change', () => { GB.setCurrentClassId(classChip.value); location.reload(); });
+
+  if (!classId) {
+    document.getElementById('gb-body').innerHTML =
+      `<div class="gb-empty"><span class="gb-empty-em">担当クラスがありません</span>管理者にクラスの割り当てを依頼してください。</div>`;
+    return;
+  }
+  const klass = classes.find(c => c.id === classId);
+  const schoolId = klass ? klass.school_id : null;
+
+  // ── roster ──────────────────────────────────────────────────────────
+  const { data: enr } = await sb
+    .from('enrollments')
+    .select('user_id, profiles(display_name, student_number)')
+    .eq('class_id', classId).eq('role', 'student');
+  const roster = (enr || []).slice().sort((a, b) => {
+    const na = parseInt((a.profiles && a.profiles.student_number) || '', 10);
+    const nb = parseInt((b.profiles && b.profiles.student_number) || '', 10);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return 0;
+  });
+
+  document.getElementById('roster-count').textContent = roster.length ? `全${roster.length}名` : '';
+  const listEl = document.getElementById('roster-list');
+  if (!roster.length) {
+    listEl.innerHTML = `<div class="gb-empty" style="padding:16px;">このクラスにはまだ児童が登録されていません。</div>`;
+  } else {
+    listEl.innerHTML = roster.map((s, i) => {
+      const num = (s.profiles && s.profiles.student_number) || (i + 1);
+      const name = (s.profiles && s.profiles.display_name) || '(未設定)';
+      return `<div class="ro-row"><div class="ro-num">${esc(String(num))}</div><div class="ro-name">${esc(name)}</div></div>`;
+    }).join('');
+    document.getElementById('btn-bulk-password').disabled = false;
+  }
+
+  // ── bulk password ───────────────────────────────────────────────────
+  const backdrop = document.getElementById('bp-backdrop');
+  document.getElementById('bp-count').textContent = `全${roster.length}名`;
+  document.getElementById('btn-bulk-password').addEventListener('click', () => {
+    document.getElementById('bp-input').value = '';
+    document.getElementById('bp-err').style.display = 'none';
+    document.getElementById('bp-progress').style.display = 'none';
+    backdrop.style.display = 'flex';
+  });
+  const closeBp = () => { backdrop.style.display = 'none'; };
+  document.getElementById('bp-cancel').addEventListener('click', closeBp);
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) closeBp(); });
+
+  document.getElementById('bp-submit').addEventListener('click', async () => {
+    const password = document.getElementById('bp-input').value.trim();
+    const errEl = document.getElementById('bp-err');
+    const progressEl = document.getElementById('bp-progress');
+    const submitBtn = document.getElementById('bp-submit');
+    errEl.style.display = 'none';
+    if (password.length < 8) {
+      errEl.textContent = 'パスワードは8文字以上にしてください。';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!roster.length) return;
+    submitBtn.disabled = true;
+    progressEl.style.display = 'block';
+    const { successCount, failures } = await MA.bulkResetPasswords({
+      cfg, accessToken: session.access_token, schoolId, classId, roster, password,
+      onProgress: (done, total) => { progressEl.textContent = `設定中… (${done}/${total})`; },
+    });
+    submitBtn.disabled = false;
+    const msg = MA.bulkResultMessage(successCount, failures);
+    if (failures.length) {
+      errEl.textContent = msg; errEl.style.display = 'block'; progressEl.style.display = 'none';
+    } else {
+      progressEl.textContent = msg;
+      setTimeout(closeBp, 1400);
+    }
+  });
+})();
+</script>
+</body>
+</html>

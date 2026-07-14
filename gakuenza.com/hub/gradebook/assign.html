@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>課題 — がくえん座 成績簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gradebook.css">
+<style>
+  .ma-row { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--mist); }
+  .ma-row:last-child { border-bottom:none; }
+  .ma-row-body { flex:1; min-width:0; }
+  .ma-row-name { font-weight:700; font-size:13.5px; }
+  .ma-row-meta { font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .ma-actions { display:flex; gap:8px; flex:0 0 auto; }
+  .ma-btn-sm { font-size:12px; padding:5px 12px; border-radius:8px; border:1px solid var(--mist); background:var(--paper); color:var(--ink); cursor:pointer; font-family:inherit; }
+  .ma-btn-sm:hover { border-color:var(--moss); }
+  .ma-btn-danger:hover { border-color:var(--clay); color:var(--clay); }
+  .ma-backdrop { position:fixed; inset:0; background:rgba(28,37,48,0.32); display:none; align-items:center; justify-content:center; z-index:50; }
+  .ma-modal { background:#fffdf8; border-radius:14px; padding:24px; width:420px; max-width:92vw; max-height:88vh; overflow-y:auto; box-shadow:0 8px 40px rgba(28,37,48,0.22); }
+  .ma-modal h2 { font-family:"Zen Maru Gothic",sans-serif; font-size:16px; margin:0 0 16px; }
+  .ma-field { margin-bottom:16px; }
+  .ma-field label { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:5px; font-weight:500; }
+  .ma-field input[type=date], .ma-field input[type=number] { width:100%; padding:8px 10px; border:1px solid var(--mist); border-radius:8px; font-family:inherit; font-size:13px; }
+  .ma-focus-field { border:1px solid var(--mist); border-radius:10px; padding:10px 12px; }
+  .ma-focus-hint { font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .ma-focus-opt { display:flex; align-items:center; gap:7px; padding:3px 0; font-size:12.5px; cursor:pointer; }
+  .ma-modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+  .ma-err { color:var(--clay); font-size:12px; margin:0 0 12px; display:none; }
+</style>
+</head>
+<body>
+<div class="gb-frame" id="app-root">
+  <aside class="gb-sidebar" id="gb-sidebar"></aside>
+  <main class="gb-main" id="gb-main">
+    <div class="gb-head">
+      <div><h1 class="gb-title">課題</h1></div>
+      <div class="gb-head-filters" id="gb-filters"></div>
+      <div class="gb-head-meta" id="gb-meta"></div>
+    </div>
+    <hr class="gb-rule">
+    <div id="gb-body">
+      <div class="gb-card" id="assigned-card"><h2 class="gb-card-head">割り当て済みの課題</h2><div id="assigned-list"></div></div>
+      <div class="gb-card" id="available-card" style="margin-top:16px;"><h2 class="gb-card-head">追加できるモジュール <span class="gb-sub">学校で有効なモジュールから選べます</span></h2><div id="available-list"></div></div>
+    </div>
+  </main>
+</div>
+
+<div class="ma-backdrop" id="ma-backdrop">
+  <div class="ma-modal">
+    <h2 id="ma-modal-title">モジュールを割り当て</h2>
+    <p class="ma-err" id="ma-err"></p>
+    <div class="ma-field">
+      <label for="ma-due">期限（任意）</label>
+      <input type="date" id="ma-due">
+    </div>
+    <div class="ma-field">
+      <label for="ma-total">問題数（任意・進捗率の計算に使います）</label>
+      <input type="number" id="ma-total" min="1" placeholder="例：10">
+    </div>
+    <div class="ma-field" id="ma-focus-slot"></div>
+    <div class="ma-modal-actions">
+      <button class="ma-btn-sm" id="ma-cancel" type="button">キャンセル</button>
+      <button class="gb-btn" id="ma-save" type="button">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="../admin/admin-common.js"></script>
+<script src="../module-units.js"></script>
+<script src="../module-assign-common.js"></script>
+<script src="gradebook-common.js"></script>
+<script>
+(async function () {
+  const GB = window.Gradebook;
+  const MA = window.ModuleAssign;
+  const H = window.HubCommon;
+  const esc = GB.esc;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const ctxWrap = await GB.requireContext(sb);
+  if (!ctxWrap) return;
+  const { ctx, profile } = ctxWrap;
+
+  const classes = await GB.loadClasses(sb, ctx);
+  let classId = GB.getCurrentClassId(classes);
+  const snap = await GB.loadSnapshotStatus(sb, classId);
+  GB.renderSidebar(sb, profile, 'assign', ctx, snap);
+
+  document.getElementById('gb-meta').innerHTML = `${esc(GB.fullDate(new Date().toISOString()))}<br>成績簿 · Gradebook`;
+  document.getElementById('gb-filters').innerHTML = GB.classChipHtml(classes, classId);
+  const classChip = document.getElementById('gb-class-chip');
+  if (classChip) classChip.addEventListener('change', () => { GB.setCurrentClassId(classChip.value); location.reload(); });
+
+  if (!classId) {
+    document.getElementById('gb-body').innerHTML =
+      `<div class="gb-empty"><span class="gb-empty-em">担当クラスがありません</span>管理者にクラスの割り当てを依頼してください。</div>`;
+    return;
+  }
+  const klass = classes.find(c => c.id === classId);
+  const schoolId = klass ? klass.school_id : null;
+
+  // ── data ────────────────────────────────────────────────────────────
+  let catalog = [], assigned = [], enabledIds = new Set();
+  async function load() {
+    const [catRes, assignedRes, enabled] = await Promise.all([
+      sb.from('modules').select('id, key, name, subject').eq('is_active', true),
+      MA.loadAssigned(sb, classId),
+      MA.loadSchoolEnabledIds(sb, schoolId),
+    ]);
+    catalog = catRes.data || [];
+    assigned = assignedRes.error ? [] : (assignedRes.data || []);
+    enabledIds = enabled || new Set();
+  }
+
+  const moduleById = {};
+  function focusSummary(a) {
+    const key = a.modules ? a.modules.key : null;
+    if (!a.focus_units || !a.focus_units.length) return '全単元';
+    const units = (window.moduleUnitsFor ? window.moduleUnitsFor(key) : []);
+    const labelOf = {}; units.forEach(u => labelOf[u.key] = u.label);
+    const names = a.focus_units.map(k => labelOf[k] || k);
+    return '今週: ' + (names.length <= 2 ? names.join('、') : names.length + '単元');
+  }
+
+  function render() {
+    catalog.forEach(m => moduleById[m.id] = m);
+    // assigned
+    const aEl = document.getElementById('assigned-list');
+    if (!assigned.length) {
+      aEl.innerHTML = `<div class="gb-empty" style="padding:16px;">まだ課題を割り当てていません。下から追加できます。</div>`;
+    } else {
+      aEl.innerHTML = assigned.map(a => {
+        const name = a.modules ? a.modules.name : '(不明なモジュール)';
+        const due = a.due_date ? H.formatDueDate(a.due_date) : '期限なし';
+        return `<div class="ma-row" data-module-id="${a.module_id}">
+          <div class="ma-row-body">
+            <div class="ma-row-name">${esc(name)}</div>
+            <div class="ma-row-meta">${esc(due)}・${esc(focusSummary(a))}${a.total_items != null ? '・' + a.total_items + '問' : ''}</div>
+          </div>
+          <div class="ma-actions">
+            <button class="ma-btn-sm" data-act="edit" data-module-id="${a.module_id}" type="button">変更</button>
+            <button class="ma-btn-sm ma-btn-danger" data-act="unassign" data-module-id="${a.module_id}" type="button">解除</button>
+          </div>
+        </div>`;
+      }).join('');
+      aEl.querySelectorAll('[data-act="edit"]').forEach(b => b.addEventListener('click', () => openModal(b.dataset.moduleId, true)));
+      aEl.querySelectorAll('[data-act="unassign"]').forEach(b => b.addEventListener('click', () => unassign(b.dataset.moduleId)));
+    }
+    // available = school-enabled, not yet assigned
+    const assignedSet = new Set(assigned.map(a => a.module_id));
+    const available = catalog.filter(m => enabledIds.has(m.id) && !assignedSet.has(m.id));
+    const vEl = document.getElementById('available-list');
+    if (!available.length) {
+      vEl.innerHTML = `<div class="gb-empty" style="padding:16px;">追加できるモジュールはありません。学校で有効なモジュールがまだない場合は、管理者にご相談ください。</div>`;
+    } else {
+      const bySubject = {};
+      for (const m of available) (bySubject[m.subject] ||= []).push(m);
+      vEl.innerHTML = H.sortedSubjectKeys(bySubject).map(subject => `
+        <div class="ma-row-meta" style="margin-top:10px;font-weight:700;">${esc(H.subjectLabel(subject))}</div>
+        ${bySubject[subject].map(m => `<div class="ma-row" data-module-id="${m.id}">
+          <div class="ma-row-body"><div class="ma-row-name">${esc(m.name)}</div></div>
+          <div class="ma-actions"><button class="ma-btn-sm" data-act="assign" data-module-id="${m.id}" type="button">割り当て</button></div>
+        </div>`).join('')}`).join('');
+      vEl.querySelectorAll('[data-act="assign"]').forEach(b => b.addEventListener('click', () => openModal(b.dataset.moduleId, false)));
+    }
+  }
+
+  // ── modal ───────────────────────────────────────────────────────────
+  const backdrop = document.getElementById('ma-backdrop');
+  let modalModuleId = null, modalIsEdit = false;
+  function openModal(moduleId, isEdit) {
+    modalModuleId = moduleId; modalIsEdit = isEdit;
+    const mod = moduleById[moduleId];
+    const existing = assigned.find(a => a.module_id === moduleId);
+    document.getElementById('ma-modal-title').textContent = (mod ? mod.name : 'モジュール') + (isEdit ? ' — 変更' : ' — 割り当て');
+    document.getElementById('ma-err').style.display = 'none';
+    document.getElementById('ma-due').value = existing && existing.due_date ? existing.due_date : '';
+    document.getElementById('ma-total').value = existing && existing.total_items != null ? existing.total_items : '';
+    const selected = existing && existing.focus_units ? existing.focus_units : [];
+    document.getElementById('ma-focus-slot').innerHTML =
+      MA.focusUnitsFieldHtml(mod ? mod.key : null, selected) || '<div class="ma-focus-hint">この教材には単元の指定はありません。</div>';
+    backdrop.style.display = 'flex';
+  }
+  function closeModal() { backdrop.style.display = 'none'; modalModuleId = null; }
+  document.getElementById('ma-cancel').addEventListener('click', closeModal);
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) closeModal(); });
+
+  document.getElementById('ma-save').addEventListener('click', async () => {
+    if (!modalModuleId) return;
+    const errEl = document.getElementById('ma-err');
+    const saveBtn = document.getElementById('ma-save');
+    const dueDate = document.getElementById('ma-due').value || null;
+    const totalRaw = document.getElementById('ma-total').value;
+    const totalItems = totalRaw ? parseInt(totalRaw, 10) : null;
+    const focusUnits = MA.readFocusUnitsField(document.getElementById('ma-focus-slot'));
+    saveBtn.disabled = true;
+    let res;
+    if (modalIsEdit) {
+      res = await MA.updateAssignment(sb, { classId, moduleId: modalModuleId, dueDate, totalItems, focusUnits });
+    } else {
+      res = await MA.assignModule(sb, { classId, moduleId: modalModuleId, dueDate, totalItems, focusUnits });
+    }
+    saveBtn.disabled = false;
+    if (res.error) {
+      errEl.textContent = '保存できませんでした。' + (res.error.message ? '（' + res.error.message + '）' : '');
+      errEl.style.display = 'block';
+      return;
+    }
+    closeModal();
+    await load(); render();
+  });
+
+  async function unassign(moduleId) {
+    const mod = moduleById[moduleId];
+    const ok = window.confirm(
+      `「${mod ? mod.name : 'このモジュール'}」の割り当てを解除しますか？\n\n` +
+      `解除すると、このクラスの児童の画面からこのモジュールが消え、これまでの成績も児童には表示されなくなります（記録自体は残ります）。`);
+    if (!ok) return;
+    const res = await MA.unassignModule(sb, { classId, moduleId });
+    if (res.error) { alert('解除できませんでした。'); return; }
+    await load(); render();
+  }
+
+  await load();
+  render();
+})();
+</script>
+</body>
+</html>
