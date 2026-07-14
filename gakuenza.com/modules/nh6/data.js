@@ -4,14 +4,14 @@
 'use strict';
 
 const NH6_UNITS = [
-  { id:1, title:'This is me!',         titleJa:'じこしょうかいをしよう',   emoji:'👋', color:'#1565C0', vocabCats:'colors,sports,animals,things,family' },
-  { id:2, title:'My Daily Schedule',   titleJa:'一日の生活を伝えよう',      emoji:'⏰', color:'#2E7D32', vocabCats:'daily,time,weather' },
-  { id:3, title:'My Weekend',          titleJa:'週末にしたことを伝えよう',  emoji:'🏆', color:'#C62828', vocabCats:'food,actions,descriptions,sports' },
-  { id:4, title:'Let\'s see the world.', titleJa:'行きたい国を紹介しよう', emoji:'🌍', color:'#6A1B9A', vocabCats:'nature,descriptions,food' },
-  { id:5, title:'Where is it from?',   titleJa:'持ち物の国を紹介しよう',   emoji:'🗺️', color:'#E65100', vocabCats:'things,stationery,clothes,ingredients' },
-  { id:6, title:'Save the animals.',   titleJa:'動物を守るために伝えよう', emoji:'🐘', color:'#1B5E20', vocabCats:'animals,sea-animals,nature' },
-  { id:7, title:'My Best Memory',      titleJa:'一番の思い出を伝えよう',   emoji:'📸', color:'#880E4F', vocabCats:'events,food,town,descriptions' },
-  { id:8, title:'My Future, My Dream', titleJa:'将来の夢を伝えよう',       emoji:'⭐', color:'#0D47A1', vocabCats:'jobs,clubs,actions,descriptions' },
+  { id:1, title:'This is me!',         titleJa:'じこしょうかいをしよう',   emoji:'👋', color:'#4A6B4F', vocabCats:'colors,sports,animals,things,family' },
+  { id:2, title:'My Daily Schedule',   titleJa:'一日の生活を伝えよう',      emoji:'⏰', color:'#6E8B3D', vocabCats:'daily,time,weather' },
+  { id:3, title:'My Weekend',          titleJa:'週末にしたことを伝えよう',  emoji:'🏆', color:'#B5572E', vocabCats:'food,actions,descriptions,sports' },
+  { id:4, title:'Let\'s see the world.', titleJa:'行きたい国を紹介しよう', emoji:'🌍', color:'#8C5A72', vocabCats:'nature,descriptions,food' },
+  { id:5, title:'Where is it from?',   titleJa:'持ち物の国を紹介しよう',   emoji:'🗺️', color:'#C06A2E', vocabCats:'things,stationery,clothes,ingredients' },
+  { id:6, title:'Save the animals.',   titleJa:'動物を守るために伝えよう', emoji:'🐘', color:'#3F7A6B', vocabCats:'animals,sea-animals,nature' },
+  { id:7, title:'My Best Memory',      titleJa:'一番の思い出を伝えよう',   emoji:'📸', color:'#A8432A', vocabCats:'events,food,town,descriptions' },
+  { id:8, title:'My Future, My Dream', titleJa:'将来の夢を伝えよう',       emoji:'⭐', color:'#7A5A3C', vocabCats:'jobs,clubs,actions,descriptions' },
 ];
 
 // ── GRAMMAR PRACTICE ─────────────────────────────────────────────────────

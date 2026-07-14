@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#1565C0">
+  <meta name="theme-color" content="#1C2530">
   <meta name="description" content="Let's Try 2 — 小学4年生英語学習コンパニオン">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="Let's Try 2">
   <title>Let's Try 2 — がくえん座</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
     /* ── Module topbar (back-to-hub link) + account bubble — same
        self-contained pattern as every other Gakuenza module. This module
@@ -20,10 +20,10 @@
        `button{width:100%}` rule once leaked onto every button on a module
        page — checked this file for that collision; none found, but each
        module still stays self-contained on purpose). ── */
-    .module-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #d8d2c2; }
-    .module-back { font-size: 13px; font-weight: 600; color: #3a4555; text-decoration: none; white-space: nowrap; }
-    .module-back:hover { color: #1c2530; }
-    .module-name { font-size: 13px; color: #8a8570; }
+    .module-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #1C2530; border-bottom: none; }
+    .module-back { font-size: 13px; font-weight: 600; color: #C9CFD8; text-decoration: none; white-space: nowrap; }
+    .module-back:hover { color: #F7F3EA; }
+    .module-name { font-size: 13px; color: #7A8294; }
 
     .module-account { position: relative; }
     .module-account-btn { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; border: 1px solid #d8d2c2; background: #fff; cursor: pointer; font-family: inherit; transition: border-color .15s, background .15s; }
@@ -35,20 +35,21 @@
     .module-account-signout { display: block; width: 100%; padding: 10px 14px; background: none; border: none; text-align: left; font-size: 13px; font-family: inherit; color: #a23b2e; cursor: pointer; }
     .module-account-signout:hover { background: #fdecea; }
 
-    .results-sync { text-align: center; font-size: 13px; font-weight: 600; color: #2e7d32; margin: 4px 0 14px; min-height: 18px; }
-    .results-sync.error { color: #a23b2e; cursor: pointer; }
+    .results-sync { text-align: center; font-size: 13px; font-weight: 600; color: #4A6B4F; margin: 4px 0 14px; min-height: 18px; }
+    .results-sync.error { color: #A8843A; cursor: pointer; }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #F4F6F8; --surface: #fff; --surface2: #ECEFF1; --border: #e0e0e0;
-      --text: #212529; --text2: #607D8B; --text3: #90A4AE; --shadow: rgba(0,0,0,.06);
-      --accent: #1565C0; --accent2: #E3F2FD;
+      --bg: #F7F3EA; --surface: #FFFFFF; --surface2: #EFE9DB; --border: #E4E0D4;
+      --text: #1C2530; --text2: #3A4555; --text3: #7A8294; --shadow: rgba(28,37,48,.08);
+      --gold: #C9A24B; --gold-deep: #A8843A;
+      --accent: #4A6B4F; --accent2: #EFE9DB;
     }
     body.dark {
-      --bg: #1A1F23; --surface: #263238; --surface2: #2E3B42; --border: #37474F;
-      --text: #ECEFF1; --text2: #90A4AE; --text3: #546E7A; --shadow: rgba(0,0,0,.3);
-      --accent2: #1A2F3E;
+      --bg: #1C1A16; --surface: #2A2620; --surface2: #332F27; --border: #4A453A;
+      --text: #F2EDE0; --text2: #C9C2AC; --text3: #8F8874; --shadow: rgba(0,0,0,.3);
+      --accent2: #332F27;
     }
 
     html, body { height: 100%; }
@@ -56,10 +57,14 @@
 
     .main-col { padding: 14px 14px 60px; max-width: 640px; margin: 0 auto; }
 
+    /* ── Signature motifs ── */
+    .eyebrow { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: .09em; color: var(--gold-deep, #A8843A); text-transform: uppercase; }
+    .dot-rule { border-bottom: 2px dotted var(--gold); margin: 12px 0 16px; }
+
     /* ── Header ── */
     .header { text-align: center; padding: 18px 0 12px; }
-    .header-icon { display: inline-block; color: #fff; border-radius: 10px; padding: 7px 18px; font-size: 20px; font-weight: 800; letter-spacing: 2px; margin-bottom: 6px; background: #1565C0; }
-    .header h1 { font-size: 23px; font-weight: 800; margin: 5px 0 0; }
+    .header-icon { display: inline-block; color: #fff; border-radius: 10px; padding: 7px 18px; font-size: 20px; font-weight: 700; letter-spacing: 2px; margin: 6px 0; background: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
+    .header h1 { font-size: 23px; font-weight: 700; margin: 5px 0 0; font-family: 'Zen Maru Gothic', sans-serif; }
     .header p { font-size: 13px; color: var(--text3); margin: 3px 0 0; }
 
     .top-controls { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 12px; }
@@ -72,10 +77,10 @@
       flex: 1; min-width: 60px; padding: 8px 4px; text-align: center;
       border: 2px solid var(--border); border-radius: 8px; background: var(--surface);
       cursor: pointer; font-weight: 700; font-size: 12px; color: var(--text2);
-      transition: all .15s; font-family: inherit;
+      transition: all .15s; font-family: 'Zen Maru Gothic', sans-serif;
     }
-    .unit-tab.active { color: #fff; border-color: transparent; background: #1565C0; }
-    .unit-tab:hover:not(.active) { border-color: #90CAF9; }
+    .unit-tab.active { color: #fff; border-color: transparent; background: #4A6B4F; }
+    .unit-tab:hover:not(.active) { border-color: var(--gold); }
 
     /* ── Unit banner ── */
     .unit-banner {
@@ -83,7 +88,7 @@
       padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 6px var(--shadow);
       border-left: 4px solid;
     }
-    .unit-banner h2 { font-size: 16px; font-weight: 800; margin-bottom: 3px; }
+    .unit-banner h2 { font-size: 16px; font-weight: 700; margin-bottom: 3px; font-family: 'Zen Maru Gothic', sans-serif; }
     .unit-banner p { font-size: 13px; color: var(--text2); }
 
     /* ── Activity grid ── */
@@ -91,12 +96,12 @@
     .act-card {
       display: flex; align-items: center; gap: 12px; padding: 13px 15px;
       background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      cursor: pointer; text-align: left; box-shadow: 0 1px 3px var(--shadow);
+      cursor: pointer; text-align: left; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10);
       transition: box-shadow .15s, transform .1s; font-family: inherit; color: var(--text); width: 100%;
     }
-    .act-card:hover { box-shadow: 0 3px 10px var(--shadow); transform: translateY(-1px); }
+    .act-card:hover { box-shadow: 0 4px 16px rgba(28,37,48,.18); transform: translateY(-2px); }
     .act-icon { font-size: 26px; flex-shrink: 0; }
-    .act-label { font-size: 15px; font-weight: 700; }
+    .act-label { font-size: 15px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; }
     .act-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
     .act-badge { margin-left: auto; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; flex-shrink: 0; }
 
@@ -111,16 +116,17 @@
       font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer;
       font-family: inherit; transition: all .15s;
     }
-    .back-btn:hover { border-color: #c62828; color: #c62828; background: #FFF5F5; }
+    .back-btn:hover { border-color: #B5572E; color: #B5572E; background: #F7E8E1; }
     .progress-text { font-size: 13px; color: var(--text3); }
 
     /* ── Progress bar ── */
     .progress-wrap { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
-    .progress-bar { height: 100%; border-radius: 3px; transition: width .3s; background: #1565C0; }
+    .progress-bar { height: 100%; border-radius: 3px; transition: width .3s; background: #4A6B4F; }
 
     /* ── Question card ── */
-    .q-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 2px 6px var(--shadow); }
-    .q-badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 10px; margin-bottom: 8px; background: #E3F2FD; color: #1565C0; }
+    .q-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10); }
+    .q-badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 10px; margin-bottom: 8px; background: #E8EDE6; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
+    body.dark .q-badge { background: #24302A; color: #8FBE95; }
     .q-text { font-size: 18px; line-height: 1.65; color: var(--text); font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .q-sub { font-size: 14px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
 
@@ -132,14 +138,16 @@
       font-size: 15px; font-weight: 500; text-align: left; background: var(--surface);
       transition: all .15s; font-family: inherit; color: var(--text);
     }
-    .opt-btn:hover:not(.locked) { border-color: #90CAF9; background: var(--surface2); }
+    .opt-btn:hover:not(.locked) { border-color: var(--gold); background: var(--surface2); }
     .opt-letter {
       display: inline-flex; align-items: center; justify-content: center;
       width: 28px; height: 28px; border-radius: 7px; background: var(--surface2);
-      font-weight: 700; font-size: 13px; flex-shrink: 0;
+      font-weight: 700; font-size: 13px; flex-shrink: 0; font-family: 'Zen Maru Gothic', sans-serif;
     }
-    .opt-btn.correct { background: #E8F5E9; border-color: #2E7D32; color: #1B5E20; }
-    .opt-btn.wrong   { background: #FFEBEE; border-color: #c62828; color: #b71c1c; }
+    .opt-btn.correct { background: #E8EDE6; border-color: #4A6B4F; color: #34503A; }
+    .opt-btn.wrong   { background: #F7E8E1; border-color: #B5572E; color: #96471F; }
+    body.dark .opt-btn.correct { background: #24302A; color: #8FBE95; }
+    body.dark .opt-btn.wrong   { background: #2F241E; color: #D68C6A; }
     .opt-btn.locked  { cursor: default; }
 
     /* ── Feedback ── */
@@ -147,21 +155,21 @@
     .fb-text { font-size: 18px; }
     .next-btn {
       padding: 10px 22px; color: #fff; border: none; border-radius: 8px;
-      font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
-      background: #1565C0; transition: background .15s;
+      font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'Zen Maru Gothic', sans-serif;
+      background: #4A6B4F; transition: background .15s;
     }
-    .next-btn:hover { background: #0D47A1; }
+    .next-btn:hover { background: #34503A; }
 
     /* ── Hint box ── */
-    .hint-box { background: #FFF8E1; border: 1px solid #FFE082; border-radius: 10px; padding: 11px 13px; margin-top: 10px; font-size: 14px; line-height: 1.6; color: #F57F17; }
-    body.dark .hint-box { background: #2E2600; border-color: #7C6C00; color: #FFD54F; }
+    .hint-box { background: #FBF3E1; border: 1px solid var(--gold); border-radius: 10px; padding: 11px 13px; margin-top: 10px; font-size: 14px; line-height: 1.6; color: #A8843A; }
+    body.dark .hint-box { background: #2E2600; border-color: #7C6C00; color: #E8C976; }
 
     /* ── Score circle ── */
     .review-header { text-align: center; padding: 20px 0 10px; }
-    .score-circle { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; height: 120px; border-radius: 50%; border: 5px solid #1565C0; margin-bottom: 10px; }
-    .score-pct { font-size: 31px; font-weight: 800; color: #1565C0; }
+    .score-circle { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; height: 120px; border-radius: 50%; border: 5px solid #4A6B4F; margin-bottom: 10px; }
+    .score-pct { font-size: 31px; font-weight: 800; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
     .score-lbl { font-size: 13px; color: var(--text3); }
-    .grade-text { font-size: 20px; font-weight: 700; }
+    .grade-text { font-size: 20px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; }
 
     /* ── Result detail ── */
     .result-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
@@ -178,10 +186,13 @@
       text-align: center; transition: all .15s; font-family: inherit; color: var(--text);
       display: flex; align-items: center; justify-content: center; gap: 6px;
     }
-    .match-item:hover:not(.matched):not(.locked) { border-color: #90CAF9; background: var(--surface2); }
-    .match-item.selected { border-color: #1565C0; background: #E3F2FD; color: #1565C0; }
-    .match-item.matched { border-color: #2E7D32; background: #E8F5E9; color: #1B5E20; cursor: default; }
-    .match-item.wrong-flash { border-color: #c62828; background: #FFEBEE; }
+    .match-item:hover:not(.matched):not(.locked) { border-color: var(--gold); background: var(--surface2); }
+    .match-item.selected { border-color: #4A6B4F; background: #E8EDE6; color: #4A6B4F; }
+    .match-item.matched { border-color: #4A6B4F; background: #E8EDE6; color: #34503A; cursor: default; }
+    .match-item.wrong-flash { border-color: #B5572E; background: #F7E8E1; }
+    body.dark .match-item.selected { background: #24302A; color: #8FBE95; }
+    body.dark .match-item.matched { background: #24302A; color: #8FBE95; }
+    body.dark .match-item.wrong-flash { background: #2F241E; }
     .match-text { flex: 1; }
 
     /* ── Word Arrange ── */
@@ -191,32 +202,34 @@
       background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 600;
       transition: all .15s; font-family: inherit; color: var(--text);
     }
-    .word-chip:hover { border-color: #1565C0; background: var(--accent2); }
+    .word-chip:hover { border-color: var(--gold); background: var(--accent2); }
     .word-chip.used { opacity: 0.3; cursor: default; pointer-events: none; }
     .answer-row { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; padding: 8px; background: var(--surface); border: 2px dashed var(--border); border-radius: 10px; margin-bottom: 10px; align-items: center; }
     .answer-row[data-empty="true"]::before { content: "単語をタップして並べよう"; color: var(--text3); font-size: 14px; font-style: italic; }
     .answer-chip {
-      padding: 8px 14px; border-radius: 8px; border: 2px solid #1565C0;
-      background: var(--accent2); cursor: pointer; font-size: 15px; font-weight: 600;
+      padding: 8px 14px; border-radius: 8px; border: 2px solid #4A6B4F;
+      background: #E8EDE6; cursor: pointer; font-size: 15px; font-weight: 600;
       color: var(--text); font-family: inherit;
     }
-    .answer-chip:hover { background: #BBDEFB; }
+    .answer-chip:hover { background: #DCE6D9; }
+    body.dark .answer-chip { background: #24302A; }
+    body.dark .answer-chip:hover { background: #2D3B31; }
 
     /* ── Primary / action btns ── */
     .primary-btn {
-      display: block; width: 100%; padding: 13px; background: #37474F; color: #fff;
+      display: block; width: 100%; padding: 13px; background: #3A4555; color: #fff;
       border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
-      margin-top: 14px; font-family: inherit; transition: background .15s;
+      margin-top: 14px; font-family: 'Zen Maru Gothic', sans-serif; transition: background .15s;
     }
-    .primary-btn:hover { background: #263238; }
-    .primary-btn.blue { background: #1565C0; }
-    .primary-btn.blue:hover { background: #0D47A1; }
+    .primary-btn:hover { background: #1C2530; }
+    .primary-btn.blue { background: #4A6B4F; }
+    .primary-btn.blue:hover { background: #34503A; }
     .check-btn {
-      display: block; width: 100%; padding: 13px; background: #1565C0; color: #fff;
+      display: block; width: 100%; padding: 13px; background: #4A6B4F; color: #fff;
       border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
-      margin-top: 10px; font-family: inherit; transition: background .15s;
+      margin-top: 10px; font-family: 'Zen Maru Gothic', sans-serif; transition: background .15s;
     }
-    .check-btn:hover { background: #0D47A1; }
+    .check-btn:hover { background: #34503A; }
     .check-btn:disabled { background: var(--border); color: var(--text3); cursor: default; }
 
     /* ── Flashcard ── */
@@ -233,33 +246,33 @@
       border: 2px solid var(--border); box-shadow: 0 4px 16px var(--shadow);
     }
     .fc-front { background: var(--surface); }
-    .fc-back  { background: #E3F2FD; transform: rotateY(180deg); }
-    body.dark .fc-back { background: #1A2F3E; }
+    .fc-back  { background: #E8EDE6; transform: rotateY(180deg); }
+    body.dark .fc-back { background: #24302A; }
     .fc-emoji { font-size: 42px; margin-bottom: 8px; }
-    .fc-word  { font-size: 22px; font-weight: 800; color: var(--text); display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+    .fc-word  { font-size: 22px; font-weight: 700; color: var(--text); display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; font-family: 'Zen Maru Gothic', sans-serif; }
     .fc-hint  { font-size: 13px; color: var(--text3); margin-top: 4px; }
-    .fc-translation { font-size: 20px; font-weight: 700; color: #1565C0; }
+    .fc-translation { font-size: 20px; font-weight: 700; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
     .fc-nav { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 12px; }
     .fc-nav-btn {
       padding: 8px 18px; border-radius: 8px; border: 2px solid var(--border);
       background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 600;
       font-family: inherit; color: var(--text2); transition: all .15s;
     }
-    .fc-nav-btn:hover { border-color: #1565C0; color: #1565C0; }
+    .fc-nav-btn:hover { border-color: var(--gold); color: #4A6B4F; }
     .fc-counter { font-size: 14px; color: var(--text3); min-width: 60px; text-align: center; }
 
     /* ── Chant / Listening ── */
     .chant-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px var(--shadow); }
-    .chant-title { font-size: 14px; font-weight: 700; color: #1565C0; margin-bottom: 10px; }
+    .chant-title { font-size: 14px; font-weight: 700; color: #4A6B4F; margin-bottom: 10px; font-family: 'Zen Maru Gothic', sans-serif; }
     .chant-line { font-size: 16px; line-height: 1.8; color: var(--text); }
-    .chant-line.highlight { color: #1565C0; font-weight: 700; }
+    .chant-line.highlight { color: #4A6B4F; font-weight: 700; }
     .play-btn {
       display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px;
       border-radius: 8px; border: 2px solid var(--border); background: var(--surface);
       cursor: pointer; font-size: 14px; font-weight: 600; font-family: inherit;
       color: var(--text2); transition: all .15s; margin-top: 8px;
     }
-    .play-btn:hover { border-color: #1565C0; color: #1565C0; }
+    .play-btn:hover { border-color: var(--gold); color: #4A6B4F; }
 
     /* ── Day-of-week wheel ── */
     .days-wheel { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
@@ -272,7 +285,7 @@
 
     /* ── Clock activity ── */
     .clock-svg { display: block; margin: 0 auto 14px; }
-    .time-display { text-align: center; font-size: 32px; font-weight: 800; color: #1565C0; margin-bottom: 8px; }
+    .time-display { text-align: center; font-size: 32px; font-weight: 800; color: #4A6B4F; margin-bottom: 8px; font-family: 'Zen Maru Gothic', sans-serif; }
 
     /* ── Weather icons ── */
     .weather-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
@@ -281,8 +294,8 @@
       border-radius: 12px; border: 2px solid var(--border); background: var(--surface);
       cursor: pointer; font-family: inherit; transition: all .15s;
     }
-    .weather-card:hover { border-color: #90CAF9; transform: translateY(-2px); }
-    .weather-card.selected { border-color: #1565C0; background: var(--accent2); }
+    .weather-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+    .weather-card.selected { border-color: #4A6B4F; background: var(--accent2); }
     .weather-icon { font-size: 32px; margin-bottom: 4px; }
     .weather-word { font-size: 12px; font-weight: 700; color: var(--text2); }
 
@@ -291,7 +304,7 @@
     /* ── Stat card ── */
     .stat-row { display: flex; gap: 12px; margin-bottom: 14px; }
     .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; box-shadow: 0 1px 3px var(--shadow); }
-    .stat-num { font-size: 26px; font-weight: 800; color: #1565C0; }
+    .stat-num { font-size: 26px; font-weight: 800; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
     .stat-lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
 
     /* ── Footer nav ── */
@@ -305,8 +318,8 @@
       font-size: 15px; line-height: 1; cursor: pointer;
       transition: all .15s; flex-shrink: 0; padding: 0;
     }
-    .tts-btn:hover { border-color: #1565C0; }
-    .tts-btn.tts-playing { animation: tts-pulse .9s infinite; border-color: #1565C0; }
+    .tts-btn:hover { border-color: var(--gold); }
+    .tts-btn.tts-playing { animation: tts-pulse .9s infinite; border-color: #4A6B4F; }
     @keyframes tts-pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
   </style>
 </head>
@@ -322,8 +335,10 @@
   <!-- ══════════════════════════════════════════ HOME ══ -->
   <div id="home-screen">
     <div class="header">
+      <div class="eyebrow">LET'S TRY</div>
       <div class="header-icon">Let's Try!</div>
       <h1>Let's Try 2 練習</h1>
+      <div class="dot-rule" style="width:120px;margin:12px auto 16px;"></div>
       <p>Unit 1–9 · 小学校4年生向け · 自主練習ツール</p>
     </div>
 
@@ -490,7 +505,7 @@ const UNITS = [
     id: 1,
     title: "Hello, world!",
     titleJp: "世界のいろいろなことばであいさつをしよう",
-    color: "#E91E63",
+    color: "#B5572E",
     activities: ["vocab","flash","match","build"],
     vocab: [
       { en:"Hello", jp:"こんにちは", emoji:"👋", hint:"世界中で使える挨拶" },
@@ -520,7 +535,7 @@ const UNITS = [
     id: 2,
     title: "Let's play cards.",
     titleJp: "すきな遊びをつたえよう",
-    color: "#2196F3",
+    color: "#4A6B4F",
     activities: ["vocab","flash","match","build"],
     vocab: [
       { en:"sunny", jp:"晴れ", emoji:"☀️", hint:"天気の言葉" },
@@ -550,7 +565,7 @@ const UNITS = [
     id: 3,
     title: "I like Mondays.",
     titleJp: "すきな曜日は何かな？",
-    color: "#4CAF50",
+    color: "#6E8B3D",
     activities: ["vocab","flash","match","build"],
     vocab: [
       { en:"Monday", jp:"月曜日", emoji:"📅", hint:"週の始まり" },
@@ -580,7 +595,7 @@ const UNITS = [
     id: 4,
     title: "What time is it?",
     titleJp: "今何時？",
-    color: "#FF9800",
+    color: "#C9A24B",
     activities: ["vocab","flash","match","build"],
     vocab: [
       { en:"What time is it?", jp:"今何時ですか？", emoji:"🕐", hint:"時間を聞く" },
@@ -610,7 +625,7 @@ const UNITS = [
     id: 5,
     title: "Do you have a pen?",
     titleJp: "おきにいりのぶんぼうぐをつたえよう",
-    color: "#9C27B0",
+    color: "#8C5A72",
     activities: ["vocab","flash","match","build"],
     vocab: [
       { en:"pen", jp:"ペン", emoji:"🖊️", hint:"書く道具" },
@@ -641,7 +656,7 @@ const UNITS = [
     id: 6,
     title: "Alphabet",
     titleJp: "アルファベットの文字を読んだり書いたりしよう",
-    color: "#F44336",
+    color: "#A8432A",
     activities: ["vocab","flash","match","build"],
     vocab: [
       { en:"A is for Apple", jp:"AはApple（りんご）", emoji:"🍎", hint:"アルファベットA" },
@@ -670,7 +685,7 @@ const UNITS = [
     id: 7,
     title: "What do you want?",
     titleJp: "自分のオリジナルピザを作ろう",
-    color: "#FF5722",
+    color: "#C06A2E",
     activities: ["vocab","flash","match","build"],
     vocab: [
       { en:"tomato", jp:"トマト", emoji:"🍅", hint:"赤い野菜" },
@@ -700,7 +715,7 @@ const UNITS = [
     id: 8,
     title: "This is my favorite place.",
     titleJp: "学校をあんないしよう",
-    color: "#00BCD4",
+    color: "#3F7A6B",
     activities: ["vocab","flash","match","build"],
     vocab: [
       { en:"gym", jp:"体育館", emoji:"🏋️", hint:"運動する場所" },
@@ -730,7 +745,7 @@ const UNITS = [
     id: 9,
     title: "This is my day.",
     titleJp: "一日の生活を発表しよう",
-    color: "#795548",
+    color: "#7A5A3C",
     activities: ["vocab","flash","match","build"],
     vocab: [
       { en:"wake up", jp:"起きる", emoji:"⏰", hint:"朝の活動" },
@@ -872,7 +887,7 @@ function renderHome() {
           <div class="act-label">${def.label}</div>
           <div class="act-desc">${def.desc}</div>
         </div>
-        <span class="act-badge" style="background:#E3F2FD;color:#1565C0">${unitCount} Units</span>
+        <span class="act-badge" style="background:#E8EDE6;color:#4A6B4F">${unitCount} Units</span>
       `;
       btn.addEventListener("click", () => launchActivity(key, null));
       grid.appendChild(btn);
@@ -893,7 +908,7 @@ function renderHome() {
           <div class="act-label">${def.label}</div>
           <div class="act-desc">${def.desc}</div>
         </div>
-        <span class="act-badge" style="background:#E3F2FD;color:#1565C0">${count}問</span>
+        <span class="act-badge" style="background:#E8EDE6;color:#4A6B4F">${count}問</span>
       `;
       btn.addEventListener("click", () => launchActivity(key, u));
       grid.appendChild(btn);
@@ -1239,9 +1254,9 @@ document.getElementById("build-check").addEventListener("click", () => {
     ? `✅ 正解！ → ${item.words.join(" ")}`
     : `❌ 正しい答え: ${item.words.join(" ")} 💡 ${item.hint}`;
   document.getElementById("build-hint").classList.remove("hidden");
-  document.getElementById("build-hint").style.color = correct ? "#2E7D32" : "#F57F17";
-  document.getElementById("build-hint").style.background = correct ? "#E8F5E9" : "#FFF8E1";
-  document.getElementById("build-hint").style.borderColor = correct ? "#A5D6A7" : "#FFE082";
+  document.getElementById("build-hint").style.color = correct ? "#34503A" : "#A8843A";
+  document.getElementById("build-hint").style.background = correct ? "#E8EDE6" : "#FBF3E1";
+  document.getElementById("build-hint").style.borderColor = correct ? "#4A6B4F" : "#C9A24B";
 
   document.getElementById("build-fb-icon").textContent = correct ? "⭕ 正解！" : "❌ 不正解";
   document.getElementById("build-feedback").classList.remove("hidden");
