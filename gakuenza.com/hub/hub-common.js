@@ -242,10 +242,40 @@ window.HubCommon = (function () {
     return { ok: true, id: resultRow.id };
   }
 
+  // Renders the module topbar's account bubble (avatar + name + sign-out)
+  // into #module-account-mount. Shared so every module gets the identical
+  // widget instead of each report shim hand-rolling it. Modules live at
+  // modules/<x>/, so the login redirect is always ../../hub/login.html.
+  async function mountModuleAccount(sb, userId) {
+    const mount = document.getElementById('module-account-mount');
+    if (!mount) return;
+    const { data: profile } = await sb.from('profiles').select('display_name').eq('id', userId).maybeSingle();
+    const initial = givenName(profile?.display_name || '').charAt(0) || '?';
+    mount.innerHTML = `
+      <div class="module-account">
+        <button class="module-account-btn" id="module-account-btn" type="button">
+          <span class="module-account-avatar">${escapeHtml(initial)}</span>
+          <span class="module-account-name">${escapeHtml(profile?.display_name || '未登録')}さん</span>
+        </button>
+        <div class="module-account-menu hidden" id="module-account-menu">
+          <button class="module-account-signout" id="module-account-signout" type="button">サインアウト</button>
+        </div>
+      </div>`;
+    const btn = document.getElementById('module-account-btn');
+    const menu = document.getElementById('module-account-menu');
+    btn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+    document.addEventListener('click', () => menu.classList.add('hidden'));
+    menu.addEventListener('click', (e) => e.stopPropagation());
+    document.getElementById('module-account-signout').addEventListener('click', async () => {
+      await sb.auth.signOut();
+      window.location.href = '../../hub/login.html';
+    });
+  }
+
   return {
     escapeHtml,
     subjectVar, subjectLabel, sortedSubjectKeys, givenName, formatGreetingDate, formatDueDate,
     relativeTime, progressBar, requireSession, renderSidebar, reportActivityWithItems,
-    assignmentKeyFromRef, assignmentLabel,
+    assignmentKeyFromRef, assignmentLabel, mountModuleAccount,
   };
 })();

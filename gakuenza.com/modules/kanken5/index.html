@@ -10,6 +10,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
+<header class="module-topbar">
+  <a class="module-back" href="../../hub/index.html">‹ ハブへもどる</a>
+  <span class="module-name">漢字検定 5級</span>
+  <div id="module-account-mount"></div>
+</header>
 <div class="wrap">
   <div class="kk5-header">
     <span class="kk5-dot"></span>
@@ -86,6 +91,7 @@
   try {
     const session = await H.requireSession(sb);
     ctx.userId = session.user.id;
+    H.mountModuleAccount(sb, ctx.userId);
     const { data: enr } = await sb
       .from('enrollments').select('class_id, classes ( id, school_id )')
       .eq('user_id', session.user.id).eq('role', 'student').limit(1);

@@ -71,3 +71,18 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: -app
 .kk4-review-item .kk4-correct { color: var(--moss); }
 .kk4-allright { text-align: center; color: var(--ink-soft); font-size: 0.85rem; }
 .kk4-note { font-size: 0.72rem; color: var(--muted); line-height: 1.6; margin-top: 20px; }
+
+/* ── Nav topbar (back to hub + account bubble) — self-contained, shared markup ── */
+.module-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 20px; background: #1C2530; }
+.module-topbar .module-back { font-size: 13px; font-weight: 600; color: #C9CFD8; text-decoration: none; white-space: nowrap; }
+.module-topbar .module-back:hover { color: #F7F3EA; }
+.module-topbar .module-name { font-family: "Zen Maru Gothic", "Noto Sans JP", sans-serif; font-weight: 700; font-size: 15px; color: #F7F3EA; padding-left: 14px; border-left: 1px solid rgba(247,243,234,.2); }
+.module-account { position: relative; margin-left: auto; }
+.module-account-btn { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; border: 1px solid rgba(247,243,234,.25); background: rgba(247,243,234,.08); cursor: pointer; font-family: inherit; transition: background .15s; }
+.module-account-btn:hover { background: rgba(247,243,234,.16); }
+.module-account-avatar { width: 26px; height: 26px; border-radius: 50%; background: #C9A24B; color: #1C2530; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.module-account-name { font-size: 13px; font-weight: 600; color: #F7F3EA; white-space: nowrap; }
+.module-account-menu { position: absolute; top: calc(100% + 6px); right: 0; background: #fff; border: 1px solid #e0dccb; border-radius: 10px; box-shadow: 0 4px 16px rgba(28,37,48,.14); min-width: 140px; overflow: hidden; z-index: 60; }
+.module-account-menu.hidden { display: none; }
+.module-account-signout { display: block; width: 100%; padding: 10px 14px; background: none; border: none; text-align: left; font-size: 13px; font-family: inherit; color: #a23b2e; cursor: pointer; }
+.module-account-signout:hover { background: #fdecea; }
