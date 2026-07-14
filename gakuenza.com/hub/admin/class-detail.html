@@ -97,11 +97,9 @@
         <div>
           <h2 class="section-title">モジュール</h2>
 
-          <div class="ac-module-subhead">学校全体で有効</div>
-          <div class="ac-card" style="margin-bottom:16px;" id="school-modules-box">
-            <div class="ac-skel" style="height:18px;margin-bottom:10px;"></div>
-            <div class="ac-skel" style="height:18px;"></div>
-          </div>
+          <p style="font-size:0.76rem;color:var(--ink-soft);margin:0 0 14px;line-height:1.5;">
+            学校でのモジュールの有効化は<a href="modules.html" style="color:var(--moss-deep);">モジュール管理</a>で行います。ここでは有効なモジュールをこのクラスに割り当てます。
+          </p>
 
           <div class="ac-module-subhead">このクラスに割り当て済み</div>
           <div id="assigned-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
@@ -769,7 +767,6 @@
 
     renderStats();
     renderRoster();
-    renderSchoolModules();
     renderAssigned();
   }
 
@@ -854,25 +851,6 @@
     });
   }
 
-  function renderSchoolModules() {
-    const box = document.getElementById('school-modules-box');
-    if (!catalog.length) {
-      box.innerHTML = '<p class="ac-calm-msg">モジュールがありません</p>';
-      return;
-    }
-    box.innerHTML = catalog.map(m => {
-      const on = enabledIds.has(m.id);
-      return `
-        <div class="ac-toggle-row${on ? '' : ' ac-disabled'}" data-module-id="${m.id}">
-          <span class="ac-toggle-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.subjectVar(m.subject)};margin-right:6px;"></span>${m.name}</span>
-          <button class="ac-toggle ${on ? 'ac-on' : 'ac-off'}" data-action="toggle-module" data-module-id="${m.id}" data-on="${on}" type="button" aria-label="${m.name}を${on ? '無効' : '有効'}にする"><div class="ac-knob"></div></button>
-        </div>`;
-    }).join('');
-    box.querySelectorAll('[data-action="toggle-module"]').forEach(btn => {
-      btn.addEventListener('click', () => toggleSchoolModule(btn.dataset.moduleId, btn.dataset.on === 'true', btn));
-    });
-  }
-
   function fmtAssignedMeta(a) {
     const due = a.due_date ? H.formatDueDate(a.due_date) : '期限なし';
     return `${due}・${a.total_items ?? '?'}問`;
@@ -939,20 +917,6 @@
       a.due_date = newDate;
       metaEl.textContent = fmtAssignedMeta(a);
     });
-  }
-
-  async function toggleSchoolModule(moduleId, currentlyOn, btnEl) {
-    btnEl.disabled = true;
-    if (currentlyOn) {
-      const { error } = await sb.from('school_modules').delete().eq('school_id', schoolId).eq('module_id', moduleId);
-      if (error) { btnEl.disabled = false; alert('変更できませんでした。'); return; }
-      enabledIds.delete(moduleId);
-    } else {
-      const { error } = await sb.from('school_modules').insert({ school_id: schoolId, module_id: moduleId });
-      if (error) { btnEl.disabled = false; alert('変更できませんでした。'); return; }
-      enabledIds.add(moduleId);
-    }
-    renderSchoolModules();
   }
 
   async function removeStudent(userIdVal, name, btnEl) {
