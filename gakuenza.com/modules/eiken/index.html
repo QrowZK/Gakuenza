@@ -21,7 +21,8 @@
 
   <div id="menu-screen">
     <div class="header">
-      <div class="header-icon" id="hdr-icon">英検</div>
+      <div class="eyebrow">PRACTICE</div>
+      <div class="header-icon" id="hdr-icon" style="margin-top:8px">英検</div>
       <h1 id="hdr-title">英検 Practice</h1>
       <p id="hdr-sub">2,142 問題 · 6 レベル · 3 セット</p>
     </div>
@@ -75,10 +76,13 @@
 
   <div id="review-screen" class="hidden">
     <div class="review-header">
-      <div class="score-circle" id="rv-circle">
-        <div class="score-pct" id="rv-pct"></div>
-        <div class="score-label" id="rv-label"></div>
+      <div class="score-ring" id="rv-circle">
+        <div class="score-inner">
+          <div class="score-pct" id="rv-pct"></div>
+          <div class="score-label" id="rv-label"></div>
+        </div>
       </div>
+      <div class="pass-badge hidden" id="rv-pass">★ ごうかくラインとっぱ！</div>
       <h2 class="grade-text" id="rv-grade"></h2>
     </div>
     <div id="rv-stats-breakdown"></div>
@@ -207,8 +211,15 @@
 
 <!-- Side panel tracker -->
 <div class="side-panel" id="side-panel">
-  <div class="side-panel-title" id="panel-title">進捗</div>
+  <div class="side-panel-title" id="panel-title">かいとうのようす</div>
+  <div class="dot-rule" style="width:56px"></div>
   <div class="tracker-grid" id="tracker-grid"></div>
+  <div class="tk-legend">
+    <span><span class="tk-dot moss"></span>せいかい</span>
+    <span><span class="tk-dot clay"></span>まちがい</span>
+    <span><span class="tk-dot gold"></span>いまここ</span>
+  </div>
+  <div class="tk-counts" id="tk-counts"></div>
 </div>
 
 </div><!-- end page-layout -->
