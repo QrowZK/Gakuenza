@@ -150,7 +150,9 @@ function renderPassagePhase() {
   $iv('iv-phase-label').textContent = '問題カードを読んでください';
   $iv('iv-progress').textContent = 'パッセージ';
 
-  let passageHTML = '<div class="iv-passage-text">' + escHtml(s.passage) + '</div>';
+  let passageHTML = '<h2 style="font-size:20px;font-weight:700;margin-bottom:2px;">' + escHtml(s.topic) + '</h2>'
+    + '<div style="width:64px;border-bottom:2px dotted var(--gold);margin:8px 0 14px;"></div>'
+    + '<div class="iv-passage-text">' + escHtml(s.passage) + '</div>';
 
   // Two-illustration levels (準2級 / 準2級プラス) provide illustration_1/_2;
   // single-illustration levels (3級 / 2級) provide illustration.
@@ -320,7 +322,8 @@ function showInterviewResults() {
     : 0;
   const grade = gradeScore(avg);
 
-  $iv('iv-result-circle').style.borderColor = c.accent;
+  $iv('iv-result-circle').style.background = 'conic-gradient(' + c.accent + ' 0 ' + avg + '%, #E4E0D4 ' + avg + '% 100%)';
+  $iv('iv-result-circle').style.borderColor = 'transparent';
   $iv('iv-result-pct').textContent = avg + '%';
   $iv('iv-result-pct').style.color = c.accent;
   $iv('iv-result-grade').textContent = grade.label;

@@ -1,9 +1,9 @@
 // Eiken Practice App — main application logic
 'use strict';
 
-// Category colours on the satoyama palette: 語い moss, 文法 blue, 会話 clay,
-// 語順 taupe. Badge backgrounds are the matching light tints.
-const BADGE_BG={VOCAB:"#E8EDE6",GRAMMAR:"#E7ECF3",CONVERSATION:"#F5E7DE",ORDER:"#EFE9DB"};
+// Category colours on the satoyama palette (matches the 1a mock's chips):
+// 語い moss, 文法 blue, 会話 clay, 語順 taupe. Badge backgrounds are the tints.
+const BADGE_BG={VOCAB:"#E8EDE6",GRAMMAR:"#E9EEF5",CONVERSATION:"#F7E8E1",ORDER:"#EFE9DB"};
 const BADGE_FG={VOCAB:"#4A6B4F",GRAMMAR:"#4A6FA5",CONVERSATION:"#C9622A",ORDER:"#7A6A53"};
 const CAT_LABEL={VOCAB:"語い",GRAMMAR:"文法",CONVERSATION:"会話",ORDER:"語順"};
 const CAT_ICON={VOCAB:"📖",GRAMMAR:"✏️",CONVERSATION:"💬",ORDER:"🔤"};
@@ -28,10 +28,6 @@ function hideAll(){["menu-screen","quiz-screen","review-screen","stats-screen"].
 function escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function cfg(){return LEVEL_CFG[currentLevel];}
-// Readable foreground for text sitting on an accent fill — ink on the light
-// gold accent, paper on the darker ones.
-function lum(hex){const h=hex.replace("#","");return (0.299*parseInt(h.slice(0,2),16)+0.587*parseInt(h.slice(2,4),16)+0.114*parseInt(h.slice(4,6),16))/255;}
-function onAccent(hex){return lum(hex)>0.62?"#1C2530":"#F7F3EA";}
 
 // ── Dark mode ─────────────────────────────────────────────────
 function applyDark(){
@@ -46,69 +42,74 @@ $("theme-btn").onclick=function(){
 
 // ── Theme (accent colours) ────────────────────────────────────
 function applyTheme(){
-  const c=cfg(), on=onAccent(c.accent);
-  // Expose the active level's accent to CSS (hovers, selected states).
-  document.body.style.setProperty("--lvl-accent", c.accent);
-  document.body.style.setProperty("--lvl-accent-light", c.accentLight);
+  const c=cfg();
   document.querySelectorAll(".level-tab").forEach(t=>{
     const active=t.getAttribute("data-level")===currentLevel;
     t.classList.toggle("active",active);
     t.style.background=active?c.accent:"";
     t.style.borderColor=active?c.accent:"";
-    t.style.color=active?on:"";
   });
   document.querySelectorAll(".set-tab").forEach(t=>{
     const active=t.getAttribute("data-set")===currentSet;
     t.classList.toggle("active",active);
     t.style.background=active?c.accent:"";
     t.style.borderColor=active?c.accent:"";
-    t.style.color=active?on:"";
   });
   $("hdr-icon").style.background=c.accent;
-  $("hdr-icon").style.color=on;
   $("hdr-title").textContent="英検"+c.label+" Practice";
   $("next-btn").style.background=c.accent;
-  $("next-btn").style.color=on;
   $("prog-bar").style.background="linear-gradient(90deg,"+c.accent+","+c.accentMid+")";
   $("modal-confirm").style.background=c.accent;
-  $("modal-confirm").style.color=on;
 }
 
 // ── Side panel tracker ────────────────────────────────────────
-// One numbered tile per question: moss=correct, clay=wrong, gold outline=
-// current, mist=upcoming (see the .tk-tile styles + legend).
 function buildTracker(){
   const grid=$("tracker-grid");
   grid.innerHTML="";
+  // Set CSS custom property for current accent colour
+  $("side-panel").style.setProperty("--accent-color", cfg().accent);
+  // Row per question: num + 4 option cells (A B C D)
   pool.forEach(function(q,i){
-    const t=document.createElement("div");
-    t.className="tk-tile upcoming";
-    t.id="tk-"+i;
-    t.textContent=String(i+1);
-    grid.appendChild(t);
+    // row number
+    const num=document.createElement("div");
+    num.className="tracker-row-num";
+    num.textContent=String(i+1).padStart(2,"0");
+    grid.appendChild(num);
+    // 4 option cells
+    q.opts.forEach(function(opt,oi){
+      const cell=document.createElement("div");
+      cell.className="tracker-cell";
+      cell.id="tc-"+i+"-"+oi;
+      cell.textContent=oi+1;
+      cell.title=opt;
+      grid.appendChild(cell);
+    });
   });
+  $("panel-title").textContent=cfg().label+" 進捗";
   $("side-panel").classList.add("visible");
   document.body.classList.add("has-panel");
-  updateTracker();
 }
 
 function updateTracker(){
-  var right=0, wrong=0;
   pool.forEach(function(q,i){
-    const t=$("tk-"+i);
-    if(!t) return;
-    var cls="tk-tile ";
-    if(results[i]){
-      if(results[i].chosen===results[i].correct){ cls+="correct"; right++; }
-      else { cls+="wrong"; wrong++; }
-    } else if(i===idx){ cls+="current"; }
-    else { cls+="upcoming"; }
-    t.className=cls;
+    q.opts.forEach(function(opt,oi){
+      const cell=$("tc-"+i+"-"+oi);
+      if(!cell) return;
+      // reset
+      cell.className="tracker-cell";
+      // current row highlight
+      if(i===idx) cell.classList.add("current-row");
+      // answered
+      if(results[i]){
+        const chosen=results[i].chosen;
+        const correct=results[i].correct;
+        if(oi===chosen && chosen===correct) cell.classList.add("chosen-correct");
+        else if(oi===chosen && chosen!==correct) cell.classList.add("chosen-wrong");
+      }
+    });
   });
-  const counts=$("tk-counts");
-  if(counts) counts.innerHTML='<span>せいかい <b style="color:var(--moss)">'+right+'</b></span>'
-    +'<span>まちがい <b style="color:var(--clay)">'+wrong+'</b></span>';
-  const cur=$("tk-"+idx);
+  // scroll current row into view
+  const cur=$("tc-"+idx+"-0");
   if(cur) cur.scrollIntoView({block:"nearest",behavior:"smooth"});
 }
 
@@ -149,11 +150,9 @@ function buildMenu(){
   MENU_ITEMS.forEach(item=>{
     const count=item.key==="ALL"?questions.length:questions.filter(q=>q.cat===item.key).length;
     if(count===0)return;
-    // ALL uses the theme's text colour (adapts light/dark); categories use
-    // their fixed satoyama accent.
-    const color=item.key==="ALL"?"var(--text)":CAT_COLOR[item.key];
+    const color=item.key==="ALL"?"#1C2530":CAT_COLOR[item.key];
     const btn=document.createElement("button");btn.className="menu-card";
-    btn.style.borderLeft="4px solid "+color;
+    btn.style.borderTop="5px solid "+color;
     btn.innerHTML='<span class="menu-icon">'+item.icon+'</span><div>'
       +'<div class="menu-label" style="color:'+color+'">'+item.label+'</div>'
       +'<div class="menu-desc">'+count+' 問</div></div>';
@@ -169,7 +168,7 @@ function buildMenu(){
   // Interview button — only for levels with a speaking component (3級 and up)
   if(currentLevel==='3'||currentLevel==='P'||currentLevel==='Q'||currentLevel==='2'){
     const ib=document.createElement("button");ib.className="menu-card";
-    ib.style.borderLeft="4px solid #B5572E";
+    ib.style.borderTop="5px solid #B5572E";
     ib.innerHTML='<span class="menu-icon">🎤</span><div>'
       +'<div class="menu-label" style="color:#B5572E">面接練習</div>'
       +'<div class="menu-desc">スピーキング / 10セッション</div></div>';
@@ -286,8 +285,8 @@ function showReview(){
   var cor=res.filter(r=>r.chosen===r.correct).length,tot=res.length,p=Math.round(cor/tot*100);
   $("rv-pct").textContent=p+"%";$("rv-pct").style.color=c.accent;
   $("rv-label").textContent=cor+" / "+tot;
-  $("rv-circle").style.background="conic-gradient("+c.accent+" 0 "+p+"%, var(--mist) "+p+"% 100%)";
-  $("rv-pass").classList.toggle("hidden", p<60); // 合格ライン 60%
+  $("rv-circle").style.background="conic-gradient("+c.accent+" 0 "+p+"%, #E4E0D4 "+p+"% 100%)";
+  $("rv-circle").style.borderColor="transparent";
   $("rv-grade").textContent=p>=80?"🎉 素晴らしい！":p>=60?"👍 よくできました！":"📚 もっと頑張りましょう！";
   var catData={};
   res.forEach(r=>{var q=questions.find(x=>x.id===r.qId);if(!catData[q.cat])catData[q.cat]={right:0,wrong:0};
@@ -304,14 +303,14 @@ function showReview(){
   var wrong=res.filter(r=>r.chosen!==r.correct);
   var sec=$("wrong-section");sec.innerHTML="";
   if(wrong.length>0){
-    sec.innerHTML='<h3 class="wrong-title">まちがえた問題を見直そう ('+wrong.length+')</h3><div class="dot-rule"></div>';
+    sec.innerHTML='<h3 class="wrong-title" style="color:'+c.accent+'">間違えた問題 ('+wrong.length+')</h3>';
     wrong.forEach(r=>{
       var q=questions.find(x=>x.id===r.qId);
       var card=document.createElement("div");card.className="wrong-card";
       card.innerHTML='<span class="badge" style="background:'+BADGE_BG[q.cat]+';color:'+BADGE_FG[q.cat]+'">'+CAT_LABEL[q.cat]+'</span>'
         +'<p class="wrong-q">'+escHtml(q.q)+'</p>'
-        +'<div class="wrong-answers"><span class="wrong-you">✕ あなた：<s>'+escHtml(q.opts[r.origChosen])+'</s></span>'
-        +'<span class="wrong-correct">○ せいかい：'+escHtml(q.opts[r.origCorrect])+'</span></div>'
+        +'<p style="font-size:13px;color:var(--text2)">あなたの回答：<span style="color:'+c.accent+'">'+escHtml(q.opts[r.origChosen])+'</span></p>'
+        +'<p style="font-size:13px;color:var(--text2);margin-top:2px">正解：<span style="color:'+c.accent+';font-weight:700">'+escHtml(q.opts[r.origCorrect])+'</span></p>'
         +'<p class="wrong-exp">解説：'+escHtml(q.exp)+'</p>';
       sec.appendChild(card);
     });
