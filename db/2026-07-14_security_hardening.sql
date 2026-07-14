@@ -67,3 +67,35 @@ REVOKE EXECUTE ON FUNCTION public.rls_auto_enable()               FROM PUBLIC, a
 GRANT EXECUTE ON FUNCTION public.purge_expired_sessions(integer) TO service_role;
 GRANT EXECUTE ON FUNCTION public.purge_old_audit_log(integer)    TO service_role;
 GRANT EXECUTE ON FUNCTION public.rls_auto_enable()               TO service_role;
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 4) revoke_truncate_from_api_roles
+-- EVERY table granted TRUNCATE to anon and authenticated. TRUNCATE bypasses
+-- RLS, so this was a latent total-wipe vector for the whole platform. Not
+-- directly reachable through PostgREST (which has no TRUNCATE verb), but the
+-- grant serves no purpose and is removed. Also strips write grants off the
+-- two read-only onboarding views.
+-- ─────────────────────────────────────────────────────────────────────────
+REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE, REFERENCES, TRIGGER
+  ON public.public_schools, public.public_classes FROM anon, authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 5) pin function search_path (linter: function_search_path_mutable)
+-- ─────────────────────────────────────────────────────────────────────────
+ALTER FUNCTION public.classes_sync_name()                 SET search_path = public;
+ALTER FUNCTION public.enforce_module_enabled()            SET search_path = public;
+ALTER FUNCTION public.hook_restrict_google_signups(jsonb) SET search_path = public;
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- NOT done here (require dashboard / product decisions):
+--   * public_schools / public_classes remain SECURITY DEFINER views. This is
+--     the correct minimal-exposure pattern: they expose only a safe column
+--     subset (id/name; id/school_id/year/gumi/name) to anonymous signup.
+--     Converting to security_invoker would force granting anon SELECT on the
+--     base tables, leaking schools.name_kana/code/status and
+--     classes.grade_level/subject/academic_year. The linter's ERROR on these
+--     is an accepted, deliberate exception.
+--   * Leaked-password protection (HaveIBeenPwned) is an Auth setting, enable
+--     it in Dashboard > Authentication > Policies. Not settable via SQL.
+-- ─────────────────────────────────────────────────────────────────────────
