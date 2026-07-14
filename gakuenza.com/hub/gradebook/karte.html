@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>個人カルテ — がくえん座 成績簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gradebook.css">
+</head>
+<body>
+<div class="gb-frame" id="app-root">
+  <aside class="gb-sidebar" id="gb-sidebar"></aside>
+  <main class="gb-main" id="gb-main">
+    <div class="gb-head">
+      <h1 class="gb-title">個人カルテ</h1>
+      <div class="gb-head-filters" id="gb-filters"></div>
+      <div class="gb-head-meta"><button class="gb-btn gb-btn-ghost gb-btn-sm" id="gb-print" type="button">面談用に印刷</button></div>
+    </div>
+    <hr class="gb-rule">
+    <div class="gb-card" id="gb-studenthead" style="margin-bottom:14px;"><div class="gb-skel" style="height:52px;"></div></div>
+    <div class="gb-main-side">
+      <div class="gb-grid">
+        <div class="gb-card" id="gb-trend"></div>
+        <div class="gb-card" id="gb-results"></div>
+      </div>
+      <div class="gb-grid">
+        <div class="gb-card" id="gb-cats"></div>
+        <div class="gb-card" id="gb-obs"></div>
+        <button class="gb-btn gb-btn-block" id="gb-print2" type="button">この子の弱点でプリントを作る →</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="../admin/admin-common.js"></script>
+<script src="gradebook-common.js"></script>
+<script>
+(async function () {
+  const GB = window.Gradebook;
+  const esc = GB.esc;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const ctxWrap = await GB.requireContext(sb);
+  if (!ctxWrap) return;
+  const { ctx, profile, userId } = ctxWrap;
+
+  const classes = await GB.loadClasses(sb, ctx);
+  let classId = GB.getCurrentClassId(classes);
+  const classObj = classes.find(c => c.id === classId) || null;
+  const snap = await GB.loadSnapshotStatus(sb, classId);
+  GB.renderSidebar(sb, profile, 'karte', ctx, snap);
+
+  if (!classId) {
+    document.getElementById('gb-studenthead').innerHTML =
+      `<div class="gb-empty"><span class="gb-empty-em">担当クラスがありません</span>管理者にクラスの割り当てを依頼してください。</div>`;
+    return;
+  }
+
+  // roster
+  const { data: enr } = await sb
+    .from('enrollments').select('user_id, profiles(display_name, student_number)')
+    .eq('class_id', classId).eq('role', 'student');
+  const roster = (enr || []).map((s, i) => ({
+    id: s.user_id,
+    name: s.profiles?.display_name || '(未設定)',
+    number: s.profiles?.student_number || String(i + 1),
+  }));
+
+  if (!roster.length) {
+    document.getElementById('gb-studenthead').innerHTML = `<div class="gb-empty">このクラスにはまだ児童がいません。</div>`;
+    return;
+  }
+
+  const params = new URLSearchParams(location.search);
+  const wanted = params.get('student');
+  let idx = Math.max(0, roster.findIndex(s => s.id === wanted));
+  if (idx < 0) idx = 0;
+
+  function renderFilters() {
+    const s = roster[idx];
+    document.getElementById('gb-filters').innerHTML =
+      GB.classChipHtml(classes, classId) +
+      `<span class="gb-chip"><button id="gb-prevs" type="button" style="border:none;background:transparent;font-weight:700;cursor:pointer;">←</button>
+       <select id="gb-student-chip" aria-label="児童">${roster.map((r, i) => `<option value="${i}"${i === idx ? ' selected' : ''}>${esc(r.number)}. ${esc(r.name)}</option>`).join('')}</select>
+       <button id="gb-nexts" type="button" style="border:none;background:transparent;font-weight:700;cursor:pointer;">→</button></span>`;
+    const cc = document.getElementById('gb-class-chip');
+    if (cc) cc.addEventListener('change', () => { GB.setCurrentClassId(cc.value); location.href = 'karte.html'; });
+    document.getElementById('gb-student-chip').addEventListener('change', (e) => { idx = Number(e.target.value); loadStudent(); });
+    document.getElementById('gb-prevs').addEventListener('click', () => { idx = (idx - 1 + roster.length) % roster.length; renderFilters(); loadStudent(); });
+    document.getElementById('gb-nexts').addEventListener('click', () => { idx = (idx + 1) % roster.length; renderFilters(); loadStudent(); });
+  }
+  renderFilters();
+
+  document.getElementById('gb-print').addEventListener('click', () => window.print());
+  document.getElementById('gb-print2').addEventListener('click', () => {
+    window.location.href = `print.html?student=${encodeURIComponent(roster[idx].id)}`;
+  });
+
+  const num = (v) => (v == null ? null : Number(v));
+
+  async function loadStudent() {
+    const student = roster[idx];
+    document.getElementById('gb-studenthead').innerHTML = `<div class="gb-skel" style="height:52px;"></div>`;
+
+    // results + items
+    const { data: results } = await sb
+      .from('activity_results')
+      .select('id, score, max_score, created_at, modules(name, subject), activity_result_items(category, correct)')
+      .eq('class_id', classId).eq('user_id', student.id)
+      .order('created_at', { ascending: false });
+    const rows = results || [];
+
+    let sum = 0, mx = 0;
+    for (const r of rows) { const s = num(r.score), m = num(r.max_score); if (s != null && m != null && m > 0) { sum += s; mx += m; } }
+    const avg = GB.pct(sum, mx);
+
+    // observation count
+    const { count: obsCount } = await sb
+      .from('observation_records').select('id', { count: 'exact', head: true })
+      .eq('class_id', classId).eq('student_id', student.id);
+
+    document.getElementById('gb-studenthead').innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div class="gb-avatar" style="width:44px;height:44px;flex:0 0 44px;font-size:19px;background:var(--ink);">${esc(GB.initial(student.name))}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="gb-zen" style="font-weight:700;font-size:17px;">${esc(student.name)}</div>
+          <div class="gb-muted" style="font-size:11px;">${esc(classObj?.name || '')} · 出席番号${esc(student.number)} · 取組回数 ${rows.length}回（学期）</div>
+        </div>
+        <div style="display:flex;gap:22px;text-align:right;">
+          <div><div class="gb-muted" style="font-size:10px;">学期平均</div><div class="gb-zen" style="font-weight:700;font-size:18px;">${mx ? avg + '%' : '—'}</div></div>
+          <div><div class="gb-muted" style="font-size:10px;">観察記録</div><div class="gb-zen" style="font-weight:700;font-size:18px;">${obsCount || 0}件</div></div>
+        </div>
+      </div>`;
+
+    await Promise.all([
+      renderTrend(student),
+      renderResults(student, rows),
+      renderCats(rows),
+      renderObs(student),
+    ]);
+  }
+
+  // ── trend (weekly snapshots) ──────────────────────────────────────────
+  async function renderTrend(student) {
+    const el = document.getElementById('gb-trend');
+    const { data: mine } = await sb
+      .from('gradebook_snapshots').select('week_of, rollup, pinned_note')
+      .eq('class_id', classId).eq('student_id', student.id).order('week_of');
+    const snaps = mine || [];
+    if (snaps.length < 2) {
+      el.innerHTML = `<h2 class="gb-card-head">週ごとの推移 <span class="gb-sub">週次スナップショット</span></h2>
+        <div class="gb-empty" style="padding:24px;"><span class="gb-empty-em">まだ推移データがありません</span>週次スナップショットが2週分たまると、推移の折れ線が表示されます。</div>`;
+      return;
+    }
+    // class average per week
+    const weeks = snaps.map(s => s.week_of);
+    const { data: classSnaps } = await sb
+      .from('gradebook_snapshots').select('week_of, rollup')
+      .eq('class_id', classId).in('week_of', weeks);
+    const classByWeek = {};
+    (classSnaps || []).forEach(s => {
+      const v = rollupVal(s.rollup);
+      if (v == null) return;
+      (classByWeek[s.week_of] ||= { sum: 0, n: 0 });
+      classByWeek[s.week_of].sum += v; classByWeek[s.week_of].n++;
+    });
+
+    const mineVals = snaps.map(s => rollupVal(s.rollup) ?? 0);
+    const classVals = weeks.map(w => classByWeek[w] ? Math.round(classByWeek[w].sum / classByWeek[w].n) : null);
+    const pinIdx = snaps.findIndex(s => s.pinned_note);
+
+    const W = 460, Hh = 150, pad = 24;
+    const n = mineVals.length;
+    const x = i => pad + (i * (W - pad * 2)) / Math.max(1, n - 1);
+    const y = v => Hh - pad - ((v / 100) * (Hh - pad * 2));
+    const minePts = mineVals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const classPts = classVals.map((v, i) => v == null ? null : `${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
+
+    el.innerHTML = `
+      <h2 class="gb-card-head">週ごとの推移 <span class="gb-sub">${esc(GB.mdDate(weeks[0]))}〜${esc(GB.mdDate(weeks[n - 1]))}</span></h2>
+      <svg viewBox="0 0 ${W} ${Hh}" style="width:100%;height:auto;">
+        <line x1="${pad}" y1="${Hh - pad}" x2="${W - pad}" y2="${Hh - pad}" stroke="var(--mist)"/>
+        ${classPts ? `<polyline points="${classPts}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-dasharray="5 4"/>` : ''}
+        <polyline points="${minePts}" fill="none" stroke="var(--moss)" stroke-width="2.5"/>
+        ${mineVals.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === pinIdx ? 4.5 : 3}" fill="${i === pinIdx ? 'var(--clay)' : 'var(--moss)'}"/>`).join('')}
+      </svg>
+      <div class="gb-trend-legend">
+        <span><span class="ln" style="border-top:2.5px solid var(--moss)"></span>本人</span>
+        <span><span class="ln" style="border-top:2px dashed var(--gold)"></span>学級平均</span>
+        <span><span class="ln" style="border-top:0;"></span><span style="color:var(--clay)">●</span> ピン留め</span>
+      </div>
+      ${pinIdx >= 0 ? `<div class="gb-pin-note"><span class="gb-pin-star">★</span> <b>ピン留め</b>（${esc(GB.mdDate(weeks[pinIdx]))}）：${esc(snaps[pinIdx].pinned_note)}</div>` : ''}`;
+  }
+  function rollupVal(rollup) {
+    if (!rollup || typeof rollup !== 'object') return null;
+    if (typeof rollup.avg === 'number') return rollup.avg;
+    if (typeof rollup.pct === 'number') return rollup.pct;
+    if (typeof rollup.score === 'number' && typeof rollup.max === 'number' && rollup.max > 0) return Math.round((rollup.score / rollup.max) * 100);
+    return null;
+  }
+
+  // ── recent results + inline grade correction ─────────────────────────
+  async function renderResults(student, rows) {
+    const el = document.getElementById('gb-results');
+    const recent = rows.slice(0, 6);
+    if (!recent.length) {
+      el.innerHTML = `<h2 class="gb-card-head">最近の結果と成績修正</h2><div class="gb-empty" style="padding:20px;">取組の記録がまだありません。</div>`;
+      return;
+    }
+    // correction history for these results
+    const ids = recent.map(r => r.id);
+    const { data: corr } = await sb
+      .from('grade_corrections').select('activity_result_id, previous_score, new_score, reason, corrected_at')
+      .in('activity_result_id', ids).order('corrected_at', { ascending: false });
+    const corrByResult = {};
+    (corr || []).forEach(c => { (corrByResult[c.activity_result_id] ||= []).push(c); });
+
+    el.innerHTML = `
+      <h2 class="gb-card-head">最近の結果と成績修正</h2>
+      <table class="gb-table">
+        <thead><tr><th>取組</th><th style="width:56px;">日付</th><th class="gb-num" style="width:64px;">得点</th><th class="gb-num" style="width:64px;">正答率</th><th style="width:48px;"></th></tr></thead>
+        <tbody>
+          ${recent.map(r => {
+            const s = num(r.score), m = num(r.max_score);
+            const p = (s != null && m != null && m > 0) ? GB.pct(s, m) : null;
+            const hist = corrByResult[r.id];
+            return `<tr data-result="${esc(r.id)}" data-score="${s ?? ''}" data-max="${m ?? ''}">
+              <td style="font-weight:700;">${esc(r.modules?.name || '取組')}${hist ? `<div class="gb-corr-hist">修正履歴 ${hist.length}件（最新 ${esc(hist[0].previous_score)}→${esc(hist[0].new_score)}：${esc(hist[0].reason || '理由なし')}）</div>` : ''}</td>
+              <td class="gb-muted">${esc(GB.mdDate(r.created_at))}</td>
+              <td class="gb-num">${s != null ? `${s}/${m}` : '—'}</td>
+              <td class="gb-num">${p != null ? p + '%' : '—'}</td>
+              <td class="gb-num">${m != null ? `<button class="gb-btn gb-btn-ghost gb-btn-sm gb-corr-open" type="button">修正</button>` : ''}</td>
+            </tr>
+            <tr class="gb-corr-slot" data-slot="${esc(r.id)}" style="display:none;"><td colspan="5" style="padding:0 10px 10px;"></td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      <p class="gb-section-note" style="margin-top:8px;">修正は履歴に記録されます（監査対象）。</p>`;
+
+    el.querySelectorAll('.gb-corr-open').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tr = btn.closest('tr');
+        const rid = tr.dataset.result;
+        const cur = tr.dataset.score, max = tr.dataset.max;
+        const slot = el.querySelector(`.gb-corr-slot[data-slot="${cssEsc(rid)}"] td`);
+        const open = slot.parentElement.style.display !== 'none';
+        if (open) { slot.parentElement.style.display = 'none'; slot.innerHTML = ''; return; }
+        slot.parentElement.style.display = 'table-row';
+        const modName = tr.querySelector('td').childNodes[0].textContent;
+        slot.innerHTML = `
+          <div class="gb-correct">
+            <div class="gb-correct-title">${esc(modName)} の得点を修正 — 現在 ${esc(cur)}/${esc(max)}</div>
+            <input type="number" min="0" max="${esc(max)}" value="${esc(cur)}" class="gb-corr-score"> <span class="gb-muted">/ ${esc(max)}</span>
+            <input type="text" class="gb-corr-reason" placeholder="理由（例：採点基準の誤り）">
+            <button class="gb-btn gb-btn-clay gb-btn-sm gb-corr-save" type="button">確定</button>
+            <div class="gb-hint">修正は履歴に記録されます。理由は必須です。</div>
+          </div>`;
+        slot.querySelector('.gb-corr-save').addEventListener('click', () => saveCorrection(rid, Number(cur), Number(max), slot, tr));
+      });
+    });
+  }
+
+  async function saveCorrection(resultId, oldScore, max, slot, tr) {
+    const newScore = Number(slot.querySelector('.gb-corr-score').value);
+    const reason = slot.querySelector('.gb-corr-reason').value.trim();
+    if (Number.isNaN(newScore) || newScore < 0 || newScore > max) { alert('得点は0〜' + max + 'の範囲で入力してください。'); return; }
+    if (!reason) { alert('修正の理由を入力してください（監査記録に残ります）。'); return; }
+    if (newScore === oldScore) { alert('得点が変わっていません。'); return; }
+    const saveBtn = slot.querySelector('.gb-corr-save');
+    saveBtn.disabled = true; saveBtn.textContent = '保存中…';
+
+    // 1) update the real record
+    const { error: upErr } = await sb.from('activity_results').update({ score: newScore }).eq('id', resultId);
+    if (upErr) { alert('修正できませんでした（権限をご確認ください）。'); saveBtn.disabled = false; saveBtn.textContent = '確定'; return; }
+    // 2) log the audited correction
+    const { error: logErr } = await sb.from('grade_corrections').insert({
+      activity_result_id: resultId, corrected_by: userId,
+      previous_score: oldScore, new_score: newScore, reason,
+    });
+    if (logErr) console.error('[gradebook] correction saved but audit log failed:', logErr);
+
+    // reflect in the row
+    tr.dataset.score = String(newScore);
+    const p = max > 0 ? GB.pct(newScore, max) : null;
+    tr.children[2].textContent = `${newScore}/${max}`;
+    tr.children[3].textContent = p != null ? p + '%' : '—';
+    const firstCell = tr.querySelector('td');
+    let hist = firstCell.querySelector('.gb-corr-hist');
+    if (!hist) { hist = document.createElement('div'); hist.className = 'gb-corr-hist'; firstCell.appendChild(hist); }
+    hist.textContent = `修正履歴（最新 ${oldScore}→${newScore}：${reason}）`;
+    slot.parentElement.style.display = 'none'; slot.innerHTML = '';
+  }
+  function cssEsc(s) { return String(s).replace(/["\\]/g, '\\$&'); }
+
+  // ── category breakdown ────────────────────────────────────────────────
+  function renderCats(rows) {
+    const el = document.getElementById('gb-cats');
+    const byCat = {};
+    for (const r of rows) for (const it of (r.activity_result_items || [])) {
+      if (!it.category) continue;
+      (byCat[it.category] ||= { c: 0, t: 0 });
+      byCat[it.category].t++; if (it.correct) byCat[it.category].c++;
+    }
+    const entries = Object.entries(byCat).map(([cat, d]) => ({ cat, pct: GB.pct(d.c, d.t) })).sort((a, b) => b.pct - a.pct);
+    el.innerHTML = `<h2 class="gb-card-head">カテゴリ別のようす</h2>` + (entries.length
+      ? entries.map(e => `<div class="gb-bar-row">
+          <div style="flex:1;font-weight:600;">${esc(e.cat)}</div>
+          <div class="gb-bar-track" style="max-width:120px;"><div class="gb-bar-fill" style="width:${e.pct}%;${e.pct < 62 ? 'background:var(--gold);' : ''}"></div></div>
+          <div class="gb-bar-pct">${e.pct}%</div>
+        </div>`).join('')
+      : `<div class="gb-empty" style="padding:16px;">カテゴリ別データがありません。</div>`);
+  }
+
+  // ── observation history ───────────────────────────────────────────────
+  async function renderObs(student) {
+    const el = document.getElementById('gb-obs');
+    const { data } = await sb
+      .from('observation_records').select('category, subject, rating, note, created_at')
+      .eq('class_id', classId).eq('student_id', student.id)
+      .order('created_at', { ascending: false }).limit(12);
+    const obs = data || [];
+    el.innerHTML = `<h2 class="gb-card-head">観察記録 <a class="gb-link" style="float:right;font-size:11px;" href="observations.html">＋ 追加</a></h2>` + (obs.length
+      ? obs.map(o => `<div class="gb-feed-row" style="align-items:flex-start;">
+          <span class="gb-badge gb-badge-gold" style="flex:0 0 auto;">${esc(o.category || '記録')}</span>
+          <span class="gb-feed-text">${esc(o.note || '')}</span>
+          <span class="gb-feed-time">${esc(GB.mdDate(o.created_at))}</span>
+        </div>`).join('')
+      : `<div class="gb-empty" style="padding:16px;">観察記録がありません。</div>`);
+  }
+
+  loadStudent();
+})();
+</script>
+</body>
+</html>

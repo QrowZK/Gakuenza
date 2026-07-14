@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>観察記録 — がくえん座 成績簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gradebook.css">
+</head>
+<body>
+<div class="gb-frame" id="app-root">
+  <aside class="gb-sidebar" id="gb-sidebar"></aside>
+  <main class="gb-main" id="gb-main">
+    <div class="gb-head">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <h1 class="gb-title">観察記録</h1>
+        <div class="gb-seg" id="gb-modeseg">
+          <button data-mode="unit" class="active" type="button">単元ごと</button>
+          <button data-mode="free" type="button">自由記録</button>
+        </div>
+      </div>
+      <div class="gb-head-meta">補助簿 · 保存は自動</div>
+    </div>
+    <div class="gb-head-filters" id="gb-filters" style="margin-top:10px;"></div>
+    <hr class="gb-rule">
+    <div id="gb-unit"></div>
+    <div id="gb-free" style="display:none;"></div>
+  </main>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="../admin/admin-common.js"></script>
+<script src="gradebook-common.js"></script>
+<script>
+(async function () {
+  const GB = window.Gradebook;
+  const esc = GB.esc;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const ctxWrap = await GB.requireContext(sb);
+  if (!ctxWrap) return;
+  const { ctx, profile, userId } = ctxWrap;
+
+  const classes = await GB.loadClasses(sb, ctx);
+  let classId = GB.getCurrentClassId(classes);
+  const classObj = classes.find(c => c.id === classId) || null;
+
+  const snap = await GB.loadSnapshotStatus(sb, classId);
+  GB.renderSidebar(sb, profile, 'observations', ctx, snap);
+
+  if (!classId) {
+    document.getElementById('gb-unit').innerHTML =
+      `<div class="gb-empty"><span class="gb-empty-em">担当クラスがありません</span>管理者にクラスの割り当てを依頼してください。</div>`;
+    return;
+  }
+  const schoolId = classObj.school_id;
+
+  // roster
+  const { data: enr } = await sb
+    .from('enrollments').select('user_id, profiles(display_name, student_number)')
+    .eq('class_id', classId).eq('role', 'student');
+  const students = (enr || []).map((s, i) => ({
+    id: s.user_id,
+    name: s.profiles?.display_name || '(未設定)',
+    number: s.profiles?.student_number || String(i + 1),
+  }));
+
+  // class modules (units)
+  const { data: cm } = await sb
+    .from('class_modules').select('module_id, modules(id, name, subject)').eq('class_id', classId);
+  const units = (cm || []).filter(x => x.modules).map(x => x.modules);
+  let unitIdx = 0;
+
+  const CATEGORIES = ['授業態度', '学習', '生活', '道徳', '係・当番', 'その他'];
+
+  // ── header filters + mode toggle ─────────────────────────────────────
+  const filtersEl = document.getElementById('gb-filters');
+  const unitEl = document.getElementById('gb-unit');
+  const freeEl = document.getElementById('gb-free');
+  let mode = 'unit';
+
+  function renderFilters() {
+    if (mode === 'unit') {
+      const unit = units[unitIdx];
+      filtersEl.innerHTML =
+        GB.classChipHtml(classes, classId) +
+        (units.length ? `<span class="gb-chip"><span class="gb-chip-label">単元</span><select id="gb-unit-chip">${
+          units.map((u, i) => `<option value="${i}"${i === unitIdx ? ' selected' : ''}>${esc(u.name)}</option>`).join('')
+        }</select></span>` : '') +
+        `<span class="gb-head-meta" id="gb-unit-count" style="margin-left:6px;align-self:center;"></span>` +
+        `<span style="margin-left:auto;display:inline-flex;gap:6px;">
+           <button class="gb-btn gb-btn-ghost gb-btn-sm" id="gb-prev" type="button">前の単元</button>
+           <button class="gb-btn gb-btn-sm" id="gb-next" type="button">次の単元</button>
+         </span>`;
+      wireClassChip();
+      const uc = document.getElementById('gb-unit-chip');
+      if (uc) uc.addEventListener('change', () => { unitIdx = Number(uc.value); renderUnit(); });
+      const prev = document.getElementById('gb-prev'), next = document.getElementById('gb-next');
+      if (prev) prev.addEventListener('click', () => { if (units.length) { unitIdx = (unitIdx - 1 + units.length) % units.length; renderFilters(); renderUnit(); } });
+      if (next) next.addEventListener('click', () => { if (units.length) { unitIdx = (unitIdx + 1) % units.length; renderFilters(); renderUnit(); } });
+    } else {
+      filtersEl.innerHTML =
+        GB.classChipHtml(classes, classId) +
+        `<span class="gb-pills" id="gb-catpills">
+           <button class="gb-pill active" data-cat="" type="button">すべて</button>
+           ${CATEGORIES.map(c => `<button class="gb-pill" data-cat="${esc(c)}" type="button">${esc(c)}</button>`).join('')}
+         </span>`;
+      wireClassChip();
+      filtersEl.querySelectorAll('#gb-catpills .gb-pill').forEach(p => {
+        p.addEventListener('click', () => {
+          filtersEl.querySelectorAll('#gb-catpills .gb-pill').forEach(x => x.classList.remove('active'));
+          p.classList.add('active');
+          freeFilter = p.dataset.cat;
+          renderFreeList();
+        });
+      });
+    }
+  }
+  function wireClassChip() {
+    const chip = document.getElementById('gb-class-chip');
+    if (chip) chip.addEventListener('change', () => { GB.setCurrentClassId(chip.value); location.reload(); });
+  }
+
+  document.querySelectorAll('#gb-modeseg button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#gb-modeseg button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      mode = b.dataset.mode;
+      unitEl.style.display = mode === 'unit' ? 'block' : 'none';
+      freeEl.style.display = mode === 'free' ? 'block' : 'none';
+      renderFilters();
+      if (mode === 'unit') renderUnit(); else renderFree();
+    });
+  });
+
+  // ── UNIT MODE ────────────────────────────────────────────────────────
+  async function renderUnit() {
+    if (!units.length) {
+      unitEl.innerHTML = `<div class="gb-empty"><span class="gb-empty-em">単元がありません</span>このクラスにモジュールが割り当てられると、単元ごとの観察記録が使えます。</div>`;
+      return;
+    }
+    if (!students.length) {
+      unitEl.innerHTML = `<div class="gb-empty">このクラスにはまだ児童がいません。</div>`;
+      return;
+    }
+    const unit = units[unitIdx];
+    unitEl.innerHTML = `<div class="gb-card" style="padding:0;overflow:hidden;"><div class="gb-skel" style="height:200px;margin:12px;"></div></div>`;
+
+    // existing observations for this unit
+    const { data: obsRows } = await sb
+      .from('observation_records').select('id, student_id, rating, note')
+      .eq('class_id', classId).eq('module_id', unit.id);
+    const obsByStudent = {};
+    (obsRows || []).forEach(o => { obsByStudent[o.student_id] = o; });
+
+    // auto module scores (best %) per student
+    const { data: ar } = await sb
+      .from('activity_results').select('user_id, score, max_score')
+      .eq('class_id', classId).eq('module_id', unit.id);
+    const autoByStudent = {};
+    (ar || []).forEach(r => {
+      const s = r.score == null ? null : Number(r.score), m = r.max_score == null ? null : Number(r.max_score);
+      if (s == null || m == null || m === 0) return;
+      const p = GB.pct(s, m);
+      if (autoByStudent[r.user_id] == null || p > autoByStudent[r.user_id]) autoByStudent[r.user_id] = p;
+    });
+
+    const filled = students.filter(s => obsByStudent[s.id]?.rating).length;
+
+    unitEl.innerHTML = `
+      <div class="gb-card" style="padding:0;overflow:hidden;">
+        <table class="gb-table">
+          <thead><tr>
+            <th style="width:44px;">番号</th><th>氏名</th><th style="width:96px;">評価</th>
+            <th>メモ</th><th class="gb-num" style="width:120px;">単元成績（自動）</th>
+          </tr></thead>
+          <tbody>
+            ${students.map(s => {
+              const o = obsByStudent[s.id] || {};
+              const auto = autoByStudent[s.id];
+              return `<tr class="gb-zebra" data-student="${esc(s.id)}">
+                <td class="gb-muted">${esc(s.number)}</td>
+                <td style="font-weight:700;">${esc(s.name)}</td>
+                <td>${ratingChips(o.rating)}</td>
+                <td><input class="gb-memo-input gb-unit-memo" placeholder="メモを追加…" value="${esc(o.note || '')}"></td>
+                <td class="gb-num">${auto == null ? '<span class="gb-muted">—</span>' : `<span${auto < 55 ? ' class="gb-auto-low"' : ''}>${auto}%</span>`}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <p class="gb-section-note" style="margin-top:10px;">右端の単元成績はモジュール結果から自動表示 — 評価の参考用。ここでは教師の観察のみ入力します。</p>`;
+
+    const uc = document.getElementById('gb-unit-count');
+    if (uc) uc.textContent = `記入済 ${filled}/${students.length}名`;
+
+    // wire rating chips + memo
+    unitEl.querySelectorAll('tr[data-student]').forEach(tr => {
+      const sid = tr.dataset.student;
+      tr.querySelectorAll('.gb-rate button').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const cur = obsByStudent[sid]?.rating || null;
+          const clicked = btn.dataset.rate;
+          const next = cur === clicked ? null : clicked;
+          await saveUnitObs(sid, unit, { rating: next });
+          setChipState(tr, next);
+        });
+      });
+      const memo = tr.querySelector('.gb-unit-memo');
+      memo.addEventListener('change', async () => {
+        await saveUnitObs(sid, unit, { note: memo.value });
+      });
+    });
+
+    async function saveUnitObs(sid, unit, patch) {
+      const existing = obsByStudent[sid];
+      if (existing) {
+        const { error } = await sb.from('observation_records').update(patch).eq('id', existing.id);
+        if (!error) Object.assign(existing, patch);
+      } else {
+        const rec = {
+          school_id: schoolId, class_id: classId, student_id: sid, teacher_id: userId,
+          subject: unit.subject || null, module_id: unit.id, category: unit.name,
+          rating: patch.rating ?? null, note: patch.note ?? '',
+        };
+        const { data, error } = await sb.from('observation_records').insert(rec).select('id, student_id, rating, note').single();
+        if (!error && data) obsByStudent[sid] = data;
+      }
+      const f = students.filter(s => obsByStudent[s.id]?.rating).length;
+      const el = document.getElementById('gb-unit-count');
+      if (el) el.textContent = `記入済 ${f}/${students.length}名`;
+    }
+  }
+
+  function ratingChips(active) {
+    const on = { A: active === 'A' ? ' class="on-a"' : '', B: active === 'B' ? ' class="on-b"' : '', C: active === 'C' ? ' class="on-c"' : '' };
+    return `<span class="gb-rate">
+      <button data-rate="A"${on.A} type="button">A</button>
+      <button data-rate="B"${on.B} type="button">B</button>
+      <button data-rate="C"${on.C} type="button">C</button></span>`;
+  }
+  function setChipState(scope, active) {
+    scope.querySelectorAll('.gb-rate button').forEach(b => {
+      b.className = '';
+      if (b.dataset.rate === active) b.classList.add('on-' + active.toLowerCase());
+    });
+  }
+
+  // ── FREE MODE ────────────────────────────────────────────────────────
+  let freeFilter = '';
+  let freeRecords = [];
+  function renderFree() {
+    freeEl.innerHTML = `
+      <div class="gb-two-col" style="grid-template-columns:1.5fr 1fr;">
+        <div class="gb-card" id="gb-freelist"><div class="gb-skel" style="height:200px;"></div></div>
+        <div class="gb-add-panel">
+          <h2 class="gb-card-head">記録を追加</h2>
+          <div class="gb-field">
+            <label>児童</label>
+            <select id="gb-add-student">${students.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select>
+          </div>
+          <div class="gb-field">
+            <label>カテゴリ / 教科（任意）</label>
+            <div class="gb-field-row">
+              <select id="gb-add-cat">${CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select>
+              <select id="gb-add-subject"><option value="">教科なし</option>${GB.SUBJECTS.map(s => `<option value="${esc(s.key)}">${esc(s.label)}</option>`).join('')}</select>
+            </div>
+          </div>
+          <div class="gb-field">
+            <label>評価（任意）</label>
+            <span class="gb-rate" id="gb-add-rate">
+              <button data-rate="A" type="button">A</button>
+              <button data-rate="B" type="button">B</button>
+              <button data-rate="C" type="button">C</button>
+              <button data-rate="" type="button" style="width:auto;padding:0 8px;">なし</button>
+            </span>
+          </div>
+          <div class="gb-field">
+            <label>メモ</label>
+            <textarea id="gb-add-note" placeholder="観察したことを記録…"></textarea>
+          </div>
+          <button class="gb-btn gb-btn-block" id="gb-add-btn" type="button">＋ 記録する</button>
+          <p class="gb-section-note" style="margin:8px 0 0;text-align:center;">保存すると左のリストに追加されます。</p>
+        </div>
+      </div>`;
+
+    // rating picker in add panel
+    let addRating = '';
+    freeEl.querySelectorAll('#gb-add-rate button').forEach(b => {
+      b.addEventListener('click', () => {
+        addRating = b.dataset.rate;
+        freeEl.querySelectorAll('#gb-add-rate button').forEach(x => { x.className = ''; x.style.width = x.dataset.rate === '' ? 'auto' : ''; x.style.padding = x.dataset.rate === '' ? '0 8px' : ''; });
+        if (addRating) b.classList.add('on-' + addRating.toLowerCase());
+        else { b.style.background = 'var(--moss)'; b.style.color = '#fff'; }
+      });
+    });
+
+    document.getElementById('gb-add-btn').addEventListener('click', async () => {
+      const sid = document.getElementById('gb-add-student').value;
+      const cat = document.getElementById('gb-add-cat').value;
+      const subject = document.getElementById('gb-add-subject').value || null;
+      const note = document.getElementById('gb-add-note').value.trim();
+      if (!sid) return;
+      const btn = document.getElementById('gb-add-btn');
+      btn.disabled = true; btn.textContent = '保存中…';
+      const rec = {
+        school_id: schoolId, class_id: classId, student_id: sid, teacher_id: userId,
+        subject, module_id: null, category: cat, rating: addRating || null, note,
+      };
+      const { data, error } = await sb.from('observation_records')
+        .insert(rec).select('id, student_id, category, subject, rating, note, created_at').single();
+      btn.disabled = false; btn.textContent = '＋ 記録する';
+      if (error) { alert('保存できませんでした。'); return; }
+      freeRecords.unshift(data);
+      document.getElementById('gb-add-note').value = '';
+      renderFreeList();
+    });
+
+    loadFree();
+  }
+
+  async function loadFree() {
+    const { data } = await sb
+      .from('observation_records')
+      .select('id, student_id, category, subject, rating, note, created_at')
+      .eq('class_id', classId).is('module_id', null)
+      .order('created_at', { ascending: false }).limit(200);
+    freeRecords = data || [];
+    renderFreeList();
+  }
+
+  function renderFreeList() {
+    const list = document.getElementById('gb-freelist');
+    if (!list) return;
+    const nameOf = Object.fromEntries(students.map(s => [s.id, s.name]));
+    const rows = freeRecords.filter(r => !freeFilter || r.category === freeFilter);
+    if (!rows.length) {
+      list.innerHTML = `<h2 class="gb-card-head">記録</h2><div class="gb-empty" style="padding:24px;"><span class="gb-empty-em">記録がありません</span>右のパネルから最初の観察を追加できます。</div>`;
+      return;
+    }
+    list.innerHTML = `<h2 class="gb-card-head">記録 <span class="gb-sub">${rows.length}件</span></h2>` + rows.map(r => {
+      const nm = nameOf[r.student_id] || '(未設定)';
+      const rate = r.rating ? `<span class="gb-rate"><button class="on-${r.rating.toLowerCase()}" type="button" style="cursor:default;">${esc(r.rating)}</button></span>` : '';
+      const subj = r.subject ? ` · ${esc(GB.SUBJECT_LABEL[r.subject] || r.subject)}` : '';
+      return `<div class="gb-note-row">
+        <div class="gb-note-av">${esc(GB.initial(nm))}</div>
+        <div class="gb-note-body">
+          <div class="gb-note-head">
+            <span class="gb-note-name">${esc(nm)}</span>
+            <span class="gb-badge gb-badge-gold gb-note-cat">${esc(r.category || '記録')}${subj}</span>
+            ${rate}
+            <span class="gb-note-time">${esc(GB.relTime(r.created_at))}</span>
+          </div>
+          <div class="gb-note-text">${esc(r.note || '')}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // initial paint
+  renderFilters();
+  renderUnit();
+})();
+</script>
+</body>
+</html>
