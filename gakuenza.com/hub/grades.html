@@ -49,6 +49,7 @@
 <script>
 (async function () {
   const H = window.HubCommon;
+  const esc = H.escapeHtml; // escape all DB-sourced text before innerHTML
   const cfg = window.GAKUENZA_CONFIG;
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
@@ -163,7 +164,7 @@
             .map(([k, r]) => ({ key: k.split('::').slice(1).join('::'), r }));
           return `
             <div class="hub-card grd-module-card">
-              <div class="module-title">${m.name}${m.name_en ? ` <span class="recent-title-en">${m.name_en}</span>` : ''}</div>
+              <div class="module-title">${esc(m.name)}${m.name_en ? ` <span class="recent-title-en">${esc(m.name_en)}</span>` : ''}</div>
               ${assignEntries.map(({ key, r }) => {
                 const label = H.assignmentLabel(key, r.payload);
                 const wrongItems = wrongItemsByResult[r.id] || [];
@@ -171,7 +172,7 @@
                 return `
                   <div class="grd-assign-row">
                     <div class="grd-assign-name">
-                      ${label}
+                      ${esc(label)}
                       ${wrongItems.length ? `<br><button class="grd-review-toggle" data-target="${reviewId}" type="button">間違えた問題を見る（${wrongItems.length}問）</button>` : ''}
                     </div>
                     <div class="grd-score">${r.score} / ${r.max_score}</div>
@@ -180,8 +181,8 @@
                     <div class="grd-review-box" id="${reviewId}">
                       ${wrongItems.map(it => `
                         <div class="grd-review-item">
-                          <div class="grd-review-prompt">${it.prompt || ''}</div>
-                          <div>あなたの答え：<span class="grd-your-answer">${it.selected_answer || '(未回答)'}</span>　正解：<span class="grd-correct-answer">${it.correct_answer || ''}</span></div>
+                          <div class="grd-review-prompt">${esc(it.prompt || '')}</div>
+                          <div>あなたの答え：<span class="grd-your-answer">${esc(it.selected_answer || '(未回答)')}</span>　正解：<span class="grd-correct-answer">${esc(it.correct_answer || '')}</span></div>
                         </div>`).join('')}
                     </div>` : ''}
                 `;

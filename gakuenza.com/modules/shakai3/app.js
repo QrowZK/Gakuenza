@@ -78,7 +78,8 @@
     }
     if (state.backendRows) {
       for (const row of state.backendRows) {
-        const d = row && row.detail;
+        // Per-question outcomes live in payload (jsonb) — see shakai-report.js.
+        const d = row && row.payload;
         if (!d) continue;
         (d.wrong || []).forEach((id) => { if (!(id in latest)) latest[id] = false; });
         (d.right || []).forEach((id) => { if (!(id in latest)) latest[id] = true; });

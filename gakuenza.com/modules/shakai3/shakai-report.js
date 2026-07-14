@@ -97,6 +97,11 @@
         payload: {
           section: result.sectionTitle,
           unit: result.unit,
+          // Per-question outcomes, needed by the ふくしゅう (review) card to
+          // rebuild "questions you got wrong" across page reloads. Without
+          // these persisted, the feature only worked within one page load.
+          right: result.rightIds || [],
+          wrong: result.wrongIds || [],
         },
       };
       const { error } = await sb.from('activity_results').insert(payload);
@@ -111,6 +116,32 @@
     }
   }
 
+  // Reads back this student's own prior attempts for this module so the
+  // ふくしゅう card can recompute previously-missed questions after a reload.
+  // Each row's payload carries { right:[ids], wrong:[ids] } (see report()).
+  // Returns [] (never throws) when there's no session/context.
+  async function fetchResults() {
+    try {
+      const ctx = await getContext();
+      if (!ctx || !ctx.moduleId) return [];
+      const sb = getClient();
+      const { data, error } = await sb
+        .from('activity_results')
+        .select('activity_ref, score, max_score, payload, created_at')
+        .eq('user_id', ctx.userId)
+        .eq('module_id', ctx.moduleId)
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.log('[Shakai3Report] fetchResults failed:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (e) {
+      console.log('[Shakai3Report] fetchResults error:', e && e.message);
+      return [];
+    }
+  }
+
   async function getProfile() {
     const ctx = await getContext();
     return ctx ? ctx.profile : null;
@@ -121,5 +152,5 @@
     if (sb) await sb.auth.signOut();
   }
 
-  window.Shakai3Report = { report, getProfile, signOut, MODULE_KEY };
+  window.Shakai3Report = { report, fetchResults, getProfile, signOut, MODULE_KEY };
 })();
