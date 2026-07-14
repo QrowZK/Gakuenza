@@ -24,4 +24,4 @@ jobs:
           # they're never in scope for rsync in the first place. If you
           # ever put something non-deployable INSIDE gakuenza.com/ itself
           # (unlikely, but possible), add EXCLUDE back in for that case.
-          ARGS: "-rltgoDzvc"
+          ARGS: "-rltgoDzvc --delete"
