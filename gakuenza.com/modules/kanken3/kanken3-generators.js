@@ -197,17 +197,54 @@
     };
   }
 
+  // ── 漢字識別 — 複数の語に共通して入る一字を選ぶ ──────────────────────
+  function genShikibetsu(C, K) {
+    const s = pick(C.shikibetsu);            // { k, words:[w1,w2,w3] }
+    const shown = s.words
+      .map(w => w.split('').map(c => (c === s.k ? '◯' : c)).join(''))
+      .join('　・　');
+    // distractors must NOT appear in any shown word, and (being a different
+    // kanji) cannot complete all three specific slots into real words.
+    const visible = new Set(s.words.join('').split(''));
+    const pool = C.shikibetsu.map(x => x.k).concat(K.map(x => x.k));
+    const distractors = sampleDistinct(pool.filter(c => !visible.has(c)), 3, [s.k]);
+    const options = shuffle([s.k, ...distractors]);
+    return {
+      itemRef: `kanken3/shikibetsu/${s.k}`,
+      category: '漢字識別',
+      prompt: `次の三つの熟語の◯には、共通する同じ漢字が入ります。あてはまる漢字をえらびなさい。\n\n${shown}`,
+      options,
+      correctAnswer: s.k,
+    };
+  }
+
+  // ── 誤字訂正 — 文中で誤って使われている漢字の、正しい字を選ぶ ─────────
+  function genGoji(C, K) {
+    const g = pick(C.goji);                  // { sent, wrong, correct, read, dis }
+    const marked = g.sent.replace(g.wrong, `〔${g.wrong}〕`);   // first occurrence
+    const options = shuffle([g.correct, ...g.dis]);
+    return {
+      itemRef: `kanken3/goji/${g.correct}/${g.wrong}`,
+      category: '誤字訂正',
+      prompt: `次の文の〔　〕の中の漢字はまちがっています。正しい漢字をえらびなさい。\n\n${marked}`,
+      options,
+      correctAnswer: g.correct,
+    };
+  }
+
   // Category registry — key, JP label, generator, and how many unique items
   // exist (used to cap single-category quiz length sensibly).
   const CATEGORIES = [
-    { key: 'yomi',     label: '読み',           gen: genYomi,     size: (C) => C.words.length },
-    { key: 'kakitori', label: '書き取り',       gen: genKakitori, size: (C) => C.words.length },
-    { key: 'kosei',    label: '熟語の構成',     gen: genKosei,    size: (C) => C.words.length },
-    { key: 'pair',     label: '対義語・類義語', gen: genPair,     size: (C) => C.pairs.length },
-    { key: 'yoji',     label: '四字熟語',       gen: genYoji,     size: (C) => C.yoji.length },
-    { key: 'okuri',    label: '送り仮名',       gen: genOkuri,    size: (C) => C.okuri.length },
-    { key: 'doon',     label: '同音・同訓異字', gen: genDoon,     size: (C) => C.doon.length },
-    { key: 'bushu',    label: '部首',           gen: genBushu,    size: (C) => C.bushu.length },
+    { key: 'yomi',       label: '読み',           gen: genYomi,       size: (C) => C.words.length },
+    { key: 'kakitori',   label: '書き取り',       gen: genKakitori,   size: (C) => C.words.length },
+    { key: 'kosei',      label: '熟語の構成',     gen: genKosei,      size: (C) => C.words.length },
+    { key: 'pair',       label: '対義語・類義語', gen: genPair,       size: (C) => C.pairs.length },
+    { key: 'yoji',       label: '四字熟語',       gen: genYoji,       size: (C) => C.yoji.length },
+    { key: 'okuri',      label: '送り仮名',       gen: genOkuri,      size: (C) => C.okuri.length },
+    { key: 'doon',       label: '同音・同訓異字', gen: genDoon,       size: (C) => C.doon.length },
+    { key: 'shikibetsu', label: '漢字識別',       gen: genShikibetsu, size: (C) => C.shikibetsu.length },
+    { key: 'goji',       label: '誤字訂正',       gen: genGoji,       size: (C) => C.goji.length },
+    { key: 'bushu',      label: '部首',           gen: genBushu,      size: (C) => C.bushu.length },
   ];
 
   function generateQuiz(C, K, categoryKey, count) {
@@ -229,7 +266,8 @@
   }
 
   global.Kanken3Gen = { generateQuiz, CATEGORIES,
-    _gens: { genYomi, genKakitori, genKosei, genPair, genYoji, genOkuri, genDoon, genBushu } };
+    _gens: { genYomi, genKakitori, genKosei, genPair, genYoji, genOkuri, genDoon,
+             genShikibetsu, genGoji, genBushu } };
 
   if (typeof module !== 'undefined') {
     module.exports = global.Kanken3Gen;
