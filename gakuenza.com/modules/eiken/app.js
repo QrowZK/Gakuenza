@@ -9,13 +9,11 @@ const CAT_LABEL={VOCAB:"語い",GRAMMAR:"文法",CONVERSATION:"会話",ORDER:"�
 const CAT_ICON={VOCAB:"📖",GRAMMAR:"✏️",CONVERSATION:"💬",ORDER:"🔤"};
 const CAT_COLOR={VOCAB:"#4A6B4F",GRAMMAR:"#4A6FA5",CONVERSATION:"#C9622A",ORDER:"#7A6A53"};
 const CATS=["VOCAB","GRAMMAR","CONVERSATION","ORDER"];
-const MENU_ITEMS=[
-  {key:"ALL",label:"すべての問題",icon:"📝"},
-  {key:"VOCAB",label:"語い",icon:"📖"},
-  {key:"GRAMMAR",label:"文法",icon:"✏️"},
-  {key:"CONVERSATION",label:"会話",icon:"💬"},
-  {key:"ORDER",label:"語順",icon:"🔤"},
-];
+// Display order for the level-card grid, per-level blurbs, and which levels
+// carry a speaking (面接) component.
+const LEVEL_ORDER=["5","4","3","P","Q","2"];
+const LEVEL_DESC={"5":"はじめての英検","4":"中学中級レベル","3":"中学卒業レベル · 面接あり","P":"高校中級レベル · 面接あり","Q":"高校中級＋ · 面接あり","2":"高校卒業レベル · 面接あり"};
+const IV_LEVELS=["3","P","Q","2"];
 
 let currentLevel="5", currentSet="1", questions=[];
 let pool=[],idx=0,selected=null,answered=false,results=[];
@@ -28,6 +26,13 @@ function hideAll(){["menu-screen","quiz-screen","review-screen","stats-screen"].
 function escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function cfg(){return LEVEL_CFG[currentLevel];}
+// Readable foreground for text on an accent fill (ink on the light gold, paper on the rest).
+function lum(hex){const h=hex.replace("#","");return (0.299*parseInt(h.slice(0,2),16)+0.587*parseInt(h.slice(2,4),16)+0.114*parseInt(h.slice(4,6),16))/255;}
+function onAccent(hex){return lum(hex)>0.62?"#1C2530":"#F7F3EA";}
+// Per-level question data helpers (the app has 3 sets × 4 categories per level).
+function levelCount(lv){return ["1","2","3"].reduce((n,st)=>n+((ALL_SETS[lv]&&ALL_SETS[lv][st])?ALL_SETS[lv][st].length:0),0);}
+function catPool(lv,cat){const out=[];["1","2","3"].forEach(st=>{(ALL_SETS[lv]&&ALL_SETS[lv][st]||[]).forEach(q=>{if(q.cat===cat)out.push(q);});});return out;}
+function statsFor(lv){try{const s=JSON.parse(localStorage.getItem(LEVEL_CFG[lv].statsKey));return s?{right:s.totalRight||0,wrong:s.totalWrong||0,sessions:s.sessions||0}:{right:0,wrong:0,sessions:0};}catch(e){return {right:0,wrong:0,sessions:0};}}
 
 // ── Dark mode ─────────────────────────────────────────────────
 function applyDark(){
@@ -42,24 +47,12 @@ $("theme-btn").onclick=function(){
 
 // ── Theme (accent colours) ────────────────────────────────────
 function applyTheme(){
-  const c=cfg();
-  document.querySelectorAll(".level-tab").forEach(t=>{
-    const active=t.getAttribute("data-level")===currentLevel;
-    t.classList.toggle("active",active);
-    t.style.background=active?c.accent:"";
-    t.style.borderColor=active?c.accent:"";
-  });
-  document.querySelectorAll(".set-tab").forEach(t=>{
-    const active=t.getAttribute("data-set")===currentSet;
-    t.classList.toggle("active",active);
-    t.style.background=active?c.accent:"";
-    t.style.borderColor=active?c.accent:"";
-  });
-  $("hdr-icon").style.background=c.accent;
-  $("hdr-title").textContent="英検"+c.label+" Practice";
-  $("next-btn").style.background=c.accent;
-  $("prog-bar").style.background="linear-gradient(90deg,"+c.accent+","+c.accentMid+")";
-  $("modal-confirm").style.background=c.accent;
+  const c=cfg(), on=onAccent(c.accent);
+  document.body.style.setProperty("--lvl-accent", c.accent);
+  document.body.style.setProperty("--lvl-accent-light", c.accentLight);
+  const nb=$("next-btn"); if(nb){nb.style.background=c.accent; nb.style.color=on;}
+  const pb=$("prog-bar"); if(pb) pb.style.background="linear-gradient(90deg,"+c.accent+","+c.accentMid+")";
+  const mc=$("modal-confirm"); if(mc){mc.style.background=c.accent; mc.style.color=on;}
 }
 
 // ── Side panel tracker ────────────────────────────────────────
@@ -141,40 +134,78 @@ function recordSession(res){
   saveStats(s);
 }
 
-// ── Menu ──────────────────────────────────────────────────────
-function switchLevel(lv){currentLevel=lv;questions=[...ALL_SETS[lv][currentSet]];buildMenu();applyTheme();}
-function switchSet(st){currentSet=st;questions=[...ALL_SETS[currentLevel][st]];buildMenu();applyTheme();}
+// ── Menu (1a: level-card grid + set list + category chips) ────
+function switchLevel(lv){
+  currentLevel=lv;
+  questions=[...ALL_SETS[lv][currentSet]];
+  buildLevelCards(); buildSetList(); buildChips(); buildIvCta(); applyTheme();
+}
 
-function buildMenu(){
-  const c=cfg(),g=$("menu-grid");g.innerHTML="";
-  MENU_ITEMS.forEach(item=>{
-    const count=item.key==="ALL"?questions.length:questions.filter(q=>q.cat===item.key).length;
-    if(count===0)return;
-    const color=item.key==="ALL"?"#1C2530":CAT_COLOR[item.key];
-    const btn=document.createElement("button");btn.className="menu-card";
-    btn.style.borderTop="5px solid "+color;
-    btn.innerHTML='<span class="menu-icon">'+item.icon+'</span><div>'
-      +'<div class="menu-label" style="color:'+color+'">'+item.label+'</div>'
-      +'<div class="menu-desc">'+count+' 問</div></div>';
-    btn.onclick=()=>startQuiz(item.key);
-    g.appendChild(btn);
+// Level picker — one color-topped card per 級, with a real progress bar
+// (cumulative accuracy from that level's saved stats; no fabricated data).
+function buildLevelCards(){
+  const wrap=$("level-cards"); wrap.innerHTML="";
+  LEVEL_ORDER.forEach(lv=>{
+    const cf=LEVEL_CFG[lv], s=statsFor(lv), tot=s.right+s.wrong, pct=tot?Math.round(s.right/tot*100):0;
+    const card=document.createElement("button");
+    card.className="level-card"+(lv===currentLevel?" active":"");
+    card.style.borderTopColor=cf.accent;
+    card.innerHTML=
+      '<div class="lc-num" style="color:'+cf.accent+'">'+cf.label+'</div>'
+      +'<div class="lc-desc">'+LEVEL_DESC[lv]+'</div>'
+      +'<div class="lc-meta">全3セット · '+levelCount(lv)+'問</div>'
+      +'<div class="lc-bar"><div class="lc-bar-fill" style="width:'+pct+'%;background:'+cf.accent+'"></div></div>'
+      +'<div class="lc-prog" style="color:'+cf.accentDark+'">'+(tot?('通算せいかい率 '+pct+'%'):'まだ挑戦していません')+'</div>';
+    card.onclick=()=>switchLevel(lv);
+    wrap.appendChild(card);
   });
-  // Note: the old "成績 (cumulative history)" menu card was removed here —
-  // redundant now that every session's results already show at the end
-  // (showReview) and report to the hub (activity_results). showStats()
-  // itself is left intact/unused rather than deleted, in case it's wanted
-  // again later; only its entry point is gone.
+}
 
-  // Interview button — only for levels with a speaking component (3級 and up)
-  if(currentLevel==='3'||currentLevel==='P'||currentLevel==='Q'||currentLevel==='2'){
-    const ib=document.createElement("button");ib.className="menu-card";
-    ib.style.borderTop="5px solid #B5572E";
-    ib.innerHTML='<span class="menu-icon">🎤</span><div>'
-      +'<div class="menu-label" style="color:#B5572E">面接練習</div>'
-      +'<div class="menu-desc">スピーキング / 10セッション</div></div>';
-    ib.onclick=()=>{ if(typeof openInterviewMenu==='function') openInterviewMenu(); else console.error('[EikenApp] interview.js not loaded - openInterviewMenu undefined'); };
-    g.appendChild(ib);
-  }
+// Set list — the active level's 3 sets; a row starts that whole set.
+function buildSetList(){
+  const list=$("set-list"); list.innerHTML="";
+  $("set-panel-title").textContent=cfg().label+" · セットをえらぶ";
+  $("set-count").textContent="3セット";
+  ["1","2","3"].forEach(st=>{
+    const n=(ALL_SETS[currentLevel][st]||[]).length;
+    const row=document.createElement("button");
+    row.className="set-row";
+    row.innerHTML='<span class="sr-name">セット '+st+'</span>'
+      +'<span class="sr-meta">全'+n+'問</span>'
+      +'<span class="sr-go" style="color:'+cfg().accent+'">はじめる →</span>';
+    row.onclick=()=>startSetQuiz(st);
+    list.appendChild(row);
+  });
+}
+
+// Category chips — level-wide practice for one category (across all 3 sets).
+function buildChips(){
+  const box=$("cat-chips"); box.innerHTML="";
+  CATS.forEach(cat=>{
+    const pool=catPool(currentLevel,cat);
+    if(!pool.length) return;
+    const chip=document.createElement("button");
+    chip.className="chip";
+    chip.innerHTML='<span class="chip-dot" style="background:'+CAT_COLOR[cat]+'"></span>'
+      +CAT_LABEL[cat]+'<span class="chip-n">'+pool.length+'</span>';
+    chip.onclick=()=>startCategoryQuiz(cat);
+    box.appendChild(chip);
+  });
+}
+
+function buildIvCta(){
+  const cta=$("iv-cta");
+  cta.style.display=IV_LEVELS.includes(currentLevel)?"":"none";
+}
+
+function startSetQuiz(st){
+  currentSet=st;
+  questions=[...ALL_SETS[currentLevel][st]];
+  startQuiz("ALL");
+}
+function startCategoryQuiz(cat){
+  questions=catPool(currentLevel,cat); // all same-category questions; stats attribution stays correct
+  startQuiz("ALL");
 }
 
 function goMenu(){hideAll();hideTracker();show("menu-screen");}
@@ -347,12 +378,7 @@ async function resetStatsConfirm(){
 }
 
 // ── Event wiring ──────────────────────────────────────────────
-document.querySelectorAll(".level-tab").forEach(tab=>{
-  tab.addEventListener("click",function(){switchLevel(this.getAttribute("data-level"));});
-});
-document.querySelectorAll(".set-tab").forEach(tab=>{
-  tab.addEventListener("click",function(){switchSet(this.getAttribute("data-set"));});
-});
+$("iv-cta-btn").onclick=()=>{ if(typeof openInterviewMenu==='function') openInterviewMenu(); else console.error('[EikenApp] interview.js not loaded'); };
 $("next-btn").onclick=nextQuestion;
 $("back-btn").onclick=goMenu;
 $("quit-btn").onclick=quitQuiz;
