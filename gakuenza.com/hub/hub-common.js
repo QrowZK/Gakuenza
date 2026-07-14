@@ -114,7 +114,7 @@ window.HubCommon = (function () {
       //     own activity_results (already RLS-permitted, always was —
       //     this is a UI-only addition, no schema/RLS change needed).
       isEducator
-        ? { key: 'grades', href: 'admin/gradebook.html', label: '成績' }
+        ? { key: 'grades', href: 'gradebook/index.html', label: '成績' }
         : isFullAdminUser
         ? { key: 'grades', label: '成績', disabled: true }
         : { key: 'grades', href: 'grades.html', label: '成績' },

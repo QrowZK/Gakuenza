@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プリント作成 — がくえん座 成績簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gradebook.css">
+</head>
+<body>
+<div class="gb-frame" id="app-root">
+  <aside class="gb-sidebar" id="gb-sidebar"></aside>
+  <main class="gb-main" id="gb-main">
+    <div class="gb-head">
+      <h1 class="gb-title">プリント作成</h1>
+      <div class="gb-head-filters" id="gb-filters"></div>
+      <div class="gb-head-meta">既存の生成エンジン（さんすう③・こくご③）を使用</div>
+    </div>
+    <hr class="gb-rule">
+    <div class="gb-two-col" style="grid-template-columns:1fr 1.1fr;align-items:start;">
+      <div class="gb-grid">
+        <div class="gb-card">
+          <h2 class="gb-card-head">1. だれ向け？</h2>
+          <div class="gb-pills" id="gb-target">
+            <button class="gb-pill active" data-t="individual" type="button">個別（1名）</button>
+            <button class="gb-pill" data-t="group" type="button">グループ</button>
+            <button class="gb-pill" data-t="class" type="button">学級全員</button>
+          </div>
+          <div class="gb-field" style="margin-top:10px;" id="gb-studentwrap">
+            <select id="gb-student"></select>
+          </div>
+        </div>
+
+        <div class="gb-card">
+          <h2 class="gb-card-head">2. 出題の重み <span class="gb-badge gb-badge-gold">弱点から自動提案</span></h2>
+          <div id="gb-weights"><div class="gb-skel" style="height:120px;"></div></div>
+          <p class="gb-section-note" style="margin-top:8px;">activity_result_items の設問単位の正答から、弱い順に初期値を設定。スライダーで調整できます。</p>
+        </div>
+
+        <div class="gb-card">
+          <h2 class="gb-card-head">3. 形式</h2>
+          <div class="gb-pills" id="gb-format">
+            <button class="gb-pill active" data-f="20" type="button">計算 20問</button>
+            <button class="gb-pill" data-f="40" type="button">計算 40問</button>
+            <button class="gb-pill" data-f="mix" type="button">文章題まぜ</button>
+          </div>
+          <label class="gb-switch" style="margin-top:12px;">
+            <input type="checkbox" id="gb-answers"> 答え付きの先生用も出力
+          </label>
+        </div>
+
+        <button class="gb-btn gb-btn-block" id="gb-make" type="button">プリントを作成する</button>
+      </div>
+
+      <div class="gb-grid">
+        <div class="gb-muted" style="font-size:11px;">プレビュー · A4たて</div>
+        <div id="gb-preview"></div>
+        <p class="gb-section-note" style="text-align:center;">作成後は印刷 / PDF保存 / 児童のモジュールに配信（配信は今後対応）。</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="../admin/admin-common.js"></script>
+<script src="gradebook-common.js"></script>
+<script>
+(async function () {
+  const GB = window.Gradebook;
+  const esc = GB.esc;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const ctxWrap = await GB.requireContext(sb);
+  if (!ctxWrap) return;
+  const { ctx, profile } = ctxWrap;
+
+  const classes = await GB.loadClasses(sb, ctx);
+  let classId = GB.getCurrentClassId(classes);
+  const classObj = classes.find(c => c.id === classId) || null;
+  const snap = await GB.loadSnapshotStatus(sb, classId);
+  GB.renderSidebar(sb, profile, 'print', ctx, snap);
+
+  document.getElementById('gb-filters').innerHTML = GB.classChipHtml(classes, classId);
+  const cc = document.getElementById('gb-class-chip');
+  if (cc) cc.addEventListener('change', () => { GB.setCurrentClassId(cc.value); location.reload(); });
+
+  if (!classId) {
+    document.getElementById('gb-preview').innerHTML =
+      `<div class="gb-empty"><span class="gb-empty-em">担当クラスがありません</span>管理者にクラスの割り当てを依頼してください。</div>`;
+    return;
+  }
+
+  // roster
+  const { data: enr } = await sb
+    .from('enrollments').select('user_id, profiles(display_name, student_number)')
+    .eq('class_id', classId).eq('role', 'student');
+  const roster = (enr || []).map((s, i) => ({ id: s.user_id, name: s.profiles?.display_name || '(未設定)', number: s.profiles?.student_number || String(i + 1) }));
+
+  const params = new URLSearchParams(location.search);
+  const preStudent = params.get('student');
+  document.getElementById('gb-student').innerHTML =
+    roster.map(r => `<option value="${esc(r.id)}"${r.id === preStudent ? ' selected' : ''}>${esc(r.number)}. ${esc(r.name)}</option>`).join('');
+
+  let target = 'individual';
+  let format = '20';
+  let weights = []; // [{cat, type, pct, weight}]
+
+  // ── weakness → auto weights (math items) ──────────────────────────────
+  async function computeWeights() {
+    let q = sb.from('activity_results')
+      .select('user_id, modules(subject), activity_result_items(category, correct)')
+      .eq('class_id', classId);
+    const { data: results } = await q;
+    const studentId = document.getElementById('gb-student').value;
+    const byCat = {};
+    for (const r of (results || [])) {
+      if (r.modules?.subject !== 'math') continue;
+      if (target === 'individual' && r.user_id !== studentId) continue;
+      for (const it of (r.activity_result_items || [])) {
+        if (!it.category) continue;
+        (byCat[it.category] ||= { c: 0, t: 0 });
+        byCat[it.category].t++; if (it.correct) byCat[it.category].c++;
+      }
+    }
+    let cats = Object.entries(byCat).map(([cat, d]) => ({ cat, pct: GB.pct(d.c, d.t) }));
+    if (!cats.length) {
+      // sensible default set when there's no data yet
+      cats = [{ cat: 'わり算の筆算', pct: 60 }, { cat: '文章題', pct: 70 }, { cat: 'かけ算', pct: 82 }, { cat: '図形', pct: 88 }];
+    }
+    cats.sort((a, b) => a.pct - b.pct);
+    cats = cats.slice(0, 4);
+    // inverse-of-accuracy weighting → weakest gets the most, normalized to 100
+    const raw = cats.map(c => Math.max(1, 100 - c.pct));
+    const sum = raw.reduce((a, b) => a + b, 0);
+    weights = cats.map((c, i) => ({
+      cat: c.cat, type: catType(c.cat), pct: c.pct,
+      weight: Math.round((raw[i] / sum) * 100),
+    }));
+    renderWeights();
+    renderPreview();
+  }
+
+  function catType(name) {
+    if (/かけ|乗/.test(name)) return 'mul';
+    if (/わり|除/.test(name)) return 'div';
+    if (/たし|加/.test(name)) return 'add';
+    if (/ひき|減/.test(name)) return 'sub';
+    if (/文章/.test(name)) return 'word';
+    if (/図形|角/.test(name)) return 'shape';
+    return 'div';
+  }
+
+  function renderWeights() {
+    document.getElementById('gb-weights').innerHTML = weights.map((w, i) => `
+      <div class="gb-weight">
+        <div class="gb-weight-label">${esc(w.cat)} <span class="gb-auto">${w.pct}%</span></div>
+        <input type="range" min="0" max="100" value="${w.weight}" data-i="${i}">
+        <div class="gb-weight-val" data-val="${i}">${w.weight}%</div>
+      </div>`).join('');
+    document.querySelectorAll('#gb-weights input[type=range]').forEach(sl => {
+      sl.addEventListener('input', () => {
+        const i = Number(sl.dataset.i);
+        weights[i].weight = Number(sl.value);
+        document.querySelector(`[data-val="${i}"]`).textContent = sl.value + '%';
+        renderPreview();
+      });
+    });
+  }
+
+  // ── preview generation ────────────────────────────────────────────────
+  function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function genProblem(type) {
+    switch (type) {
+      case 'mul': { const a = rand(2, 9), b = rand(2, 12); return { q: `${a} × ${b} =`, a: a * b }; }
+      case 'add': { const a = rand(12, 89), b = rand(12, 89); return { q: `${a} ＋ ${b} =`, a: a + b }; }
+      case 'sub': { const a = rand(30, 99), b = rand(10, 29); return { q: `${a} − ${b} =`, a: a - b }; }
+      case 'div': default: { const b = rand(2, 9), ans = rand(2, 9), a = b * ans; return { q: `${a} ÷ ${b} =`, a: ans }; }
+    }
+  }
+  function genWord() {
+    const total = rand(24, 96), groups = rand(3, 8);
+    const per = Math.floor(total / groups);
+    return { q: `${total}このあめを ${groups}人で同じ数ずつ分けます。1人分は何こになりますか。`, a: `${per}こ` };
+  }
+
+  function renderPreview() {
+    const showAns = document.getElementById('gb-answers').checked;
+    const N = format === '40' ? 40 : format === 'mix' ? 12 : 20;
+    const includeWord = format === 'mix' || weights.some(w => w.type === 'word' && w.weight > 0);
+
+    // distribute problems by weight (skip word-type in the calc grid)
+    const calcW = weights.filter(w => w.type !== 'word' && w.type !== 'shape');
+    const wsum = calcW.reduce((a, w) => a + w.weight, 0) || 1;
+    const probs = [];
+    calcW.forEach(w => {
+      const count = Math.round((w.weight / wsum) * N);
+      for (let i = 0; i < count; i++) probs.push(genProblem(w.type));
+    });
+    while (probs.length < N) probs.push(genProblem((calcW[0] || { type: 'div' }).type));
+    probs.length = N;
+
+    const gridPreview = probs.slice(0, format === '40' ? 20 : N).map((p, i) =>
+      `<div>${circledNum(i + 1)} ${esc(p.q)}${showAns ? ` <b style="color:var(--moss-deep)">${esc(String(p.a))}</b>` : '　'}</div>`).join('');
+
+    const studentName = target === 'individual'
+      ? (roster.find(r => r.id === document.getElementById('gb-student').value)?.name || '')
+      : target === 'class' ? '' : 'グループ';
+    const topCat = weights[0]?.cat || 'わり算';
+    const footWeights = weights.filter(w => w.weight > 0)
+      .map(w => `${esc(w.cat)}${w.weight}%`).join(' · ');
+    const word = includeWord ? genWord() : null;
+
+    document.getElementById('gb-preview').innerHTML = `
+      <div class="gb-worksheet">
+        <div class="gb-worksheet-title">
+          <span>${esc(topCat)} ふくしゅうプリント</span>
+          <span class="gb-worksheet-meta">${esc(classObj?.name || '')}　名前（${esc(studentName)}）</span>
+        </div>
+        <div class="gb-ws-grid">${gridPreview}</div>
+        ${word ? `<div class="gb-ws-word">${circledNum((format === '40' ? 20 : N) + 1)} ${esc(word.q)}${showAns ? ` <b style="color:var(--moss-deep)">${esc(word.a)}</b>` : ''}
+          <div class="gb-ws-answerbox"></div></div>` : ''}
+        <div class="gb-ws-foot">${esc(footWeights)} で出題</div>
+      </div>`;
+  }
+  function circledNum(n) {
+    const c = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+    return n >= 1 && n <= 20 ? c[n - 1] : `(${n})`;
+  }
+
+  // ── wiring ────────────────────────────────────────────────────────────
+  document.querySelectorAll('#gb-target .gb-pill').forEach(p => p.addEventListener('click', () => {
+    document.querySelectorAll('#gb-target .gb-pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    target = p.dataset.t;
+    document.getElementById('gb-studentwrap').style.display = target === 'individual' ? 'block' : 'none';
+    computeWeights();
+  }));
+  document.querySelectorAll('#gb-format .gb-pill').forEach(p => p.addEventListener('click', () => {
+    document.querySelectorAll('#gb-format .gb-pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    format = p.dataset.f;
+    renderPreview();
+  }));
+  document.getElementById('gb-student').addEventListener('change', computeWeights);
+  document.getElementById('gb-answers').addEventListener('change', renderPreview);
+  document.getElementById('gb-make').addEventListener('click', () => {
+    renderPreview();
+    setTimeout(() => window.print(), 60);
+  });
+
+  computeWeights();
+})();
+</script>
+</body>
+</html>

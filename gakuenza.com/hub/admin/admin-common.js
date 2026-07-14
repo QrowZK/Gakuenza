@@ -122,7 +122,7 @@ window.AdminCommon = (function () {
     const navItems = admin?.tier === 'educator'
       ? [
           { key: 'home', label: 'ホーム', href: '../index.html' },
-          { key: 'gradebook', label: '成績', href: 'gradebook.html' },
+          { key: 'gradebook', label: '成績', href: '../gradebook/index.html' },
           { key: 'settings', label: '設定', href: '../settings.html' },
         ]
       : [
@@ -131,7 +131,7 @@ window.AdminCommon = (function () {
           { key: 'students', label: '生徒', href: 'students.html' },
           { key: 'classes', label: 'クラス', href: 'class-detail.html' },
           { key: 'modules', label: 'モジュール', href: 'modules.html' },
-          { key: 'gradebook', label: '成績', href: 'gradebook.html' },
+          { key: 'gradebook', label: '成績', href: '../gradebook/index.html' },
           { key: 'settings', label: '設定', href: '../settings.html' },
         ];
 

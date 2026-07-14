@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ダッシュボード — がくえん座 成績簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gradebook.css">
+</head>
+<body>
+<div class="gb-frame" id="app-root">
+  <aside class="gb-sidebar" id="gb-sidebar"></aside>
+  <main class="gb-main" id="gb-main">
+    <div class="gb-head">
+      <div>
+        <h1 class="gb-title">ダッシュボード</h1>
+      </div>
+      <div class="gb-head-filters" id="gb-filters"></div>
+      <div class="gb-head-meta" id="gb-meta"></div>
+    </div>
+    <hr class="gb-rule">
+    <div id="gb-body">
+      <div class="gb-kpi-row" id="gb-kpis">
+        <div class="gb-kpi gb-skel" style="height:78px;"></div>
+        <div class="gb-kpi gb-skel" style="height:78px;"></div>
+        <div class="gb-kpi gb-skel" style="height:78px;"></div>
+        <div class="gb-kpi gb-skel" style="height:78px;"></div>
+      </div>
+      <div class="gb-main-side" style="margin-top:16px;">
+        <div class="gb-grid">
+          <div class="gb-card" id="gb-subjects"></div>
+          <div class="gb-card" id="gb-recent"></div>
+        </div>
+        <div class="gb-grid">
+          <div class="gb-card" id="gb-watch"></div>
+          <div class="gb-card" id="gb-obsgap"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="../admin/admin-common.js"></script>
+<script src="gradebook-common.js"></script>
+<script>
+(async function () {
+  const GB = window.Gradebook;
+  const esc = GB.esc;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const ctxWrap = await GB.requireContext(sb);
+  if (!ctxWrap) return;
+  const { ctx, profile } = ctxWrap;
+
+  const classes = await GB.loadClasses(sb, ctx);
+  let classId = GB.getCurrentClassId(classes);
+
+  const snap = await GB.loadSnapshotStatus(sb, classId);
+  GB.renderSidebar(sb, profile, 'dashboard', ctx, snap);
+
+  document.getElementById('gb-meta').innerHTML =
+    `${esc(GB.fullDate(new Date().toISOString()))}<br>成績簿 · Gradebook`;
+
+  document.getElementById('gb-filters').innerHTML = GB.classChipHtml(classes, classId);
+  const classChip = document.getElementById('gb-class-chip');
+  if (classChip) classChip.addEventListener('change', () => {
+    GB.setCurrentClassId(classChip.value);
+    location.reload();
+  });
+
+  if (!classId) {
+    document.getElementById('gb-body').innerHTML =
+      `<div class="gb-empty"><span class="gb-empty-em">担当クラスがありません</span>管理者にクラスの割り当てを依頼してください。</div>`;
+    return;
+  }
+
+  function weekStartISO() {
+    const d = new Date();
+    const day = (d.getDay() + 6) % 7; // Monday = 0
+    d.setDate(d.getDate() - day);
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  }
+
+  // ── roster ──────────────────────────────────────────────────────────
+  const { data: enr } = await sb
+    .from('enrollments').select('user_id, profiles(display_name)')
+    .eq('class_id', classId).eq('role', 'student');
+  const students = enr || [];
+  const enrolled = students.length;
+  const nameOf = {};
+  students.forEach(s => { nameOf[s.user_id] = s.profiles?.display_name || '(未設定)'; });
+
+  // ── results (with module subject/name) ──────────────────────────────
+  const { data: results } = await sb
+    .from('activity_results')
+    .select('id, user_id, score, max_score, created_at, activity_ref, modules(name, subject)')
+    .eq('class_id', classId)
+    .order('created_at', { ascending: false });
+  const rows = results || [];
+
+  const num = (v) => (v == null ? null : Number(v));
+  // per-student rollup
+  const perStudent = {};
+  for (const r of rows) {
+    const s = num(r.score), m = num(r.max_score);
+    if (s == null || m == null || m === 0) continue;
+    (perStudent[r.user_id] ||= { sum: 0, max: 0 });
+    perStudent[r.user_id].sum += s;
+    perStudent[r.user_id].max += m;
+  }
+  const classSum = Object.values(perStudent).reduce((a, x) => a + x.sum, 0);
+  const classMax = Object.values(perStudent).reduce((a, x) => a + x.max, 0);
+  const classAvg = GB.pct(classSum, classMax);
+
+  const ws = weekStartISO();
+  const completedThisWeek = new Set(rows.filter(r => r.created_at >= ws).map(r => r.user_id)).size;
+
+  // needs-attention: students with a rollup below 60%, lowest first
+  const watch = students
+    .map(s => {
+      const p = perStudent[s.user_id];
+      return p && p.max > 0 ? { id: s.user_id, name: nameOf[s.user_id], pct: GB.pct(p.sum, p.max) } : null;
+    })
+    .filter(Boolean)
+    .filter(x => x.pct < 60)
+    .sort((a, b) => a.pct - b.pct);
+
+  // ── KPI tiles ───────────────────────────────────────────────────────
+  document.getElementById('gb-kpis').innerHTML = `
+    <div class="gb-kpi">
+      <div class="gb-kpi-label">在籍</div>
+      <div class="gb-kpi-num">${enrolled}<span class="gb-unit">名</span></div>
+    </div>
+    <div class="gb-kpi">
+      <div class="gb-kpi-label">今週の取組完了</div>
+      <div class="gb-kpi-num">${completedThisWeek}<span class="gb-unit">/${enrolled}名</span></div>
+      <div class="gb-kpi-delta">今週の活動記録より</div>
+    </div>
+    <div class="gb-kpi">
+      <div class="gb-kpi-label">学級平均正答率</div>
+      <div class="gb-kpi-num">${classMax ? classAvg + '<span class="gb-unit">%</span>' : '—'}</div>
+      <div class="gb-kpi-delta">モジュール活動から自動集計</div>
+    </div>
+    <div class="gb-kpi${watch.length ? ' gb-kpi-alert' : ''}">
+      <div class="gb-kpi-label">要フォロー</div>
+      <div class="gb-kpi-num">${watch.length}<span class="gb-unit">名</span></div>
+      <div class="gb-kpi-delta">正答率60%未満</div>
+    </div>`;
+
+  // ── 教科別 今週のようす ─────────────────────────────────────────────
+  const bySubject = {};
+  for (const r of rows) {
+    const subj = r.modules?.subject || 'misc';
+    (bySubject[subj] ||= { sum: 0, max: 0, latest: null, latestAt: null });
+    const s = num(r.score), m = num(r.max_score);
+    if (s != null && m != null && m > 0) { bySubject[subj].sum += s; bySubject[subj].max += m; }
+    if (!bySubject[subj].latestAt || r.created_at > bySubject[subj].latestAt) {
+      bySubject[subj].latestAt = r.created_at;
+      bySubject[subj].latest = r.modules?.name || '';
+    }
+  }
+  const subjEntries = GB.SUBJECTS.map(s => [s.key, s.label, bySubject[s.key]]).filter(e => e[2]);
+  document.getElementById('gb-subjects').innerHTML = `
+    <h2 class="gb-card-head">教科別 今週のようす</h2>
+    ${subjEntries.length ? subjEntries.map(([key, label, d]) => {
+      const p = GB.pct(d.sum, d.max);
+      return `<div class="gb-bar-row">
+        <div class="gb-bar-label">${esc(label)}</div>
+        <div class="gb-bar-track"><div class="gb-bar-fill" style="width:${p}%;${p < 70 ? 'background:var(--clay);' : ''}"></div></div>
+        <div class="gb-bar-pct">${d.max ? p + '%' : '—'}</div>
+        <div class="gb-bar-note">${esc(d.latest || '')}</div>
+      </div>`;
+    }).join('') : `<div class="gb-empty" style="padding:18px;">まだ活動記録がありません。</div>`}
+    <p class="gb-section-note" style="margin:10px 0 0;">結果はモジュール活動から自動集計 · 手入力不要</p>`;
+
+  // ── 最近の活動 ───────────────────────────────────────────────────────
+  const feed = rows.slice(0, 6).map(r => {
+    const s = num(r.score), m = num(r.max_score);
+    const sc = (s != null && m != null) ? ` ${s}/${m}` : '';
+    return { text: `${r.modules?.name || '活動'} — ${nameOf[r.user_id] || '児童'}${sc}`, at: r.created_at };
+  });
+  document.getElementById('gb-recent').innerHTML = `
+    <h2 class="gb-card-head">最近の活動</h2>
+    ${feed.length ? feed.map(f => `
+      <div class="gb-feed-row">
+        <span class="gb-dot"></span>
+        <span class="gb-feed-text">${esc(f.text)}</span>
+        <span class="gb-feed-time">${esc(GB.relTime(f.at))}</span>
+      </div>`).join('') : `<div class="gb-empty" style="padding:18px;">最近の活動はまだありません。</div>`}`;
+
+  // ── 要フォローの児童 ─────────────────────────────────────────────────
+  document.getElementById('gb-watch').innerHTML = `
+    <h2 class="gb-card-head">要フォローの児童</h2>
+    ${watch.length ? watch.slice(0, 5).map(w => `
+      <div class="gb-watch">
+        <div class="gb-watch-av">${esc(GB.initial(w.name))}</div>
+        <div class="gb-watch-body">
+          <div class="gb-watch-name">${esc(w.name)}</div>
+          <div class="gb-watch-meta"><a class="gb-link" href="karte.html?student=${encodeURIComponent(w.id)}">カルテへ →</a></div>
+        </div>
+        <div class="gb-watch-pct">${w.pct}%</div>
+      </div>`).join('') : `<div class="gb-empty" style="padding:18px;">要フォローの児童はいません。</div>`}`;
+
+  // ── 観察記録の記入もれ ───────────────────────────────────────────────
+  const { data: obs } = await sb
+    .from('observation_records').select('student_id').eq('class_id', classId);
+  const observed = new Set((obs || []).map(o => o.student_id));
+  const gap = students.filter(s => !observed.has(s.user_id)).length;
+  document.getElementById('gb-obsgap').innerHTML = `
+    <h2 class="gb-card-head">観察記録の記入もれ</h2>
+    <p style="font-size:12.5px;margin:0 0 10px;">今学期まだ記録のない児童が <b>${gap}名</b> います。</p>
+    <a class="gb-link" href="observations.html">観察記録を開く →</a>`;
+})();
+</script>
+</body>
+</html>

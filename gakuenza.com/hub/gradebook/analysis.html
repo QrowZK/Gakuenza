@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>成績分析 — がくえん座 成績簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gradebook.css">
+<style>
+  /* sticky heatmap header + name column for classes past ~12 students */
+  .gb-heat-wrap { max-height: 62vh; overflow: auto; }
+  .gb-heat thead th { position: sticky; top: 0; background: var(--paper); z-index: 2; }
+  .gb-heat td.gb-heat-name, .gb-heat th.gb-heat-name { position: sticky; left: 0; background: var(--paper); z-index: 1; }
+  .gb-heat thead th.gb-heat-name { z-index: 3; }
+</style>
+</head>
+<body>
+<div class="gb-frame" id="app-root">
+  <aside class="gb-sidebar" id="gb-sidebar"></aside>
+  <main class="gb-main" id="gb-main">
+    <div class="gb-head">
+      <h1 class="gb-title">成績分析</h1>
+      <div class="gb-head-filters" id="gb-filters"></div>
+      <div class="gb-head-meta">
+        <div class="gb-heat-legend" style="justify-content:flex-end;">
+          <span><span class="sw" style="background:var(--heat-1)"></span>85%以上</span>
+          <span><span class="sw" style="background:var(--heat-2)"></span>70–84%</span>
+          <span><span class="sw" style="background:var(--heat-3)"></span>55–69%</span>
+          <span><span class="sw" style="background:var(--heat-4)"></span>55%未満</span>
+        </div>
+      </div>
+    </div>
+    <hr class="gb-rule">
+    <div class="gb-main-side">
+      <div class="gb-card" id="gb-heatcard"><div class="gb-skel" style="height:280px;"></div></div>
+      <div class="gb-grid">
+        <div class="gb-card" id="gb-stumble"></div>
+        <div class="gb-card" id="gb-dist"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="../admin/admin-common.js"></script>
+<script src="gradebook-common.js"></script>
+<script>
+(async function () {
+  const GB = window.Gradebook;
+  const esc = GB.esc;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const ctxWrap = await GB.requireContext(sb);
+  if (!ctxWrap) return;
+  const { ctx, profile } = ctxWrap;
+
+  const classes = await GB.loadClasses(sb, ctx);
+  let classId = GB.getCurrentClassId(classes);
+  const snap = await GB.loadSnapshotStatus(sb, classId);
+  GB.renderSidebar(sb, profile, 'analysis', ctx, snap);
+
+  let subject = 'math';
+
+  function renderFilters() {
+    document.getElementById('gb-filters').innerHTML =
+      GB.classChipHtml(classes, classId) + GB.subjectChipHtml(subject);
+    const cc = document.getElementById('gb-class-chip');
+    if (cc) cc.addEventListener('change', () => { GB.setCurrentClassId(cc.value); location.reload(); });
+    const sc = document.getElementById('gb-subject-chip');
+    if (sc) sc.addEventListener('change', () => { subject = sc.value; load(); });
+  }
+  renderFilters();
+
+  if (!classId) {
+    document.getElementById('gb-heatcard').innerHTML =
+      `<div class="gb-empty"><span class="gb-empty-em">担当クラスがありません</span>管理者にクラスの割り当てを依頼してください。</div>`;
+    document.getElementById('gb-stumble').style.display = 'none';
+    document.getElementById('gb-dist').style.display = 'none';
+    return;
+  }
+
+  const { data: enr } = await sb
+    .from('enrollments').select('user_id, profiles(display_name)')
+    .eq('class_id', classId).eq('role', 'student');
+  const students = (enr || []).map(s => ({ id: s.user_id, name: s.profiles?.display_name || '(未設定)' }));
+
+  async function load() {
+    const heatcard = document.getElementById('gb-heatcard');
+    heatcard.innerHTML = `<div class="gb-skel" style="height:280px;"></div>`;
+
+    const { data: results } = await sb
+      .from('activity_results')
+      .select('user_id, modules(subject), activity_result_items(category, correct)')
+      .eq('class_id', classId);
+
+    // keep only this subject's attempts, flatten items
+    const items = [];
+    for (const r of (results || [])) {
+      if (r.modules?.subject !== subject) continue;
+      for (const it of (r.activity_result_items || [])) {
+        if (!it.category) continue;
+        items.push({ user_id: r.user_id, category: it.category, correct: !!it.correct });
+      }
+    }
+
+    if (!items.length) {
+      heatcard.innerHTML = `<div class="gb-empty"><span class="gb-empty-em">${esc(GB.SUBJECT_LABEL[subject] || subject)}の分析データがありません</span>この教科のモジュール活動が記録されると、カテゴリ別のヒートマップが表示されます。</div>`;
+      document.getElementById('gb-stumble').innerHTML = `<h2 class="gb-card-head">学級のつまずき Top3</h2><div class="gb-empty" style="padding:14px;">データがありません。</div>`;
+      document.getElementById('gb-dist').innerHTML = `<h2 class="gb-card-head">得点分布</h2><div class="gb-empty" style="padding:14px;">データがありません。</div>`;
+      return;
+    }
+
+    // categories in first-seen order
+    const cats = [];
+    for (const it of items) if (!cats.includes(it.category)) cats.push(it.category);
+
+    // cell[user][cat] = {c,t}
+    const cell = {};
+    const catTotals = {};
+    for (const it of items) {
+      (cell[it.user_id] ||= {});
+      (cell[it.user_id][it.category] ||= { c: 0, t: 0 });
+      cell[it.user_id][it.category].t++;
+      if (it.correct) cell[it.user_id][it.category].c++;
+      (catTotals[it.category] ||= { c: 0, t: 0 });
+      catTotals[it.category].t++;
+      if (it.correct) catTotals[it.category].c++;
+    }
+
+    // only students who have data, in roster order (fall back to any with data)
+    const rosterWithData = students.filter(s => cell[s.id]);
+    const rows = rosterWithData.length ? rosterWithData
+      : Object.keys(cell).map(id => ({ id, name: (students.find(s => s.id === id)?.name) || '(不明)' }));
+
+    // ── heatmap ──
+    heatcard.innerHTML = `
+      <div class="gb-heat-wrap">
+        <table class="gb-heat">
+          <thead><tr>
+            <th class="gb-heat-name">氏名</th>
+            ${cats.map(c => `<th>${esc(c)}</th>`).join('')}
+            <th>平均</th>
+          </tr></thead>
+          <tbody>
+            ${rows.map(s => {
+              let sc = 0, st = 0;
+              const tds = cats.map(cat => {
+                const d = cell[s.id]?.[cat];
+                if (!d) return `<td class="gb-heat-cell gb-muted" style="background:var(--paper-dim);color:var(--ink-soft);">—</td>`;
+                const p = GB.pct(d.c, d.t); sc += d.c; st += d.t;
+                return `<td class="gb-heat-cell ${GB.heatClass(p)}" data-student="${esc(s.id)}" data-cat="${esc(cat)}" title="${esc(s.name)} · ${esc(cat)}">${p}</td>`;
+              }).join('');
+              const avg = GB.pct(sc, st);
+              return `<tr><td class="gb-heat-name">${esc(s.name)}</td>${tds}<td class="gb-heat-avg">${st ? avg + '%' : '—'}</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <p class="gb-section-note" style="margin-top:10px;">セルをクリックで該当児童の個人カルテへ。児童数が多い場合は表内をスクロールします。</p>`;
+
+    heatcard.querySelectorAll('.gb-heat-cell[data-student]').forEach(td => {
+      td.addEventListener('click', () => {
+        window.location.href = `karte.html?student=${encodeURIComponent(td.dataset.student)}`;
+      });
+    });
+
+    // ── 学級のつまずき Top3 ──
+    const catRank = cats.map(c => ({ cat: c, pct: GB.pct(catTotals[c].c, catTotals[c].t) }))
+      .sort((a, b) => a.pct - b.pct).slice(0, 3);
+    document.getElementById('gb-stumble').innerHTML = `
+      <h2 class="gb-card-head">学級のつまずき Top3</h2>
+      ${catRank.map(r => {
+        const below = rows.filter(s => { const d = cell[s.id]?.[r.cat]; return d && GB.pct(d.c, d.t) < 70; }).length;
+        return `<div style="margin-bottom:12px;">
+          <div class="gb-bar-row" style="padding:2px 0;">
+            <div style="flex:1;font-weight:700;">${esc(r.cat)}</div>
+            <div class="gb-bar-pct" style="color:${r.pct < 55 ? 'var(--clay)' : 'var(--ink)'}">${r.pct}%</div>
+          </div>
+          <div class="gb-bar-track"><div class="gb-bar-fill" style="width:${r.pct}%;${r.pct < 70 ? 'background:var(--clay);' : ''}"></div></div>
+          <div class="gb-section-note" style="margin:4px 0 0;">該当中 ${below}名 が70%未満</div>
+        </div>`;
+      }).join('')}
+      <a class="gb-link" href="print.html">→ この弱点でプリントを作る</a>`;
+
+    // ── 得点分布 ──
+    const buckets = [40, 50, 60, 70, 80, 90, 100];
+    const counts = new Array(buckets.length).fill(0);
+    rows.forEach(s => {
+      let c = 0, t = 0;
+      cats.forEach(cat => { const d = cell[s.id]?.[cat]; if (d) { c += d.c; t += d.t; } });
+      if (!t) return;
+      const p = GB.pct(c, t);
+      let bi = buckets.findIndex(b => p <= b);
+      if (bi < 0) bi = buckets.length - 1;
+      counts[bi]++;
+    });
+    const maxCount = Math.max(1, ...counts);
+    document.getElementById('gb-dist').innerHTML = `
+      <h2 class="gb-card-head">得点分布 <span class="gb-sub">${esc(GB.SUBJECT_LABEL[subject] || subject)}・平均</span></h2>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:110px;padding-top:6px;">
+        ${counts.map((n, i) => `
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+            <div style="font-size:10px;color:var(--ink-soft);">${n || ''}</div>
+            <div title="${n}名" style="width:100%;height:${Math.round((n / maxCount) * 84)}px;background:${i <= 1 ? 'var(--heat-4)' : i <= 3 ? 'var(--heat-3)' : 'var(--moss)'};border-radius:4px 4px 0 0;min-height:${n ? '3px' : '0'};"></div>
+            <div style="font-size:9.5px;color:var(--ink-soft);margin-top:3px;">~${buckets[i]}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
