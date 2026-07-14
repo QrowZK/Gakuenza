@@ -31,7 +31,7 @@
     --panel-bg: #F7F3EA; --panel-text: #3A4555; --panel-dim: #7A8294;
     --panel-border: #E4E0D4; --panel-head: #EFE9DB;
     --panel-cell: #FFFFFF; --panel-cell-border: #E4E0D4;
-    --gold: #C9A24B; --shadow-float: rgba(28,37,48,.18);
+    --gold: #C9A24B; --gold-deep: #A8843A; --shadow-float: rgba(28,37,48,.18);
   }
   body.dark {
     --bg: #1C1A16; --surface: #2A2620; --surface2: #332F27; --border: #4A453A;
@@ -50,9 +50,60 @@
     transition: background .15s, border-color .15s, color .15s, transform .1s, box-shadow .15s;
   }
 
-  /* ── Layout ── */
+  /* ── Layout — desktop-width per 1a; each screen sets its own column ── */
   .page-layout { min-height: 100vh; }
-  .main-col { padding: 18px 18px 44px; max-width: 640px; margin: 0 auto; }
+  .main-col { padding: 0; max-width: none; margin: 0; }
+  #menu-screen { max-width: 1180px; margin: 0 auto; padding: 32px 28px 64px; }
+  #quiz-screen, #review-screen, #stats-screen { max-width: 720px; margin: 0 auto; padding: 26px 22px 56px; }
+
+  /* ── Signature motifs ── */
+  .eyebrow { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: .09em; color: var(--gold-deep, #A8843A); text-transform: uppercase; }
+  .dot-rule { border-bottom: 2px dotted var(--gold); margin: 12px 0 0; }
+
+  /* ── Menu (1a): head, level-card grid, set list, chips, interview CTA ── */
+  .menu-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 30px; }
+  .menu-title { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 32px; color: var(--text); margin-top: 6px; letter-spacing: .01em; }
+
+  .level-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .level-card { background: var(--surface); border: 1px solid var(--border); border-top: 5px solid var(--border); border-radius: 16px; padding: 22px 22px; display: flex; flex-direction: column; gap: 9px; text-align: left; cursor: pointer; font-family: inherit; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10); transition: transform .12s, box-shadow .15s; }
+  .level-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(28,37,48,.18); }
+  .level-card.active { box-shadow: 0 0 0 2px var(--lvl-accent), 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10); }
+  .lc-num { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 38px; line-height: 1.12; }
+  .lc-desc { font-size: 14px; color: var(--text2); }
+  .lc-meta { font-size: 12.5px; color: var(--text3); }
+  .lc-bar { height: 8px; background: var(--surface2); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+  .lc-bar-fill { height: 100%; border-radius: 999px; transition: width .4s; }
+  .lc-prog { font-size: 12px; font-weight: 600; }
+
+  .menu-2col { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; margin-top: 32px; align-items: start; }
+  .menu-card-lg { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px 26px; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10); }
+  .menu-card-lg h2 { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 18px; color: var(--text); }
+  .panel-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .panel-count { font-size: 12.5px; color: var(--text3); }
+  .set-list { display: flex; flex-direction: column; gap: 8px; }
+  .set-row { display: flex; align-items: center; gap: 14px; background: var(--surface2); border: 1.5px solid transparent; border-radius: 8px; padding: 13px 16px; cursor: pointer; text-align: left; font-family: inherit; transition: background .14s, border-color .14s; }
+  .set-row:hover { border-color: var(--lvl-accent); background: var(--surface); }
+  .sr-name { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; color: var(--text); min-width: 62px; }
+  .sr-meta { flex: 1; font-size: 13px; color: var(--text3); }
+  .sr-go { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 13px; }
+  .menu-side { display: flex; flex-direction: column; gap: 20px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 999px; padding: 8px 15px; font-size: 13px; color: var(--text); background: var(--surface); cursor: pointer; font-family: inherit; transition: background .14s, border-color .14s; }
+  .chip:hover { border-color: var(--lvl-accent); background: var(--surface2); }
+  .chip-dot { width: 9px; height: 9px; border-radius: 999px; flex-shrink: 0; }
+  .chip-n { color: var(--text3); font-size: 12px; margin-left: 2px; }
+  .iv-cta { display: flex; align-items: center; gap: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px; }
+  .iv-cta-text { flex: 1; }
+  .iv-cta-text h2 { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 18px; color: var(--text); }
+  .iv-cta-text p { font-size: 13px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
+  .iv-cta-btn { background: #B5572E; color: #F7F3EA; font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 14px; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer; white-space: nowrap; transition: background .15s, transform .1s; }
+  .iv-cta-btn:hover { background: #96471F; transform: translateY(-1px); }
+
+  @media (max-width: 860px) {
+    .menu-2col { grid-template-columns: 1fr; }
+    .level-cards { grid-template-columns: repeat(2, 1fr); }
+    .menu-title { font-size: 26px; }
+  }
 
   /* Side panel — fixed to right of viewport */
   .side-panel { 

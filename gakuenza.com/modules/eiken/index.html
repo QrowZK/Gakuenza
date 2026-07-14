@@ -20,35 +20,42 @@
 
 
   <div id="menu-screen">
-    <div class="header">
-      <div class="header-icon" id="hdr-icon">英検</div>
-      <h1 id="hdr-title">英検 Practice</h1>
-      <div style="width:120px;border-bottom:2px dotted var(--gold);margin:12px auto 0;"></div>
-      <p id="hdr-sub">2,142 問題 · 6 レベル · 3 セット</p>
-    </div>
-
-    <!-- Level tabs + theme toggle -->
-    <div class="top-controls">
-      <div class="level-tabs" id="level-tabs">
-        <button class="level-tab" data-level="5">5級</button>
-        <button class="level-tab" data-level="4">4級</button>
-        <button class="level-tab" data-level="3">3級</button>
-        <button class="level-tab" data-level="P">準2級</button>
-        <button class="level-tab" data-level="Q">準2級＋</button>
-        <button class="level-tab" data-level="2">2級</button>
+    <div class="menu-head">
+      <div>
+        <div class="eyebrow">PRACTICE</div>
+        <h1 class="menu-title">きょうは何をれんしゅうする？</h1>
+        <div class="dot-rule" style="width:120px;"></div>
       </div>
       <button class="theme-btn" id="theme-btn" title="ライト/ダークモード">🌙</button>
     </div>
 
-    <!-- Set tabs -->
-    <div class="set-tabs" id="set-tabs">
-      <button class="set-tab active" data-set="1">セット 1</button>
-      <button class="set-tab" data-set="2">セット 2</button>
-      <button class="set-tab" data-set="3">セット 3</button>
-    </div>
+    <!-- Level picker: color-topped cards, one per 級 -->
+    <div class="level-cards" id="level-cards"></div>
 
-    <div class="menu-grid" id="menu-grid"></div>
-    <p class="footer">レベルとセットを選んでください</p>
+    <div class="menu-2col">
+      <div class="menu-card-lg set-panel">
+        <div class="panel-head">
+          <h2 id="set-panel-title">セットをえらぶ</h2>
+          <span class="panel-count" id="set-count"></span>
+        </div>
+        <div class="dot-rule" style="width:72px;"></div>
+        <div class="set-list" id="set-list"></div>
+      </div>
+      <div class="menu-side">
+        <div class="menu-card-lg">
+          <h2>カテゴリでれんしゅう</h2>
+          <div class="dot-rule" style="width:72px;"></div>
+          <div class="chips" id="cat-chips"></div>
+        </div>
+        <div class="iv-cta" id="iv-cta" style="display:none;">
+          <div class="iv-cta-text">
+            <h2>面接れんしゅう</h2>
+            <p>スピーキングテストを本番形式で。</p>
+          </div>
+          <button class="iv-cta-btn" id="iv-cta-btn">はじめる →</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="quiz-screen" class="hidden">
