@@ -8,7 +8,8 @@
 //   - sansu3:  keys u01..u17  ==  'u' + zero-padded unit number in
 //              modules/sansu3/generators.js UNITS (see app.js unitKey()).
 //   - kokugo3: 'kanji' (the kanji drill) + each key of READING_UNITS in
-//              modules/kokugo3/reading-units.js (currently just 'daizu').
+//              modules/kokugo3/reading-units.js + each key of GRAMMAR_UNITS in
+//              modules/kokugo3/grammar-generators.js.
 //
 // Do NOT invent a parallel key scheme. When a module gains/renames units,
 // update both the module and this registry (kept in sync deliberately —
@@ -40,7 +41,17 @@
     ],
     kokugo3: [
       { key: 'kanji', label: '漢字れんしゅう' },
+      { key: 'haru', label: '読解：春風をたどって' },
+      { key: 'maigo', label: '読解：まいごのかぎ' },
+      { key: 'chiichan', label: '読解：ちいちゃんのかげおくり' },
       { key: 'daizu', label: '読解：すがたをかえる大豆' },
+      { key: 'touge', label: '読解：三年とうげ' },
+      { key: 'ari', label: '読解：ありの行列' },
+      { key: 'mochimochi', label: '読解：モチモチの木' },
+      { key: 'kosoado', label: 'ことば：こそあど言葉' },
+      { key: 'shuushoku', label: 'ことば：修飾語' },
+      { key: 'kotowaza', label: 'ことば：ことわざ・故事成語' },
+      { key: 'romaji', label: 'ことば：ローマ字' },
     ],
     // rika4 unit keys == the `key` of each unit in modules/rika4/rika4-data.js
     // (RIKA4_DATA.UNIT_KEYS). The module runner reads focus_units and

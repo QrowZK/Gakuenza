@@ -5,13 +5,22 @@
 // shakai3 shipped a real bug (wrong column names) by not doing this.
 (function () {
   async function reportKokugo3(sb, ctx, { mode, unitKey, results }) {
-    // mode: 'kanji' | 'reading'
+    // mode: 'kanji' | 'reading' | 'grammar'
     // results: [{ itemRef, category, prompt, correct, selectedAnswer, correctAnswer }]
     const score = results.filter(r => r.correct).length;
     const maxScore = results.length;
-    const activityRef = mode === 'kanji'
-      ? `kokugo3/kanji/${Date.now()}`
-      : `kokugo3/reading/${unitKey}/${Date.now()}`;
+    // activity_ref shape: "<module_key>/<part>/.../<timestamp>" — the gradebook
+    // strips the trailing timestamp to group retries into one assignment
+    // column, so keep the unit key in the ref for per-unit grouping.
+    let activityRef;
+    if (mode === 'kanji') activityRef = `kokugo3/kanji/${Date.now()}`;
+    else if (mode === 'grammar') activityRef = `kokugo3/grammar/${unitKey}/${Date.now()}`;
+    else activityRef = `kokugo3/reading/${unitKey}/${Date.now()}`;
+
+    let payload;
+    if (mode === 'kanji') payload = { mode: 'kanji' };
+    else if (mode === 'grammar') payload = { mode: 'grammar', unit: unitKey };
+    else payload = { mode: 'reading', unit: unitKey };
 
     return window.HubCommon.reportActivityWithItems(sb, {
       schoolId: ctx.schoolId,
@@ -21,7 +30,7 @@
       activityRef,
       score,
       maxScore,
-      payload: mode === 'kanji' ? { mode: 'kanji' } : { mode: 'reading', unit: unitKey },
+      payload,
       items: results.map(r => ({
         itemRef: r.itemRef,
         category: r.category,
