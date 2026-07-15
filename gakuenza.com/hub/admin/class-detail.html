@@ -10,6 +10,13 @@
 <link rel="stylesheet" href="admin.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* focus-unit checkboxes (shared markup from module-assign-common.js) */
+  .ma-focus-field { border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+  .ma-focus-hint { font-size:0.72rem; color:var(--ink-soft); margin-bottom:6px; }
+  .ma-focus-opt { display:flex; align-items:center; gap:7px; padding:3px 0; font-size:0.8rem; cursor:pointer; }
+  .ac-assigned-card .ac-btn { margin-left:6px; }
+</style>
 </head>
 <body>
 
@@ -90,11 +97,9 @@
         <div>
           <h2 class="section-title">モジュール</h2>
 
-          <div class="ac-module-subhead">学校全体で有効</div>
-          <div class="ac-card" style="margin-bottom:16px;" id="school-modules-box">
-            <div class="ac-skel" style="height:18px;margin-bottom:10px;"></div>
-            <div class="ac-skel" style="height:18px;"></div>
-          </div>
+          <p style="font-size:0.76rem;color:var(--ink-soft);margin:0 0 14px;line-height:1.5;">
+            学校でのモジュールの有効化は<a href="modules.html" style="color:var(--moss-deep);">モジュール管理</a>で行います。ここでは有効なモジュールをこのクラスに割り当てます。
+          </p>
 
           <div class="ac-module-subhead">このクラスに割り当て済み</div>
           <div id="assigned-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
@@ -307,10 +312,11 @@
         <label class="ac-field-label" for="input-total-items">問題数</label>
         <input id="input-total-items" type="number" min="1" required>
       </div>
-      <div class="ac-field" style="margin-bottom:20px;">
+      <div class="ac-field">
         <label class="ac-field-label" for="input-due-date">期限（任意）</label>
         <input id="input-due-date" type="date">
       </div>
+      <div class="ac-field" id="assign-focus-slot" style="margin-bottom:20px;"></div>
       <p class="ac-modal-err" id="assign-err" style="display:none;"></p>
       <div class="ac-modal-actions">
         <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-assign">キャンセル</button>
@@ -323,10 +329,13 @@
 <script src="../supabase.js"></script>
 <script src="../config.js"></script>
 <script src="../hub-common.js"></script>
+<script src="../module-units.js"></script>
+<script src="../module-assign-common.js"></script>
 <script src="admin-common.js"></script>
 <script>
 (async function () {
   const H = window.HubCommon;
+  const MA = window.ModuleAssign;
   const AC = window.AdminCommon;
   const cfg = window.GAKUENZA_CONFIG;
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
@@ -719,7 +728,7 @@
   }
   async function loadCatalogAndEnabled() {
     const [catalogRes, enabledRes] = await Promise.all([
-      sb.from('modules').select('id, key, name, subject'),
+      sb.from('modules').select('id, key, name, subject, recommended_grades'),
       sb.from('school_modules').select('module_id').eq('school_id', schoolId),
     ]);
     return { catalogRes, enabledRes };
@@ -758,7 +767,6 @@
 
     renderStats();
     renderRoster();
-    renderSchoolModules();
     renderAssigned();
   }
 
@@ -843,25 +851,6 @@
     });
   }
 
-  function renderSchoolModules() {
-    const box = document.getElementById('school-modules-box');
-    if (!catalog.length) {
-      box.innerHTML = '<p class="ac-calm-msg">モジュールがありません</p>';
-      return;
-    }
-    box.innerHTML = catalog.map(m => {
-      const on = enabledIds.has(m.id);
-      return `
-        <div class="ac-toggle-row${on ? '' : ' ac-disabled'}" data-module-id="${m.id}">
-          <span class="ac-toggle-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${H.subjectVar(m.subject)};margin-right:6px;"></span>${m.name}</span>
-          <button class="ac-toggle ${on ? 'ac-on' : 'ac-off'}" data-action="toggle-module" data-module-id="${m.id}" data-on="${on}" type="button" aria-label="${m.name}を${on ? '無効' : '有効'}にする"><div class="ac-knob"></div></button>
-        </div>`;
-    }).join('');
-    box.querySelectorAll('[data-action="toggle-module"]').forEach(btn => {
-      btn.addEventListener('click', () => toggleSchoolModule(btn.dataset.moduleId, btn.dataset.on === 'true', btn));
-    });
-  }
-
   function fmtAssignedMeta(a) {
     const due = a.due_date ? H.formatDueDate(a.due_date) : '期限なし';
     return `${due}・${a.total_items ?? '?'}問`;
@@ -886,11 +875,27 @@
             <div class="ac-assigned-meta" id="assigned-meta-${a.module_id}">${fmtAssignedMeta(a)}</div>
           </div>
           <button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-due" data-module-id="${a.module_id}" type="button">変更</button>
+          <button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="unassign" data-module-id="${a.module_id}" type="button">解除</button>
         </div>`).join('');
       el.querySelectorAll('[data-action="edit-due"]').forEach(btn => {
         btn.addEventListener('click', () => editDueDate(btn.dataset.moduleId));
       });
+      el.querySelectorAll('[data-action="unassign"]').forEach(btn => {
+        btn.addEventListener('click', () => unassignModule(btn.dataset.moduleId));
+      });
     }
+  }
+
+  async function unassignModule(moduleId) {
+    const a = (assigned || []).find(x => x.module_id === moduleId);
+    const name = a && a.modules ? a.modules.name : 'このモジュール';
+    const ok = window.confirm(
+      `「${name}」の割り当てを解除しますか？\n\n` +
+      `解除すると、このクラスの児童の画面からこのモジュールが消え、これまでの成績も児童には表示されなくなります（記録自体は残ります）。`);
+    if (!ok) return;
+    const { error } = await MA.unassignModule(sb, { classId: classRow.id, moduleId });
+    if (error) { alert('解除できませんでした。'); return; }
+    await refetchAndRender();
   }
 
   function editDueDate(moduleId) {
@@ -912,20 +917,6 @@
       a.due_date = newDate;
       metaEl.textContent = fmtAssignedMeta(a);
     });
-  }
-
-  async function toggleSchoolModule(moduleId, currentlyOn, btnEl) {
-    btnEl.disabled = true;
-    if (currentlyOn) {
-      const { error } = await sb.from('school_modules').delete().eq('school_id', schoolId).eq('module_id', moduleId);
-      if (error) { btnEl.disabled = false; alert('変更できませんでした。'); return; }
-      enabledIds.delete(moduleId);
-    } else {
-      const { error } = await sb.from('school_modules').insert({ school_id: schoolId, module_id: moduleId });
-      if (error) { btnEl.disabled = false; alert('変更できませんでした。'); return; }
-      enabledIds.add(moduleId);
-    }
-    renderSchoolModules();
   }
 
   async function removeStudent(userIdVal, name, btnEl) {
@@ -1121,8 +1112,17 @@
         </optgroup>`).join('');
       document.getElementById('btn-submit-assign').disabled = false;
     }
+    renderAssignFocus();
     document.getElementById('modal-assign').style.display = 'flex';
   }
+  // Focus-unit checkboxes follow the currently-selected module in the picker.
+  function renderAssignFocus() {
+    const sel = document.getElementById('select-assign-module');
+    const mod = catalog.find(m => m.id === sel.value);
+    document.getElementById('assign-focus-slot').innerHTML =
+      (mod ? MA.focusUnitsFieldHtml(mod.key, []) : '') || '';
+  }
+  document.getElementById('select-assign-module').addEventListener('change', renderAssignFocus);
   document.getElementById('btn-assign-module').addEventListener('click', openAssignModal);
   document.getElementById('btn-cancel-assign').addEventListener('click', () => {
     document.getElementById('modal-assign').style.display = 'none';
@@ -1135,9 +1135,15 @@
     const errEl = document.getElementById('assign-err');
     const btn = document.getElementById('btn-submit-assign');
     if (!moduleId) return;
+    const focusUnits = MA.readFocusUnitsField(document.getElementById('assign-focus-slot'));
+    // Soft grade-mismatch warning (advisory, never blocks).
+    const mod = catalog.find(m => m.id === moduleId);
+    if (mod && MA.gradeMismatch(mod.recommended_grades, classRow.year)) {
+      if (!window.confirm(MA.gradeMismatchMessage(mod.recommended_grades, classRow.year, mod.name))) return;
+    }
     btn.disabled = true;
-    const { error } = await sb.from('class_modules').insert({
-      class_id: classRow.id, module_id: moduleId, total_items: totalItems, due_date: dueDate,
+    const { error } = await MA.assignModule(sb, {
+      classId: classRow.id, moduleId, totalItems, dueDate, focusUnits,
     });
     if (error) {
       errEl.textContent = '割り当てできませんでした。';

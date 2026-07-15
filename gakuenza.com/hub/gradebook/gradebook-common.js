@@ -92,6 +92,8 @@ window.Gradebook = (function () {
   // ── sidebar ──────────────────────────────────────────────────────────
   const NAV = [
     { key: 'dashboard',    label: 'ダッシュボード', href: 'index.html' },
+    { key: 'assign',       label: '課題',           href: 'assign.html' },
+    { key: 'roster',       label: '名簿',           href: 'roster.html' },
     { key: 'observations', label: '観察記録',       href: 'observations.html' },
     { key: 'analysis',     label: '成績分析',       href: 'analysis.html' },
     { key: 'karte',        label: '個人カルテ',     href: 'karte.html' },

@@ -9,6 +9,34 @@
 <link rel="stylesheet" href="admin.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  .md-toolbar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:-8px 0 24px; }
+  .md-toolbar select { padding:7px 10px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:0.85rem; }
+  .md-note { font-size:0.8rem; color:var(--ink-soft); }
+  .md-cat-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
+  .md-cat-row:last-child { border-bottom:none; }
+  .md-cat-body { flex:1; min-width:0; }
+  .md-cat-name { font-weight:700; font-size:0.9rem; }
+  .md-cat-en { font-size:0.74rem; color:var(--ink-soft); }
+  .md-inactive-badge { display:inline-block; font-size:0.66rem; font-weight:700; color:#fff; background:var(--ink-soft); border-radius:999px; padding:1px 8px; margin-left:8px; vertical-align:middle; }
+  .md-ctl { display:flex; align-items:center; gap:8px; flex:0 0 auto; font-size:0.76rem; color:var(--ink-soft); }
+  /* toggle switch */
+  .md-switch { position:relative; display:inline-block; width:40px; height:22px; }
+  .md-switch input { opacity:0; width:0; height:0; }
+  .md-slider { position:absolute; cursor:pointer; inset:0; background:var(--border); border-radius:22px; transition:0.18s; }
+  .md-slider::before { content:""; position:absolute; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:0.18s; }
+  .md-switch input:checked + .md-slider { background:var(--moss); }
+  .md-switch input:checked + .md-slider::before { transform:translateX(18px); }
+  .md-switch input:disabled + .md-slider { opacity:0.5; cursor:not-allowed; }
+  /* matrix */
+  .md-matrix-wrap { overflow-x:auto; }
+  table.md-matrix { border-collapse:collapse; font-size:0.8rem; }
+  table.md-matrix th, table.md-matrix td { border:1px solid var(--border); padding:7px 9px; text-align:center; }
+  table.md-matrix th.md-row-head { text-align:left; position:sticky; left:0; background:var(--paper); white-space:nowrap; }
+  table.md-matrix thead th { background:var(--paper-dim); white-space:nowrap; }
+  .md-cell-changed { outline:2px solid var(--gold); outline-offset:-2px; }
+  .md-apply-bar { display:flex; align-items:center; gap:12px; margin-top:14px; }
+</style>
 </head>
 <body>
 
@@ -19,16 +47,22 @@
     <div class="ac-page-head">
       <h1 class="ac-page-title">モジュール</h1>
     </div>
-    <p style="font-size:0.85rem;color:var(--ink-soft);margin:-8px 0 28px;">
-      プラットフォーム全体のモジュール一覧です。学校ごとの有効・無効の切り替えは、クラス詳細画面の「学校全体で有効」から行えます。
+    <p style="font-size:0.85rem;color:var(--ink-soft);margin:-8px 0 20px;">
+      学校でのモジュールの有効化と、クラスへの割り当てをここで管理します。
     </p>
 
-    <!-- Read-only catalog, grouped by subject — no enable/assign actions
-         here on purpose (that's per-school, per-class, and already lives
-         in class-detail.html; this page is deliberately just "what
-         exists on the platform", per product decision 2026-07-09). -->
-    <div id="module-groups">
-      <div class="ac-card ac-skel" style="height:100px;"></div>
+    <div class="md-toolbar" id="md-toolbar"></div>
+
+    <div class="ac-card" style="margin-bottom:22px;">
+      <h2 class="ac-card-head" style="margin:0 0 4px;">カタログ・学校での有効化</h2>
+      <p class="md-note" style="margin:0 0 12px;">「学校で有効」にしたモジュールだけ、下のマトリクスでクラスに割り当てられます。</p>
+      <div id="md-catalog"><div class="ac-card ac-skel" style="height:80px;"></div></div>
+    </div>
+
+    <div class="ac-card">
+      <h2 class="ac-card-head" style="margin:0 0 4px;">割り当てマトリクス（モジュール × クラス）</h2>
+      <p class="md-note" style="margin:0 0 12px;">チェックを付け外しして「適用」を押すと、まとめて割り当て・解除できます。</p>
+      <div id="md-matrix"></div>
     </div>
   </main>
 </div>
@@ -36,58 +70,209 @@
 <script src="../supabase.js"></script>
 <script src="../config.js"></script>
 <script src="../hub-common.js"></script>
+<script src="../module-assign-common.js"></script>
 <script src="admin-common.js"></script>
 <script>
 (async function () {
   const H = window.HubCommon;
   const AC = window.AdminCommon;
+  const MA = window.ModuleAssign;
   const cfg = window.GAKUENZA_CONFIG;
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  const esc = H.escapeHtml;
 
   const session = await H.requireSession(sb);
   if (!session) return;
   const userId = session.user.id;
-
   const admin = await AC.requireAdminAccess(sb, userId);
   if (!admin) return;
 
   const { data: profile } = await sb.from('profiles').select('display_name').eq('id', userId).maybeSingle();
   AC.renderAdminSidebar(sb, profile, 'modules', admin);
 
-  const groupsEl = document.getElementById('module-groups');
-  // modules has RLS disabled entirely (global catalog, same as every
-  // other page in the app that reads it) — no school-scoping question
-  // here at all, which is exactly why this page can skip the picker
-  // that teachers.html and class-detail.html both need.
-  const { data: modules, error } = await sb
-    .from('modules').select('key, name, name_en, subject').order('name');
+  // Enable/disable at the school level is admin-tier only (school_modules
+  // writes require app_user_admin_school_ids()); coordinators see state but
+  // can't change it. is_active soft-retire is platform-admin only (RPC).
+  const canEnable = !admin.isCoordinator;      // school_admin + platform
+  const canRetire = admin.isPlatformAdmin;
 
-  if (error) {
-    groupsEl.innerHTML = '<p class="ac-calm-msg">読み込めませんでした</p>';
-    return;
+  const schools = await AC.getAccessibleSchools(sb, admin);
+  let schoolId = schools.length ? schools[0].id : null;
+
+  // ── toolbar (school picker) ──────────────────────────────────────────
+  const toolbar = document.getElementById('md-toolbar');
+  if (schools.length > 1) {
+    toolbar.innerHTML = `<label class="md-note" for="md-school">学校</label>
+      <select id="md-school">${schools.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>`;
+    document.getElementById('md-school').addEventListener('change', (e) => { schoolId = e.target.value; load(); });
+  } else if (schools.length === 1) {
+    toolbar.innerHTML = `<span class="md-note">学校：<strong>${esc(schools[0].name)}</strong></span>`;
   }
-  if (!modules || modules.length === 0) {
-    groupsEl.innerHTML = '<p class="ac-calm-msg">モジュールがまだ登録されていません。</p>';
-    return;
+
+  // ── state ────────────────────────────────────────────────────────────
+  let modules = [], enabledSet = new Set(), classes = [], assignedSet = new Set();
+  const pending = new Map(); // "classId|moduleId" -> true(assign)/false(unassign)
+
+  async function load() {
+    pending.clear();
+    if (!schoolId) return;
+    const [modRes, smodRes, classRes] = await Promise.all([
+      sb.from('modules').select('id, key, name, name_en, subject, is_active').order('name'),
+      sb.from('school_modules').select('module_id, enabled').eq('school_id', schoolId),
+      sb.from('classes').select('id, name, year, gumi').eq('school_id', schoolId).order('year').order('gumi'),
+    ]);
+    modules = modRes.data || [];
+    enabledSet = new Set((smodRes.data || []).filter(r => r.enabled).map(r => r.module_id));
+    classes = classRes.data || [];
+    assignedSet = new Set();
+    if (classes.length) {
+      const classIds = classes.map(c => c.id);
+      const { data: cms } = await sb.from('class_modules').select('class_id, module_id').in('class_id', classIds);
+      (cms || []).forEach(r => assignedSet.add(r.class_id + '|' + r.module_id));
+    }
+    renderCatalog();
+    renderMatrix();
   }
 
-  const bySubject = {};
-  for (const m of modules) (bySubject[m.subject] ||= []).push(m);
+  // ── catalog + enable toggles ─────────────────────────────────────────
+  function renderCatalog() {
+    const el = document.getElementById('md-catalog');
+    if (!modules.length) { el.innerHTML = '<p class="ac-calm-msg">モジュールがまだ登録されていません。</p>'; return; }
+    const bySubject = {};
+    for (const m of modules) (bySubject[m.subject] ||= []).push(m);
+    el.innerHTML = H.sortedSubjectKeys(bySubject).map(subject => `
+      <div class="ac-subject-group">
+        <div class="ac-subject-label">
+          <span style="width:10px;height:10px;border-radius:50%;background:${H.subjectVar(subject)};display:inline-block;flex:0 0 auto;"></span>
+          <span>${H.subjectLabel(subject)}</span>
+        </div>
+        ${bySubject[subject].map(m => {
+          const on = enabledSet.has(m.id);
+          const inactive = m.is_active === false;
+          return `<div class="md-cat-row" data-module-id="${m.id}">
+            <div class="md-cat-body">
+              <div class="md-cat-name">${esc(m.name)}${inactive ? '<span class="md-inactive-badge">停止中</span>' : ''}</div>
+              <div class="md-cat-en">${esc(m.name_en || '')}</div>
+            </div>
+            <div class="md-ctl">
+              ${canRetire ? `<label class="md-note" style="cursor:pointer;">稼働
+                <input type="checkbox" data-act="active" data-module-id="${m.id}" ${inactive ? '' : 'checked'}></label>` : ''}
+              <span>学校で有効</span>
+              <label class="md-switch">
+                <input type="checkbox" data-act="enable" data-module-id="${m.id}" ${on ? 'checked' : ''} ${canEnable ? '' : 'disabled'}>
+                <span class="md-slider"></span>
+              </label>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`).join('') + (canEnable ? '' : '<p class="md-note" style="margin-top:10px;">学校での有効化の変更は管理者のみ可能です。</p>');
 
-  groupsEl.innerHTML = H.sortedSubjectKeys(bySubject).map(subject => `
-    <div class="ac-subject-group">
-      <div class="ac-subject-label">
-        <span style="width:10px;height:10px;border-radius:50%;background:${H.subjectVar(subject)};display:inline-block;flex:0 0 auto;"></span>
-        <span>${H.subjectLabel(subject)}</span>
-      </div>
-      <div class="ac-grid">
-        ${bySubject[subject].map(m => `
-          <div class="ac-card">
-            <div class="ac-assigned-title">${m.name}</div>
-            <div class="ac-assigned-meta">${m.name_en || ''}</div>
-          </div>`).join('')}
-      </div>
-    </div>`).join('');
+    el.querySelectorAll('[data-act="enable"]').forEach(cb =>
+      cb.addEventListener('change', () => toggleEnable(cb.dataset.moduleId, cb.checked, cb)));
+    el.querySelectorAll('[data-act="active"]').forEach(cb =>
+      cb.addEventListener('change', () => toggleActive(cb.dataset.moduleId, cb.checked, cb)));
+  }
+
+  async function toggleEnable(moduleId, on, cb) {
+    // Disabling doesn't remove existing class assignments (no cascade); warn so
+    // the admin knows children may still see it and it will drop off the matrix.
+    if (!on) {
+      const assignedCount = classes.filter(c => assignedSet.has(c.id + '|' + moduleId)).length;
+      if (assignedCount > 0) {
+        const ok = window.confirm(
+          `このモジュールは ${assignedCount} クラスに割り当て済みです。\n\n` +
+          `学校で無効にしても既存の割り当ては自動では解除されず、児童には表示され続けます` +
+          `（マトリクスからは見えなくなります）。無効にしますか？`);
+        if (!ok) { cb.checked = true; return; }
+      }
+    }
+    cb.disabled = true;
+    let error;
+    if (on) ({ error } = await sb.from('school_modules').insert({ school_id: schoolId, module_id: moduleId }));
+    else ({ error } = await sb.from('school_modules').delete().eq('school_id', schoolId).eq('module_id', moduleId));
+    cb.disabled = false;
+    if (error) { cb.checked = !on; alert('変更できませんでした。' + (error.message ? '（' + error.message + '）' : '')); return; }
+    if (on) enabledSet.add(moduleId); else enabledSet.delete(moduleId);
+    // enabling/disabling changes which rows the matrix can show
+    renderMatrix();
+  }
+
+  async function toggleActive(moduleId, active, cb) {
+    cb.disabled = true;
+    const { error } = await sb.rpc('app_set_module_active', { p_module: moduleId, p_active: active });
+    cb.disabled = false;
+    if (error) { cb.checked = !active; alert('変更できませんでした。'); return; }
+    const m = modules.find(x => x.id === moduleId); if (m) m.is_active = active;
+    renderCatalog();
+  }
+
+  // ── matrix ───────────────────────────────────────────────────────────
+  function renderMatrix() {
+    const el = document.getElementById('md-matrix');
+    const enabledModules = modules.filter(m => enabledSet.has(m.id));
+    if (!enabledModules.length) { el.innerHTML = '<p class="ac-calm-msg">「学校で有効」なモジュールがありません。上で有効にしてください。</p>'; return; }
+    if (!classes.length) { el.innerHTML = '<p class="ac-calm-msg">この学校にはクラスがありません。</p>'; return; }
+
+    const head = `<thead><tr><th class="md-row-head">モジュール</th>${classes.map(c => `<th>${esc(c.name)}</th>`).join('')}</tr></thead>`;
+    const body = enabledModules.map(m => `<tr>
+      <th class="md-row-head">${esc(m.name)}</th>
+      ${classes.map(c => {
+        const key = c.id + '|' + m.id;
+        // Reflect any staged (unapplied) change on top of the saved state, so
+        // re-rendering the matrix — e.g. after an enable toggle — keeps the
+        // checkboxes in sync with the pending Map and the "適用" counter.
+        const shown = pending.has(key) ? pending.get(key) : assignedSet.has(key);
+        return `<td class="${pending.has(key) ? 'md-cell-changed' : ''}"><input type="checkbox" data-key="${key}" ${shown ? 'checked' : ''}></td>`;
+      }).join('')}
+    </tr>`).join('');
+
+    el.innerHTML = `<div class="md-matrix-wrap"><table class="md-matrix">${head}<tbody>${body}</tbody></table></div>
+      <div class="md-apply-bar">
+        <button class="ac-btn ac-btn-accent ac-btn-md" id="md-apply" type="button" disabled>適用</button>
+        <span class="md-note" id="md-pending">変更なし</span>
+      </div>`;
+
+    el.querySelectorAll('input[data-key]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const key = cb.dataset.key;
+        const wasAssigned = assignedSet.has(key);
+        if (cb.checked === wasAssigned) pending.delete(key); // back to original
+        else pending.set(key, cb.checked);
+        cb.closest('td').classList.toggle('md-cell-changed', pending.has(key));
+        updatePendingBar();
+      });
+    });
+    updatePendingBar();
+  }
+
+  function updatePendingBar() {
+    const applyBtn = document.getElementById('md-apply');
+    const pendEl = document.getElementById('md-pending');
+    if (!applyBtn) return;
+    applyBtn.disabled = pending.size === 0;
+    pendEl.textContent = pending.size ? `${pending.size}件の変更` : '変更なし';
+    applyBtn.onclick = applyPending;
+  }
+
+  async function applyPending() {
+    const applyBtn = document.getElementById('md-apply');
+    applyBtn.disabled = true;
+    const entries = Array.from(pending.entries());
+    const failures = [];
+    for (const [key, assign] of entries) {
+      const [classId, moduleId] = key.split('|');
+      const res = assign
+        ? await MA.assignModule(sb, { classId, moduleId })
+        : await MA.unassignModule(sb, { classId, moduleId });
+      if (res.error) failures.push(key);
+      else { if (assign) assignedSet.add(key); else assignedSet.delete(key); }
+    }
+    pending.clear();
+    if (failures.length) alert(`${entries.length - failures.length}件を適用しました。${failures.length}件は失敗しました。`);
+    renderMatrix();
+  }
+
+  await load();
 })();
 </script>
 </body>

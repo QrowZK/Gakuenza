@@ -169,6 +169,23 @@ button { font-family: inherit; width: auto; }
   padding: 3px 6px;
 }
 .unit-title { font-weight: 700; font-size: 1.02rem; }
+
+/* Unit-scoped pacing (focus_units): foreground this week's units without
+   hiding the rest. Calm treatment — a warm border + a small "今週" badge. */
+.vol-head--focus { color: var(--m3-moss-deep); border-bottom-color: var(--m3-moss); }
+.unit-card--focus {
+  border-color: var(--m3-moss);
+  box-shadow: 0 2px 12px rgba(74, 107, 79, 0.18);
+}
+.unit-focus-badge {
+  margin-left: auto;
+  background: var(--m3-moss);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
 .sec-btn {
   display: flex;
   justify-content: space-between;
