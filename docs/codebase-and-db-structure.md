@@ -282,6 +282,24 @@ hand-mirrored after the fact.
 
 ## 6. Notable findings & open items
 
+> **Remediation addendum (2026-07-15).** Findings 1–4 below were the state at
+> review time; several have since been actioned on the live project (see
+> `db/2026-07-15_*.sql` and `supabase/README.md`):
+> - **#1 pg_cron** — installed; `weekly-gradebook-snapshot` job scheduled; the
+>   snapshot builder added and history backfilled (1,006 rows, 4 weeks) so the
+>   karte trend renders now. The purge jobs became moot (see #2).
+> - **#2 app_sessions / auth_audit_log** — **retired** (tables + 6 functions
+>   dropped); login already used GoTrue sessions.
+> - **#3 educator read RLS** — tightened to taught classes on
+>   `activity_results` / `activity_result_items`; coordinators (previously
+>   absent from `ar_read`) folded into the staff read.
+> - **#5 app_\* EXECUTE** — deliberately kept: those helpers are referenced by
+>   RLS policies (Postgres requires the querying role to hold EXECUTE) and
+>   expose only the caller's own memberships.
+> - **#4 dead files** / **#7 leaked-password** — `dashboard.html` converted to
+>   a redirect; leaked-password protection is still an Auth-dashboard toggle.
+> Migration tooling was scaffolded under `supabase/` (Tier 3).
+
 **Correctness / operational**
 
 1. **`pg_cron` is not installed**, yet two pieces of the design depend on a
