@@ -135,13 +135,6 @@ window.AdminCommon = (function () {
           { key: 'settings', label: '設定', href: '../settings.html' },
         ];
 
-    // Platform admins (全校管理者) get a cross-school 学校 tab for creating
-    // and reviewing schools — a sysadmin-global surface, so it's only added
-    // for that tier (RLS also gates the actual create to platform admins).
-    if (admin?.isPlatformAdmin) {
-      navItems.splice(1, 0, { key: 'schools', label: '学校', href: 'schools.html' });
-    }
-
     mount.innerHTML = `
       <a class="gz-home" href="../index.html" title="ホームへ">
         <svg viewBox="0 0 100 100" aria-hidden="true">

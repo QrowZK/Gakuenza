@@ -18,15 +18,18 @@
   <main class="main">
     <!-- Same school-picker convention as class-detail.html — always
          shown, not just for platform admins with multiple schools, so
-         the UI doesn't change shape between admin types. Creating a
-         school moved to its own platform-admin-only 学校 tab
-         (schools.html). -->
+         the UI doesn't change shape between admin types. Platform
+         admins additionally get a "+ 学校を追加" button here — creating
+         a school is platform-admin-only (enforced by RLS, not just this
+         button being hidden), since a scoped admin has no legitimate
+         reason to spin up more schools. -->
     <div class="ac-card" id="picker-bar" style="margin-bottom:24px;">
-      <div style="display:flex;align-items:flex-end;gap:16px;">
+      <div style="display:flex;align-items:flex-end;gap:16px;justify-content:space-between;">
         <div class="ac-field" style="margin-bottom:0;max-width:280px;flex:1;">
           <label class="ac-field-label" for="picker-school">学校</label>
           <select id="picker-school"></select>
         </div>
+        <button class="ac-btn ac-btn-ghost-light ac-btn-sm" type="button" id="btn-add-school" style="display:none;">+ 学校を追加</button>
       </div>
     </div>
 
@@ -41,6 +44,26 @@
       <div class="ac-card ac-skel" style="height:64px;"></div>
     </div>
   </main>
+</div>
+
+<!-- ============================================================ -->
+<!-- Create-school modal (platform admin only) -->
+<!-- ============================================================ -->
+<div class="ac-modal-backdrop" id="modal-add-school" style="display:none;">
+  <div class="ac-modal" style="width:400px;">
+    <h2 class="ac-modal-title">学校を追加</h2>
+    <form id="form-add-school">
+      <div class="ac-field" style="margin-bottom:20px;">
+        <label class="ac-field-label" for="input-school-name">学校名</label>
+        <input id="input-school-name" required maxlength="100" autocomplete="off">
+      </div>
+      <p class="ac-modal-err" id="add-school-err" style="display:none;"></p>
+      <div class="ac-modal-actions">
+        <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-add-school">キャンセル</button>
+        <button class="ac-btn ac-btn-accent ac-btn-md" type="submit" id="btn-submit-add-school">作成する</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- ============================================================ -->
@@ -229,6 +252,40 @@
   pickerSchool.addEventListener('change', async () => {
     currentSchoolName = schools.find(s => s.id === pickerSchool.value)?.name || '';
     await loadTeachers(pickerSchool.value);
+  });
+
+  // ── create school (platform admin only — button hidden for scoped
+  //    admins; RLS is the real boundary either way) ─────────────────────
+  if (admin.isPlatformAdmin) {
+    document.getElementById('btn-add-school').style.display = '';
+  }
+  document.getElementById('btn-add-school').addEventListener('click', () => {
+    document.getElementById('form-add-school').reset();
+    document.getElementById('add-school-err').style.display = 'none';
+    document.getElementById('modal-add-school').style.display = 'flex';
+    document.getElementById('input-school-name').focus();
+  });
+  document.getElementById('btn-cancel-add-school').addEventListener('click', () => {
+    document.getElementById('modal-add-school').style.display = 'none';
+  });
+  document.getElementById('form-add-school').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('input-school-name').value.trim();
+    const errEl = document.getElementById('add-school-err');
+    const submitBtn = document.getElementById('btn-submit-add-school');
+    errEl.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = '作成中…';
+    const { data, error } = await sb.from('schools').insert({ name }).select('id').single();
+    submitBtn.disabled = false;
+    submitBtn.textContent = '作成する';
+    if (error) {
+      errEl.textContent = '作成できませんでした。';
+      errEl.style.display = 'block';
+      return;
+    }
+    document.getElementById('modal-add-school').style.display = 'none';
+    await refreshSchoolPicker(data.id);
   });
 
   // ── create teacher / admin (top-tier only — mirrors provision-account's
