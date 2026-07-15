@@ -15,6 +15,12 @@ code.** Deploy is GitHub → Actions → rsync to DreamHost on push to
 `main` — commits here go live without further manual steps once
 merged.
 
+**Deep reference:** `docs/codebase-and-db-structure.md` is a full,
+current map of the repo layout, runtime architecture, every table +
+RLS policy, the five-tier role model, and the Edge Functions. Read it
+before any nontrivial change to DB-adjacent or auth-adjacent code —
+this file is only the load-bearing rules, that one is the map.
+
 ## Module directory convention
 
 ```
@@ -61,22 +67,43 @@ gakuenza.com/modules/<key>/
 5. **Registration migrations are idempotent** — update-then-insert-
    if-absent, `is_active = true` set explicitly even though the
    column defaults to true, `subject` matching the real CHECK
-   constraint on `modules`.
+   constraint on `modules`. The constraint currently allows exactly:
+   `english`, `math`, `japanese`, `science`, `social`, `sougou`,
+   `misc` — no others, no aliases (a 社会 module is `social`, not
+   `japanese` or `english`).
 
 ## Schema notes worth knowing before touching module-adjacent tables
 
 - `class_modules.focus_units` (jsonb) and `modules.recommended_grades`
-  (int[]) are **real columns with zero current consumers** — no
-  module reads or writes either yet. Building a module that honors
-  `focus_units` (foreground listed units, fail soft to "all units" on
-  null/malformed) is establishing that pattern, not following one.
-- A file called `module-units.js` is referenced in some project
-  documentation but does not exist anywhere in this codebase as of
-  this writing — verify directly before assuming it exists or trying
-  to import it.
+  (int[]) are **both now wired into real code** (this changed
+  2026-07-15). `focus_units` is read by the module runners — `sansu3`
+  is the reference (reads the union of focus keys across the student's
+  classes, fails soft to null = all units if any class is unscoped),
+  with `rika3`, `rika4`, and `kokugo3` following the same pattern; it
+  is written by the assignment UIs (`hub/admin/class-detail.html`,
+  `hub/gradebook/assign.html`, both via `module-assign-common.js`).
+  `recommended_grades` is read by those same assignment UIs to suggest
+  grade-appropriate modules. **Data caveat:** as of this review no
+  `class_modules` row actually has `focus_units` populated yet
+  (`cm_with_focus = 0`) — the plumbing exists end-to-end but no teacher
+  has scoped an assignment, so test the null/"all units" path for real.
+- **`module-units.js` now exists** at `gakuenza.com/hub/module-units.js`
+  (`window.MODULE_UNITS`) — it is the canonical unit-key registry the
+  assignment UIs use to render the focus-unit picker, and the keys
+  **must** match each module's internal unit keys exactly (`sansu3`:
+  `u01`–`u17`; `kokugo3`: `kanji` + `READING_UNITS` keys). When a
+  module gains or renames units, update both the module and this
+  registry — the assignment pages cannot load a module's generators.
+  (The old note that this file "does not exist" is retired.)
 - `modules.is_active` genuinely defaults to `true` at the column
   level — the earlier fear that an unset module is invisible by
   default was wrong — but set it explicitly anyway, it's convention.
+- **`db/` is a documentation mirror, not an applied migration set.**
+  Every `db/*.sql` was transcribed *after* being applied to the live
+  project by hand — nothing replays it and nothing enforces that it
+  matches production. A migration file existing in `db/` does **not**
+  mean it ran. Verify module-adjacent state against the live DB (or
+  `docs/codebase-and-db-structure.md`), not against `db/`.
 
 ## Copyright — "reference, don't reproduce"
 
@@ -108,9 +135,23 @@ search.
 ## not your job to fix incidentally
 
 - The admin console (`hub/admin/*.html`) still loads the shared root
-  `style.css` with no defense against the button-width bug.
-- Educator-facing module assignment doesn't exist yet — admin console
-  only, as of this writing.
+  `style.css` with no defense against the button-width bug (confirmed
+  still present 2026-07-15: all five admin HTML files `<link>`
+  `../../style.css`).
+- **`rika4` (理科4年) is built and deployed but NOT registered in the
+  live `modules` table.** The module directory ships (merged in PR #22)
+  and `db/2026-07-15_register_rika4_module.sql` exists — but that
+  migration was never applied, so the live catalog has 12 modules while
+  the repo has 13 module directories, and `rika4` is invisible in the
+  hub. Applying that idempotent migration fixes it.
+- **`shakai3` (社会3年) is miscategorized as `subject = 'english'`** in
+  the live `modules` row; the correct value is `'social'`. Cosmetic
+  today (it mis-groups in the subject-grouped assignment UI) but wrong.
+
+Educator-facing module assignment **now exists** (retired earlier note):
+`hub/gradebook/assign.html` + `module-assign-common.js` let educators
+write `class_modules` for their taught classes, and the `cmod_write`
+RLS policy was widened from admin-only to cover taught classes.
 
 ## For automated/headless runs specifically
 
