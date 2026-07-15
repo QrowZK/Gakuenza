@@ -138,15 +138,15 @@ search.
   `style.css` with no defense against the button-width bug (confirmed
   still present 2026-07-15: all five admin HTML files `<link>`
   `../../style.css`).
-- **`rika4` (理科4年) is built and deployed but NOT registered in the
-  live `modules` table.** The module directory ships (merged in PR #22)
-  and `db/2026-07-15_register_rika4_module.sql` exists — but that
-  migration was never applied, so the live catalog has 12 modules while
-  the repo has 13 module directories, and `rika4` is invisible in the
-  hub. Applying that idempotent migration fixes it.
-- **`shakai3` (社会3年) is miscategorized as `subject = 'english'`** in
-  the live `modules` row; the correct value is `'social'`. Cosmetic
-  today (it mis-groups in the subject-grouped assignment UI) but wrong.
+- (Resolved 2026-07-15) `rika4` was built + deployed but unregistered
+  in the live `modules` table; `db/2026-07-15_register_rika4_module.sql`
+  had never been applied. Registered during this review — the live
+  catalog now has 13 modules matching the 13 directories. Left here as
+  the canonical example of the `db/`-is-a-mirror hazard: a fresh module
+  is not live in the hub until its registration row exists in the DB,
+  regardless of whether its migration file is committed.
+- (Resolved 2026-07-15) `shakai3` had `subject = 'english'`; corrected
+  to `'social'` (mirror: `db/2026-07-15_fix_shakai3_subject.sql`).
 
 Educator-facing module assignment **now exists** (retired earlier note):
 `hub/gradebook/assign.html` + `module-assign-common.js` let educators
