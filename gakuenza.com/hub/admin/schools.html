@@ -21,7 +21,10 @@
       <button class="ac-btn ac-btn-accent ac-btn-sm" type="button" id="btn-add-school">+ 学校を追加</button>
     </div>
 
-    <div id="school-list" class="ac-grid">
+    <!-- Full-width single-column list: school rows carry a long name plus
+         code / counts / status, which do not fit the narrow ac-grid person
+         cards. -->
+    <div id="school-list" style="display:flex;flex-direction:column;gap:12px;max-width:760px;">
       <div class="ac-card ac-skel" style="height:64px;"></div>
       <div class="ac-card ac-skel" style="height:64px;"></div>
       <div class="ac-card ac-skel" style="height:64px;"></div>
@@ -133,13 +136,13 @@
       const cls = classCount[s.id] || 0;
       const stu = studentCount[s.id] || 0;
       return `
-        <div class="ac-card ac-person-card">
-          <div style="flex:1;min-width:0;">
+        <div class="ac-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div style="flex:1 1 200px;min-width:0;">
             <div class="ac-roster-name">${H.escapeHtml(s.name)}</div>
             ${kana}
           </div>
-          <span class="ac-mono" style="font-size:0.78rem;color:var(--ink-soft);">${H.escapeHtml(s.code || '—')}</span>
-          <span style="font-size:0.78rem;color:var(--ink-soft);white-space:nowrap;">${cls}クラス・${stu}名</span>
+          <div style="font-size:0.76rem;color:var(--ink-soft);white-space:nowrap;">${cls}クラス・${stu}名</div>
+          <div style="font-family:ui-monospace,Menlo,monospace;font-size:0.74rem;color:var(--ink-soft);white-space:nowrap;">${H.escapeHtml(s.code || '—')}</div>
           <span class="ac-badge ${statusClass}">${H.escapeHtml(statusLabel)}</span>
         </div>`;
     }).join('');
