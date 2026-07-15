@@ -115,17 +115,6 @@
                 </div>
               </div>
             </div>
-            <!-- Special-education classes have no year/gumi, so they
-                 can't be reached through the two selects above — same
-                 dual-path structure as class-detail.html's own picker.
-                 Hidden entirely when a school has none. -->
-            <div class="login-field" id="student-special-wrap" style="display:none;">
-              <label for="student-special">特別支援学級など</label>
-              <div class="select-wrap">
-                <select id="student-special"><option value="">—</option></select>
-                <span class="chev">⌄</span>
-              </div>
-            </div>
             <div class="login-field">
               <label for="student-number">出席番号</label>
               <input type="text" id="student-number" inputmode="numeric" placeholder="例：12" autocomplete="off" required disabled>
@@ -243,8 +232,6 @@
   const schoolSelect = document.getElementById('student-school');
   const yearSelect = document.getElementById('student-year');
   const gumiSelect = document.getElementById('student-gumi');
-  const specialSelect = document.getElementById('student-special');
-  const specialWrap = document.getElementById('student-special-wrap');
   const numberInput = document.getElementById('student-number');
   let classesForSchool = [];
   let resolvedClassId = '';
@@ -254,10 +241,12 @@
     if (!enabled) numberInput.value = '';
   }
 
-  // Mirrors class-detail.html's own school -> year -> gumi cascading
-  // picker exactly (including the special-ed side path) — same shape,
-  // just reading from the public_classes view instead of the real
-  // (staff-only) classes table, since there's no session yet here.
+  // School -> 学年 -> 組 cascading picker, reading from the public_classes
+  // view (no session yet here). Special-education classes (no year/組) are
+  // folded into the 学年 dropdown as a grouped section rather than a
+  // separate field — selecting one resolves straight to its class and
+  // skips 組. Year options are tagged "y{year}", special ones "s{classId}"
+  // so the change handler can tell the two paths apart.
   async function loadClassesForSchool(schoolId) {
     yearSelect.innerHTML = '<option value="">—</option>';
     gumiSelect.innerHTML = '<option value="">—</option>';
@@ -272,28 +261,34 @@
     classesForSchool = error ? [] : (data || []);
 
     const years = [...new Set(classesForSchool.filter(c => c.year != null).map(c => c.year))].sort((a, b) => a - b);
-    yearSelect.innerHTML = '<option value="">—</option>' + years.map(y => `<option value="${y}">${y}年</option>`).join('');
-    yearSelect.disabled = years.length === 0;
-
     const specials = classesForSchool.filter(c => c.year == null);
+
+    let opts = '<option value="">—</option>' + years.map(y => `<option value="y${y}">${y}年</option>`).join('');
     if (specials.length) {
-      specialWrap.style.display = '';
-      specialSelect.innerHTML = '<option value="">—</option>' + specials.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    } else {
-      specialWrap.style.display = 'none';
-      specialSelect.innerHTML = '<option value="">—</option>';
+      opts += '<optgroup label="特別支援学級など">' +
+        specials.map(c => `<option value="s${c.id}">${c.name}</option>`).join('') +
+        '</optgroup>';
     }
+    yearSelect.innerHTML = opts;
+    yearSelect.disabled = years.length === 0 && specials.length === 0;
   }
 
   yearSelect.addEventListener('change', () => {
-    const year = Number(yearSelect.value);
+    const v = yearSelect.value;
     resolvedClassId = '';
     setNumberEnabled(false);
-    if (!year) {
-      gumiSelect.innerHTML = '<option value="">—</option>';
-      gumiSelect.disabled = true;
+    gumiSelect.innerHTML = '<option value="">—</option>';
+    gumiSelect.disabled = true;
+    if (!v) return;
+    if (v[0] === 's') {
+      // a special-education class chosen directly from the 学年 list —
+      // it has no 組, so resolve straight to it and enable 出席番号.
+      resolvedClassId = v.slice(1);
+      setNumberEnabled(true);
       return;
     }
+    // a numbered year — populate its 組 options
+    const year = Number(v.slice(1));
     const gumis = classesForSchool.filter(c => c.year === year);
     gumiSelect.innerHTML = '<option value="">—</option>' + gumis.map(c => `<option value="${c.id}">${c.gumi}組</option>`).join('');
     gumiSelect.disabled = false;
@@ -301,12 +296,6 @@
   gumiSelect.addEventListener('change', () => {
     resolvedClassId = gumiSelect.value;
     setNumberEnabled(!!resolvedClassId);
-    if (resolvedClassId) { specialSelect.value = ''; }
-  });
-  specialSelect.addEventListener('change', () => {
-    resolvedClassId = specialSelect.value;
-    setNumberEnabled(!!resolvedClassId);
-    if (resolvedClassId) { yearSelect.value = ''; gumiSelect.innerHTML = '<option value="">—</option>'; gumiSelect.disabled = true; }
   });
   schoolSelect.addEventListener('change', () => loadClassesForSchool(schoolSelect.value));
 
