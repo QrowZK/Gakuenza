@@ -711,10 +711,11 @@ grant select, insert, update, delete, references, trigger on
 -- modules: read-only to anon/authenticated (writes only via the RPC).
 grant select on public.modules to anon, authenticated;
 
--- NOTE (known wart, faithful to prod): these three gradebook-v2 tables still
--- grant TRUNCATE to anon/authenticated — the 2026-07-14 hardening that removed
--- TRUNCATE from the older tables never covered them. Captured here as-is; a
--- follow-up migration should REVOKE TRUNCATE ... FROM anon, authenticated.
+-- NOTE (faithful to the floor): these three gradebook-v2 tables were granted
+-- TRUNCATE to anon/authenticated — the 2026-07-14 hardening that removed
+-- TRUNCATE from the older tables never covered them. Captured here as-is to
+-- keep the baseline a true snapshot; migration
+-- 20260715235133_revoke_truncate_from_gradebook_v2_tables.sql revokes it.
 grant select, insert, update, delete, references, trigger, truncate on
   public.observation_records, public.grade_corrections, public.gradebook_snapshots
   to anon, authenticated;
