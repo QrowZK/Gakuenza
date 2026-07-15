@@ -17,7 +17,7 @@
   <main class="main">
     <div class="hub-section">
       <h1 class="greeting-title">モジュール一覧</h1>
-      <p class="greeting-date">割り当てられているすべてのモジュール</p>
+      <p class="greeting-date" id="modules-subtitle">割り当てられているすべてのモジュール</p>
     </div>
 
     <div id="assigned-groups"></div>
@@ -39,12 +39,16 @@
 
   await H.renderSidebar(sb, userId, 'modules');
 
+  // Students see the modules assigned to their class(es). Staff (educators/
+  // admins) have no student enrollment, so instead list the modules their
+  // school has ENABLED — the catalog they can open to preview/try.
   const { data: enrollmentRows } = await sb
     .from('enrollments').select('class_id').eq('user_id', userId).eq('role', 'student');
   const classIds = (enrollmentRows || []).map(r => r.class_id);
 
   let assigned = [];
   let assignedErr = null;
+  let staffMode = false;
   if (classIds.length) {
     const res = await sb
       .from('class_modules')
@@ -52,6 +56,22 @@
       .in('class_id', classIds);
     assigned = res.data || [];
     assignedErr = res.error;
+  } else {
+    const { data: memberRow } = await sb
+      .from('school_members').select('school_id')
+      .eq('user_id', userId).in('role', ['educator', 'school_admin', 'coordinator'])
+      .limit(1).maybeSingle();
+    if (memberRow) {
+      staffMode = true;
+      const res = await sb
+        .from('school_modules')
+        .select('modules(id, key, name, name_en, subject, launch_url, is_active)')
+        .eq('school_id', memberRow.school_id).eq('enabled', true);
+      assignedErr = res.error;
+      assigned = (res.data || [])
+        .filter(r => r.modules && r.modules.is_active)
+        .map(r => ({ due_date: null, total_items: null, modules: r.modules }));
+    }
   }
   const seen = new Set();
   assigned = assigned.filter(a => {
@@ -59,6 +79,10 @@
     seen.add(a.modules.id);
     return true;
   });
+  if (staffMode) {
+    const sub = document.getElementById('modules-subtitle');
+    if (sub) sub.textContent = '学校で利用可能なすべてのモジュール';
+  }
 
   const { data: activity, error: activityErr } = await sb
     .from('activity_results').select('module_id, activity_ref, created_at').eq('user_id', userId);
@@ -86,7 +110,7 @@
   if (assignedErr || activityErr) {
     groupsEl.innerHTML = '<p class="calm-msg">読み込めませんでした</p>';
   } else if (assigned.length === 0) {
-    groupsEl.innerHTML = '<p class="calm-msg">割り当てられたモジュールはまだありません。</p>';
+    groupsEl.innerHTML = `<p class="calm-msg">${staffMode ? '利用可能なモジュールがありません。' : '割り当てられたモジュールはまだありません。'}</p>`;
   } else {
     const bySubject = {};
     for (const a of assigned) (bySubject[a.modules.subject] ||= []).push(a);
