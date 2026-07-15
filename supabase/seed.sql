@@ -1,0 +1,10 @@
+-- Seed data for the LOCAL Supabase stack (`supabase db reset` / `supabase start`).
+--
+-- This runs ONLY against a local dev database — never production. Production
+-- holds real student/teacher accounts and is never seeded from here.
+--
+-- Intentionally empty for now: the modules catalog and any reference rows are
+-- established by migrations, and account data is created at runtime via the
+-- provision-account / student-login Edge Functions. Add local-only fixtures
+-- here (a demo school, a demo class, a couple of test students) when you want
+-- `supabase start` to come up with something to click through.
