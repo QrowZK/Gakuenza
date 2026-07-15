@@ -735,6 +735,7 @@
   }
 
   let roster = [], assigned = [], catalog = [], enabledIds = new Set(), activityByUser = {}, classTeachers = [];
+  let rosterExpanded = false; // roster list shows a compact preview until expanded
 
   async function loadClassTeachers() {
     return sb
@@ -823,8 +824,8 @@
       document.getElementById('btn-add-student-empty').addEventListener('click', openAddStudentModal);
       return;
     }
-    const SHOW = 4;
-    const shown = roster.slice(0, SHOW);
+    const COLLAPSED = 4;
+    const shown = rosterExpanded ? roster : roster.slice(0, COLLAPSED);
     const rest = roster.length - shown.length;
     el.innerHTML = shown.map(r => {
       const p = r.profiles || {};
@@ -841,7 +842,12 @@
           <button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-student" data-user-id="${r.user_id}" data-name="${(p.display_name || '').replace(/"/g, '')}" data-number="${(p.student_number || '').replace(/"/g, '')}" type="button">編集</button>
           <button class="ac-btn-danger" data-action="remove-student" data-user-id="${r.user_id}" data-name="${(p.display_name || '').replace(/"/g, '')}" type="button">削除</button>
         </div>`;
-    }).join('') + (rest > 0 ? `<div class="ac-roster-more">ほか${rest}名</div>` : '');
+    }).join('')
+      + (rest > 0
+          ? `<button class="ac-roster-more" id="roster-toggle" type="button" style="cursor:pointer;background:none;border:none;width:100%;">すべて表示（ほか${rest}名）</button>`
+          : (rosterExpanded && roster.length > COLLAPSED
+              ? `<button class="ac-roster-more" id="roster-toggle" type="button" style="cursor:pointer;background:none;border:none;width:100%;">折りたたむ</button>`
+              : ''));
 
     el.querySelectorAll('[data-action="remove-student"]').forEach(btn => {
       btn.addEventListener('click', () => removeStudent(btn.dataset.userId, btn.dataset.name, btn));
@@ -849,6 +855,8 @@
     el.querySelectorAll('[data-action="edit-student"]').forEach(btn => {
       btn.addEventListener('click', () => openEditStudentModal(btn.dataset.userId, btn.dataset.name, btn.dataset.number));
     });
+    const rosterToggle = document.getElementById('roster-toggle');
+    if (rosterToggle) rosterToggle.addEventListener('click', () => { rosterExpanded = !rosterExpanded; renderRoster(); });
   }
 
   function fmtAssignedMeta(a) {
