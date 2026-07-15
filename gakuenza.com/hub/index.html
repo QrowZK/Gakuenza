@@ -20,13 +20,13 @@
       <p class="greeting-date" id="greeting-date"></p>
     </div>
 
-    <div class="hub-section">
+    <div class="hub-section" id="recent-section">
       <div class="section-header"><h2 class="section-title">最近アクセスしたモジュール</h2></div>
       <div class="recent-list" id="recent-list"></div>
     </div>
 
     <div>
-      <div class="section-header"><h2 class="section-title">割り当てられたモジュール</h2></div>
+      <div class="section-header"><h2 class="section-title" id="assigned-title">割り当てられたモジュール</h2></div>
       <div id="assigned-groups"></div>
     </div>
   </main>
@@ -49,13 +49,20 @@
   document.getElementById('greeting').textContent = given ? `${given}さん、おかえりなさい` : 'おかえりなさい';
   document.getElementById('greeting-date').textContent = H.formatGreetingDate(new Date());
 
-  // ── assigned modules (via this student's class(es)) ──────────────────
+  // ── modules to show on the home ──────────────────────────────────────
+  // A student sees the modules assigned to their class(es). Staff
+  // (educators / admins / coordinators) have no student enrollment, so
+  // instead show the modules their school has ENABLED — a catalog they can
+  // open to preview/try. Teachers assign & monitor in 成績; this is just
+  // "what's available to use". A launch by staff records nothing (the
+  // module report shims skip when there's no student class context).
   const { data: enrollmentRows } = await sb
     .from('enrollments').select('class_id').eq('user_id', userId).eq('role', 'student');
   const classIds = (enrollmentRows || []).map(r => r.class_id);
 
   let assigned = [];
   let assignedErr = null;
+  let staffMode = false;
   if (classIds.length) {
     const res = await sb
       .from('class_modules')
@@ -63,6 +70,22 @@
       .in('class_id', classIds);
     assigned = res.data || [];
     assignedErr = res.error;
+  } else {
+    const { data: memberRow } = await sb
+      .from('school_members').select('school_id')
+      .eq('user_id', userId).in('role', ['educator', 'school_admin', 'coordinator'])
+      .limit(1).maybeSingle();
+    if (memberRow) {
+      staffMode = true;
+      const res = await sb
+        .from('school_modules')
+        .select('modules(id, key, name, name_en, subject, launch_url, is_active)')
+        .eq('school_id', memberRow.school_id).eq('enabled', true);
+      assignedErr = res.error;
+      assigned = (res.data || [])
+        .filter(r => r.modules && r.modules.is_active)
+        .map(r => ({ due_date: null, total_items: null, modules: r.modules }));
+    }
   }
   const seen = new Set();
   assigned = assigned.filter(a => {
@@ -70,6 +93,13 @@
     seen.add(a.modules.id);
     return true;
   });
+
+  // Staff home: no personal "recently accessed" history, and the section
+  // below is a catalog of what's available, not personal assignments.
+  if (staffMode) {
+    document.getElementById('recent-section').style.display = 'none';
+    document.getElementById('assigned-title').textContent = '利用可能なモジュール';
+  }
 
   // ── this student's activity, for completion + recency ─────────────────
   const { data: activity, error: activityErr } = await sb
@@ -136,7 +166,7 @@
   if (assignedErr) {
     groupsEl.innerHTML = '<p class="calm-msg">読み込めませんでした</p>';
   } else if (assigned.length === 0) {
-    groupsEl.innerHTML = '<p class="calm-msg">割り当てられたモジュールはまだありません。</p>';
+    groupsEl.innerHTML = `<p class="calm-msg">${staffMode ? '利用可能なモジュールがありません。' : '割り当てられたモジュールはまだありません。'}</p>`;
   } else {
     const bySubject = {};
     for (const a of assigned) (bySubject[a.modules.subject] ||= []).push(a);
