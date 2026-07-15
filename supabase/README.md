@@ -17,42 +17,34 @@ instead of being applied ad-hoc to the live project and hand-mirrored into
 
 ## Current state (2026-07-15)
 
-The production migration ledger (`supabase_migrations.schema_migrations`) tracks
-**exactly one** migration:
+`migrations/` and the production ledger (`supabase_migrations.schema_migrations`)
+are reconciled — two tracked migrations, two files, nothing pending:
 
 ```
+20260706000000_remote_schema                              ← squashed baseline
 20260715044642_fix_schools_insert_returning_for_platform_admin
 ```
 
-Everything else — the **entire base schema** (tables, RLS policies, helper
-functions, triggers, views; project created 2026-07-06) **and** every change
-recorded under `db/*.sql` — was applied directly via the dashboard / management
-API / `execute_sql`, which does **not** write to the ledger. So the ledger alone
-cannot rebuild the database, and `db/*.sql` is a hand-kept mirror that nothing
-enforces against production (see `docs/codebase-and-db-structure.md` §5).
+**Origin of the baseline.** The base schema (tables, RLS, helper functions,
+triggers, views; project created 2026-07-06) and every `db/*.sql` change were
+originally applied via the dashboard / management API / `execute_sql`, which
+does **not** write to the ledger, so only the schools-fix was tracked. On
+2026-07-15 the full current schema was captured into
+`20260706000000_remote_schema.sql` by **introspecting the live DB through the
+Supabase MCP** (`pg_catalog` / `pg_get_*def`) — not `pg_dump` — and the baseline
+version was inserted into the ledger as already-applied so `supabase db push`
+never tries to replay it against production. `db/*.sql` remains the
+human-readable pre-adoption history; `migrations/` supersedes it going forward.
 
-**Adopting migrations therefore needs a one-time baseline snapshot** of the
-current production schema. Until that exists, `migrations/` stays empty and
-`db/*.sql` remains the human-readable pre-adoption history.
-
-## Materialize the baseline (one-time, needs DB credentials)
-
-`supabase db pull` introspects the remote with `pg_dump`, writes a single
-`migrations/<ts>_remote_schema.sql` capturing the full current schema, and
-reconciles the local/remote ledgers so nothing tries to replay history against
-production. It needs the DB password and an access token — **neither is
-available in the CI/agent sandbox** — so run it locally:
-
-```bash
-cp supabase/.env.example supabase/.env.local   # then fill in the two values
-export SUPABASE_ACCESS_TOKEN=...                # from .env.local
-supabase link --project-ref ohnsawydclmsrgphasbn   # prompts for the DB password
-supabase db pull                                # writes migrations/<ts>_remote_schema.sql
-git add supabase/migrations && git commit -m "Baseline: capture production schema"
-```
-
-After that, `migrations/` is the complete, replayable source of truth and
-`supabase db reset` can rebuild a local copy from scratch.
+> **Verify the baseline before relying on a from-zero `db reset`.** The baseline
+> is a hand-assembled snapshot, not `pg_dump` output. It replays cleanly for the
+> high-risk parts (all 28 RLS policies + both views were create-tested against
+> the live tables/functions and rolled back), but when you next have DB
+> credentials, run `supabase db pull` on a throwaway/preview branch and diff it
+> against the committed baseline to confirm nothing was missed (grants,
+> defaults, extension placement). Treat any diff as authoritative. The baseline
+> file header carries the same caveat and lists what is intentionally excluded
+> (the `cron` schedule, Supabase-managed schemas/event triggers).
 
 ## Going-forward workflow — do NOT hand-apply schema changes anymore
 
