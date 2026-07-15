@@ -176,8 +176,11 @@
   let modalModuleId = null, modalIsEdit = false;
   function openModal(moduleId, isEdit) {
     modalModuleId = moduleId; modalIsEdit = isEdit;
-    const mod = moduleById[moduleId];
     const existing = assigned.find(a => a.module_id === moduleId);
+    // Fall back to the assigned row's joined module info when the module isn't
+    // in the active catalog (e.g. it was soft-retired after being assigned) so
+    // edit still shows the real name and unit picker.
+    const mod = moduleById[moduleId] || (existing && existing.modules) || null;
     document.getElementById('ma-modal-title').textContent = (mod ? mod.name : 'モジュール') + (isEdit ? ' — 変更' : ' — 割り当て');
     document.getElementById('ma-err').style.display = 'none';
     document.getElementById('ma-due').value = existing && existing.due_date ? existing.due_date : '';
