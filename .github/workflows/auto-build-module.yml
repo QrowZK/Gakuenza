@@ -1,0 +1,61 @@
+name: Auto-build module from spec
+
+# Fires only when a spec is added/changed in docs/specs/pending/ on
+# main. Nothing in docs/specs/completed/ or anywhere else triggers
+# this — that separation is what makes "pending" mean "approved,
+# ready to build" rather than "any doc in the repo."
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/specs/pending/**'
+
+permissions:
+  contents: write        # to push the working branch
+  pull-requests: write    # to open the PR
+
+jobs:
+  build-from-spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build against pending spec(s)
+        uses: anthropics/claude-code-action@v1
+        env:
+          # Defense in depth — this workflow doesn't need the deploy
+          # secrets (SSH key, DreamHost host/user/target) that live in
+          # this same repo's secrets for the site-deploy workflow, so
+          # strip them from the subprocess environment entirely rather
+          # than rely on the prompt alone to not touch them.
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            There may be one or more spec files in docs/specs/pending/.
+            For each one:
+
+            1. Read it fully, along with CLAUDE.md at the repo root
+               (standing conventions — already loaded, but re-check it
+               against this specific spec for anything relevant).
+            2. Build the module exactly as specified. Do not invent
+               scope beyond what the spec describes — if the spec is
+               ambiguous or you'd need to make a real judgment call
+               it doesn't cover, STOP and note that clearly in the PR
+               description instead of deciding unilaterally.
+            3. Run the testing bar described in CLAUDE.md — generator
+               stress-tests at real scale if applicable, a flow test
+               through the actual quiz UI, migration idempotency check.
+               Do not skip this because it's a headless run.
+            4. Move the spec file from docs/specs/pending/ to
+               docs/specs/completed/ as part of the same change, so it
+               isn't picked up again on a future push.
+            5. Open a pull request. Do not push directly to main. In
+               the PR description, list exactly what was built, what
+               was tested (and how), and flag anything you were unsure
+               about or any judgment call you made.
+
+            If docs/specs/pending/ is empty by the time you check
+            (e.g. another run already processed it), do nothing and
+            exit cleanly.
+          claude_args: "--max-turns 60 --model sonnet --allowedTools Read,Write,Edit,Bash"
