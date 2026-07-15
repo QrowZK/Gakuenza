@@ -64,6 +64,23 @@
     return Array.from(new Set(keys));
   }
 
+  // ---- soft grade-mismatch warning ------------------------------------------
+
+  // recommendedGrades = modules.recommended_grades (int[] or null); classYear =
+  // classes.year. Returns true when there IS a recommendation and the class
+  // year isn't in it. Advisory only — the caller shows a confirm, never blocks
+  // (cross-grade use is valid: review, advanced students, special-ed).
+  function gradeMismatch(recommendedGrades, classYear) {
+    if (!recommendedGrades || !recommendedGrades.length) return false;
+    if (classYear == null) return false;
+    return recommendedGrades.indexOf(Number(classYear)) === -1;
+  }
+
+  function gradeMismatchMessage(recommendedGrades, classYear, moduleName) {
+    return '「' + moduleName + '」は ' + recommendedGrades.join('・') + '年 向けのモジュールです。' +
+      classYear + '年 のクラスに割り当てようとしています。\n\n続けますか？';
+  }
+
   // ---- focus-unit checkbox field --------------------------------------------
 
   // Returns HTML for a set of unit checkboxes for a module, or '' if the module
@@ -152,6 +169,8 @@
     assignModule: assignModule,
     unassignModule: unassignModule,
     updateAssignment: updateAssignment,
+    gradeMismatch: gradeMismatch,
+    gradeMismatchMessage: gradeMismatchMessage,
     focusUnitsFieldHtml: focusUnitsFieldHtml,
     readFocusUnitsField: readFocusUnitsField,
     bulkResetPasswords: bulkResetPasswords,

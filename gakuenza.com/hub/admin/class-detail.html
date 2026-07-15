@@ -728,7 +728,7 @@
   }
   async function loadCatalogAndEnabled() {
     const [catalogRes, enabledRes] = await Promise.all([
-      sb.from('modules').select('id, key, name, subject'),
+      sb.from('modules').select('id, key, name, subject, recommended_grades'),
       sb.from('school_modules').select('module_id').eq('school_id', schoolId),
     ]);
     return { catalogRes, enabledRes };
@@ -1136,6 +1136,11 @@
     const btn = document.getElementById('btn-submit-assign');
     if (!moduleId) return;
     const focusUnits = MA.readFocusUnitsField(document.getElementById('assign-focus-slot'));
+    // Soft grade-mismatch warning (advisory, never blocks).
+    const mod = catalog.find(m => m.id === moduleId);
+    if (mod && MA.gradeMismatch(mod.recommended_grades, classRow.year)) {
+      if (!window.confirm(MA.gradeMismatchMessage(mod.recommended_grades, classRow.year, mod.name))) return;
+    }
     btn.disabled = true;
     const { error } = await MA.assignModule(sb, {
       classId: classRow.id, moduleId, totalItems, dueDate, focusUnits,

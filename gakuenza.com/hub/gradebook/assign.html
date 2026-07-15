@@ -109,7 +109,7 @@
   let catalog = [], assigned = [], enabledIds = new Set();
   async function load() {
     const [catRes, assignedRes, enabled] = await Promise.all([
-      sb.from('modules').select('id, key, name, subject').eq('is_active', true),
+      sb.from('modules').select('id, key, name, subject, recommended_grades').eq('is_active', true),
       MA.loadAssigned(sb, classId),
       MA.loadSchoolEnabledIds(sb, schoolId),
     ]);
@@ -199,6 +199,13 @@
     const totalRaw = document.getElementById('ma-total').value;
     const totalItems = totalRaw ? parseInt(totalRaw, 10) : null;
     const focusUnits = MA.readFocusUnitsField(document.getElementById('ma-focus-slot'));
+    // Soft grade-mismatch warning on new assignments (never blocks).
+    if (!modalIsEdit) {
+      const mod = moduleById[modalModuleId];
+      if (mod && MA.gradeMismatch(mod.recommended_grades, klass ? klass.year : null)) {
+        if (!window.confirm(MA.gradeMismatchMessage(mod.recommended_grades, klass.year, mod.name))) return;
+      }
+    }
     saveBtn.disabled = true;
     let res;
     if (modalIsEdit) {

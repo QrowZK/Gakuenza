@@ -90,6 +90,10 @@
   } else {
     const bySubject = {};
     for (const a of assigned) (bySubject[a.modules.subject] ||= []).push(a);
+    // Within each subject, order by due date (soonest first); undated last.
+    // due_date is 'YYYY-MM-DD', so a lexicographic compare sorts correctly.
+    const dueRank = (a) => a.due_date || '9999-99-99';
+    for (const subj in bySubject) bySubject[subj].sort((x, y) => dueRank(x).localeCompare(dueRank(y)));
 
     groupsEl.innerHTML = H.sortedSubjectKeys(bySubject).map(subject => [subject, bySubject[subject]]).map(([subject, mods]) => `
       <div class="subject-group">
