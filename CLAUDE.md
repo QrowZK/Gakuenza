@@ -103,7 +103,19 @@ gakuenza.com/modules/<key>/
   project by hand — nothing replays it and nothing enforces that it
   matches production. A migration file existing in `db/` does **not**
   mean it ran. Verify module-adjacent state against the live DB (or
-  `docs/codebase-and-db-structure.md`), not against `db/`.
+  `docs/codebase-and-db-structure.md`), not against `db/`. These are
+  the **pre-adoption history** — new schema changes do not go here.
+- **Schema changes now go through `supabase/migrations/`** (CLI tooling
+  scaffolded 2026-07-15 — see `supabase/README.md`). The prod ledger
+  (`supabase_migrations.schema_migrations`) tracks only 1 migration so
+  far; the base schema + all `db/*.sql` are untracked pre-adoption
+  history, so a one-time `supabase db pull` baseline (needs DB creds,
+  can't run in the agent sandbox) is still pending. Going forward: in a
+  CLI session use `supabase migration new` + `db push`; in an agent/CI
+  session use the MCP `apply_migration` (it writes the ledger) **and**
+  commit the matching `supabase/migrations/<ts>_<name>.sql` in the same
+  PR. Never apply schema via `execute_sql`/dashboard — that bypasses the
+  ledger and is how the untracked history accumulated.
 
 ## Copyright — "reference, don't reproduce"
 
