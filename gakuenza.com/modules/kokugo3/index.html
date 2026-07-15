@@ -20,7 +20,7 @@
     <span class="k3-dot"></span>
     <div>
       <h1 class="k3-title">国語 3年</h1>
-      <p class="k3-sub" id="k3-subtitle">漢字・読解のれんしゅう</p>
+      <p class="k3-sub" id="k3-subtitle">漢字・読解・ことばのれんしゅう</p>
     </div>
   </div>
 
@@ -34,6 +34,10 @@
         <button type="button" class="k3-mode-btn" id="btn-mode-reading">
           <h3>読解れんしゅう</h3>
           <p>教科書で読んだ文章について、内容をたしかめます。</p>
+        </button>
+        <button type="button" class="k3-mode-btn" id="btn-mode-grammar">
+          <h3>ことば・文ぽう</h3>
+          <p>こそあど言葉・修飾語・ことわざ・ローマ字のれんしゅうです。</p>
         </button>
       </div>
     </div>
@@ -67,6 +71,7 @@
 <script src="kanji-data.js"></script>
 <script src="kanji-generator.js"></script>
 <script src="reading-units.js"></script>
+<script src="grammar-generators.js"></script>
 <script src="../../hub/supabase.js"></script>
 <script src="../../hub/config.js"></script>
 <script src="../../hub/hub-common.js"></script>
@@ -140,8 +145,10 @@
   }
   (function applyModeFocus() {
     const readingKeys = Object.keys(READING_UNITS);
+    const grammarKeys = Object.keys(window.GRAMMAR_UNITS || {});
     if (focusUnits.has('kanji')) markFocus(document.getElementById('btn-mode-kanji'));
     if (readingKeys.some(k => focusUnits.has(k))) markFocus(document.getElementById('btn-mode-reading'));
+    if (grammarKeys.some(k => focusUnits.has(k))) markFocus(document.getElementById('btn-mode-grammar'));
   })();
 
   const viewSelect = document.getElementById('view-select');
@@ -183,6 +190,29 @@
         const unit = READING_UNITS[currentUnitKey];
         questions = unit.questions.map(q => ({ ...q, options: shuffleArr(q.options) }));
         startQuiz(unit.note);
+      });
+    });
+    showView(viewUnitSelect);
+  });
+
+  document.getElementById('btn-mode-grammar').addEventListener('click', () => {
+    currentMode = 'grammar';
+    const unitList = document.getElementById('unit-list');
+    const units = window.GRAMMAR_UNITS || {};
+    const keys = Object.keys(units);
+    unitList.innerHTML = keys.map(key => {
+      const u = units[key];
+      const foc = focusUnits.has(key);
+      return `<button type="button" class="k3-mode-btn${foc ? ' k3-focus' : ''}" style="width:100%;margin-bottom:10px;" data-gunit="${key}">
+        <h3>${u.title}${foc ? ' <span class="k3-focus-badge">今週</span>' : ''}</h3>
+        <p>${u.desc}</p>
+      </button>`;
+    }).join('');
+    unitList.querySelectorAll('[data-gunit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentUnitKey = btn.dataset.gunit;
+        questions = window.generateGrammarQuiz(currentUnitKey, 10);
+        startQuiz();
       });
     });
     showView(viewUnitSelect);
