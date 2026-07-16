@@ -9,21 +9,28 @@ instead of being applied ad-hoc to the live project and hand-mirrored into
 - `config.toml` — CLI project config (from `supabase init`). Drives the **local**
   stack and `supabase config push`; it is *not* an authoritative mirror of the
   production Auth settings (those are managed in the dashboard).
-- `migrations/` — ordered migration files. Empty until the baseline is
-  materialized (see below).
+- `migrations/` — ordered migration files (5 tracked, matching the ledger).
 - `seed.sql` — local-only fixtures loaded by `supabase db reset`. Never runs
   against production.
 - `.env.example` — the credentials the CLI needs; copy to `.env.local` (git-ignored).
 
-## Current state (2026-07-15)
+## Current state (2026-07-16)
 
 `migrations/` and the production ledger (`supabase_migrations.schema_migrations`)
-are reconciled — two tracked migrations, two files, nothing pending:
+are reconciled — five tracked migrations, five files, nothing pending:
 
 ```
 20260706000000_remote_schema                              ← squashed baseline
 20260715044642_fix_schools_insert_returning_for_platform_admin
+20260715235133_revoke_truncate_from_gradebook_v2_tables
+20260716012834_register_sansu4_module
+20260716012842_register_shakai4_module
 ```
+
+(The baseline + schools-fix + revoke-truncate came from the migrations-adoption
+work; the two `register_*` rows are the first modules — sansu4, shakai4 — shipped
+through the new system. An earlier split where the baseline files existed on one
+branch and the `register_*` files on `main` has been reconciled here.)
 
 **Origin of the baseline.** The base schema (tables, RLS, helper functions,
 triggers, views; project created 2026-07-06) and every `db/*.sql` change were
