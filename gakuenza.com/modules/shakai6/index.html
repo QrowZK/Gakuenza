@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>社会 6年 | がくえん座</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="module-topbar">
+    <a class="back-link" href="../../hub/index.html">← ハブへもどる</a>
+    <span class="module-name">社会 6年</span>
+    <span class="spacer"></span>
+    <div class="account-bubble" id="accountBubble" hidden>
+      <button class="bubble-btn" id="bubbleBtn" type="button">
+        <span class="avatar" id="bubbleAvatar"></span>
+        <span id="bubbleName"></span>
+      </button>
+      <div class="dropdown">
+        <button type="button" id="signoutBtn">サインアウト</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- menu -->
+    <section class="screen active" id="screen-menu">
+      <h1 class="page-title">社会 6年　もくじ</h1>
+      <div id="focusNote"></div>
+      <div id="unitList"></div>
+    </section>
+
+    <!-- lesson cards -->
+    <section class="screen" id="screen-lesson">
+      <h1 class="page-title" id="lessonSectionTitle"></h1>
+      <div class="lesson-card" id="lessonCard"></div>
+      <div class="lesson-nav">
+        <button class="btn" id="lessonPrev" type="button">← まえ</button>
+        <div class="lesson-dots" id="lessonDots"></div>
+        <button class="btn primary" id="lessonNext" type="button">つぎ →</button>
+      </div>
+      <p style="text-align:center; margin-top:14px;">
+        <button class="btn ghost" id="lessonSkip" type="button">レッスンをとばして問題へ</button>
+      </p>
+    </section>
+
+    <!-- drill -->
+    <section class="screen" id="screen-drill">
+      <div class="drill-progress">
+        <span class="drill-title" id="drillTitle"></span>
+        <span id="drillCounter"></span>
+        <div class="progress-track"><div class="progress-fill" id="drillFill"></div></div>
+      </div>
+      <div class="question-card">
+        <div class="q-fig fig" id="qFig" hidden></div>
+        <p class="q-text" id="qText"></p>
+        <div class="answer-row" id="answerRow">
+          <input class="answer-input" id="answerInput" type="text"
+                 autocomplete="off" autocapitalize="off" spellcheck="false"
+                 placeholder="答えを書いてね" />
+        </div>
+        <div class="order-area" id="orderArea" hidden>
+          <div class="order-picked" id="orderPicked"></div>
+          <div class="order-pool" id="orderPool"></div>
+        </div>
+        <p class="hint-row">
+          <button class="btn ghost" id="hintBtn" type="button" hidden>ヒントを見る</button>
+          <span class="hint-text" id="hintText" hidden></span>
+        </p>
+        <div class="feedback" id="feedback">
+          <div class="verdict" id="fbVerdict"></div>
+          <div id="fbBody"></div>
+        </div>
+        <div class="drill-actions">
+          <button class="btn ghost" id="quitBtn" type="button">やめる</button>
+          <button class="btn primary" id="checkBtn" type="button">答え合わせ</button>
+          <button class="btn primary" id="nextBtn" type="button" hidden>つぎの問題 →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- review -->
+    <section class="screen" id="screen-review">
+      <h1 class="page-title" id="reviewTitle"></h1>
+      <div class="review-summary">
+        <div class="score" id="reviewScore"></div>
+        <div class="msg" id="reviewMsg"></div>
+      </div>
+      <div class="review-list" id="reviewList"></div>
+      <div class="review-actions">
+        <button class="btn" id="retryBtn" type="button">もういちど</button>
+        <button class="btn primary" id="backToMenuBtn" type="button">もくじへもどる</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="../../hub/supabase.js"></script>
+  <script src="../../hub/config.js"></script>
+  <script src="../../hub/hub-common.js"></script>
+  <script src="questions.js"></script>
+  <script src="shakai6-report.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

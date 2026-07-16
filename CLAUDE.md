@@ -49,16 +49,30 @@ gakuenza.com/modules/<key>/
 2. **Always use `HubCommon.reportActivityWithItems(sb, {schoolId,
    classId, moduleId, userId, activityRef, score, maxScore, payload,
    items})` for reporting. Never hand-roll the `activity_results`
-   insert.** At least three modules in this project did, got the
-   column names right, but never wrote to `activity_result_items` —
-   meaning the gradebook's per-question analysis has nothing to show
-   for them. Live, unfixed, don't repeat it.
+   insert.** Five modules currently do (`nh6`, `nhvocab`, `letstry1`,
+   `letstry2`, `shakai3`) — they got the `activity_results` column
+   names right but never write to `activity_result_items`, so the
+   gradebook's per-question analysis has nothing to show for them.
+   Live, unfixed, don't repeat it (and note it's five, not the three
+   this file once claimed — the ported English apps `nh6`/`nhvocab`/
+   `letstry1`/`letstry2` plus `shakai3` all hand-roll).
 
 3. **Resolve a student's context via `enrollments → classes.school_id`
    — never `profiles.home_school_id`.** That column is real (used in
    the `profiles_read` RLS policy) but is not the right source for a
    module's active class/school context. Caught mid-build once
-   already (kokugo3); don't rediscover it.
+   already (kokugo3); don't rediscover it. **Also: for real schools,
+   `profiles.home_school_id` is intentionally left NULL and must stay
+   that way — do not "backfill" it.** Real schools number students
+   per-class (出席番号: a "#1" in every class), but the
+   `profiles_student_no_per_school` unique index is on
+   `(home_school_id, student_number)` — a per-*school* guarantee. NULL
+   `home_school_id` is the only thing that lets per-class-numbered
+   students coexist (Postgres treats `(null, "1")` rows as distinct).
+   Setting it hits a duplicate-key violation (verified on Mizuho,
+   2026-07-16). The seed schools only have it set because they're
+   synthetic/uniquely-numbered. Login is unaffected either way (the
+   student flow keys on `{class_id, student_number}`, unique per class).
 
 4. **`launch_url` in any module registration migration is always
    absolute** (`/modules/<key>/index.html`). Relative paths have
@@ -79,7 +93,13 @@ gakuenza.com/modules/<key>/
   2026-07-15). `focus_units` is read by the module runners — `sansu3`
   is the reference (reads the union of focus keys across the student's
   classes, fails soft to null = all units if any class is unscoped),
-  with `rika3`, `rika4`, and `kokugo3` following the same pattern; it
+  with `kokugo3`, `rika4`, `sansu4`, and `shakai4` following the same
+  pattern (5 total, matching the `module-units.js` registry exactly).
+  **`rika3` is NOT wired** despite `rika3-data.js` exposing a
+  unit-key list "for focus_units alignment" — it never queries
+  `class_modules` and is absent from `module-units.js`, so the
+  assignment UI can't offer it a unit picker. (Don't let the comment
+  in `rika3-data.js` fool you, as this file's own note once did.) It
   is written by the assignment UIs (`hub/admin/class-detail.html`,
   `hub/gradebook/assign.html`, both via `module-assign-common.js`).
   `recommended_grades` is read by those same assignment UIs to suggest
@@ -105,13 +125,15 @@ gakuenza.com/modules/<key>/
   mean it ran. Verify module-adjacent state against the live DB (or
   `docs/codebase-and-db-structure.md`), not against `db/`. These are
   the **pre-adoption history** — new schema changes do not go here.
-- **Schema changes now go through `supabase/migrations/`** (CLI tooling
-  scaffolded 2026-07-15 — see `supabase/README.md`). The prod ledger
-  (`supabase_migrations.schema_migrations`) tracks only 1 migration so
-  far; the base schema + all `db/*.sql` are untracked pre-adoption
-  history, so a one-time `supabase db pull` baseline (needs DB creds,
-  can't run in the agent sandbox) is still pending. Going forward: in a
-  CLI session use `supabase migration new` + `db push`; in an agent/CI
+- **Schema changes now go through `supabase/migrations/`** (adopted
+  2026-07-15 — see `supabase/README.md`). The prod ledger
+  (`supabase_migrations.schema_migrations`) and `migrations/` are
+  reconciled: a squashed baseline (`20260706000000_remote_schema.sql`,
+  assembled by MCP introspection of the live DB) plus the one
+  pre-existing tracked migration. The baseline is a hand-assembled
+  snapshot, **not** `pg_dump` — verify it with `supabase db pull` on a
+  branch before trusting a from-zero `db reset`. Going forward: in a CLI
+  session use `supabase migration new` + `db push`; in an agent/CI
   session use the MCP `apply_migration` (it writes the ledger) **and**
   commit the matching `supabase/migrations/<ts>_<name>.sql` in the same
   PR. Never apply schema via `execute_sql`/dashboard — that bypasses the
@@ -146,10 +168,15 @@ search.
 ## Known, currently-unresolved things — don't be surprised by them,
 ## not your job to fix incidentally
 
-- The admin console (`hub/admin/*.html`) still loads the shared root
-  `style.css` with no defense against the button-width bug (confirmed
-  still present 2026-07-15: all five admin HTML files `<link>`
-  `../../style.css`).
+- (Resolved 2026-07-16) The admin console (`hub/admin/*.html`) used to
+  load the shared root `style.css` with no defense against the
+  button-width bug. `admin.css` is now self-contained — it copies the
+  `:root` token values literally and carries the base element rules the
+  admin pages use (`h1`/`label`/`input`/`table`/`a`), **minus** the
+  `button { width:100% }` footgun — and all five admin pages dropped the
+  `../../style.css` `<link>` (they load `hub-shell.css` → `admin.css`
+  only). `body` background/font stay owned by `hub-shell.css`. Keep the
+  copied tokens in sync with root `style.css`.
 - (Resolved 2026-07-15) `rika4` was built + deployed but unregistered
   in the live `modules` table; `db/2026-07-15_register_rika4_module.sql`
   had never been applied. Registered during this review — the live
