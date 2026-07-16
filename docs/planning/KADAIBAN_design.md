@@ -1,556 +1,421 @@
-# Kadaiban (課題板) — Design Document
+# Kadaiban (課題板) — build-ready architecture & spec
 
-_Status: **DRAFT / proposal for review.** Greenfield — "Kadaiban" appears
-nowhere in the codebase yet. Nothing here is built. Written 2026-07-16
-against the live structure in `docs/codebase-and-db-structure.md` and the
-files cited inline._
+**Status:** Architecture **confirmed by the product owner** (2026-07-16). This
+supersedes the earlier interpretation-guess draft. All open interpretation
+questions are resolved; what remains below are verified implementation
+decisions and a phased build plan. Every "verify before assuming" flag in the
+original spec has been checked against the live codebase and database — see
+**§2 Verification findings**.
 
----
-
-## 0. Interpretation assumption — CONFIRM BEFORE BUILDING
-
-> **This whole doc rests on one interpretation the user must confirm.** I
-> read the request as: the platform already has module *assignment*
-> (`class_modules` maps a module to a class, written by
-> `gakuenza.com/hub/gradebook/assign.html`), but it lacks a **student-facing,
-> due-date-aware "assignment board"** and a **teacher-facing way to curate
-> and track completion of assigned tasks over time**. Kadaiban is proposed as
-> that board: teachers post 課題 (assignments) that either point at an
-> existing module/unit *or* are free-form tasks, with optional due dates;
-> students see a personal board of assigned / due / done; completion is
-> tracked, reusing `activity_results` for module-backed tasks.
->
-> **If instead you meant something narrower** (e.g. only "make the existing
-> home page prettier and due-date-sorted") **or broader** (e.g. a
-> full messaging/announcements board, parent visibility, file attachments,
-> grading rubrics), the data model in §3 changes materially. **Do not treat
-> the scope below as settled.** Open questions are collected in §7.
-
-### What already exists (so we don't rebuild it)
-
-Grounding these claims in real files:
-
-- **`class_modules`** (`supabase/migrations/20260706000000_remote_schema.sql`
-  L110–116) already carries `due_date date`, `total_items integer`,
-  `focus_units jsonb`. PK is `(class_id, module_id)` — **one row per
-  (class, module)**.
-- **The student home already renders an assignment board.**
-  `gakuenza.com/hub/index.html` (L59–213) loads `class_modules` for the
-  student's enrolled classes, groups by subject, sorts by due date, and
-  computes a per-module status badge (`未着手 / 進行中 / 完了`) by counting
-  distinct `activity_ref`s in `activity_results` against `total_items`
-  (`computeStatus`, L117–125).
-- **The teacher assign surface exists.** `gakuenza.com/hub/gradebook/assign.html`
-  + `gakuenza.com/hub/module-assign-common.js` (`window.ModuleAssign`) write
-  `class_modules` (assign / unassign / due date / total_items / focus_units).
-- **Completion is *inferred*, never stored.** There is no per-student "this
-  assignment is done" record anywhere. `activity_results`
-  (`remote_schema.sql` L118–128) is an append-only attempt log.
-
-### The concrete gaps Kadaiban fills
-
-The current model is a decent MVP but hits five real limits:
-
-1. **One row per (class, module) → no history.** Because `class_modules` PK
-   is `(class_id, module_id)`, a class cannot have "sansu3 unit u03 due
-   Monday" *and* "sansu3 unit u07 due next Monday" as two distinct
-   assignments. Re-assigning overwrites the due date. There is no notion of
-   "last week's homework" vs "this week's."
-2. **No free-form / non-module tasks.** Everything must point at a registered
-   `modules` row. A teacher cannot post "音読カードを持ってくる" or "ドリル
-   p.12–13" as a tracked task.
-3. **Completion is a heuristic, not a fact.** `computeStatus` guesses done-ness
-   from attempt counts and `total_items`; it can't represent "teacher marked
-   this complete", a free-form task's completion, or "turned in but not
-   auto-scored." As of this review **no `class_modules` row has
-   `focus_units` populated** (CLAUDE.md: `cm_with_focus = 0`), and
-   `total_items` is optional — so the heuristic frequently has nothing to work
-   with and shows `null` progress.
-4. **No teacher completion dashboard.** A teacher can assign but cannot see, at
-   a glance, "18/25 done, these 7 haven't started." The gradebook analysis
-   pages are score-oriented, not completion-oriented.
-5. **No "assigned window" / no per-student differentiation.** Assignments are
-   class-wide and undated-until-due; there's no assigned-date, no "hidden
-   until", no assign-to-a-subset.
-
-Kadaiban introduces a first-class **assignment (課題) entity** that carries its
-own identity, dates, and (optionally) points at a module+unit, plus a
-**per-student completion record**, while *reusing* `activity_results` as the
-evidence source for module-backed tasks rather than duplicating scores.
+Kadaiban is genuinely new territory: the **first Gakuenza feature to use
+Supabase Storage, file uploads, and persisted freehand drawing.** None of that
+exists anywhere else in the project today (confirmed — §2).
 
 ---
 
-## 1. Purpose & problem statement
+## 1. What this is (confirmed scope)
 
-**Kadaiban (課題板 — "assignment board")** is a due-date-aware assignment
-surface with two faces:
+**Digital ink annotation + submission workflow. NOT OCR, NOT automated
+grading.**
 
-- **Student board** (`hub/kadaiban.html`): "here is my homework" — what's
-  assigned, what's due soon, what's done, one tap to launch the underlying
-  module. Replaces / absorbs the ad-hoc "割り当てられたモジュール" block on
-  `hub/index.html`.
-- **Teacher board** (`hub/gradebook/kadaiban.html`): post & curate 課題 (module-
-  backed or free-form), set due dates, and **see completion across the roster**
-  at a glance.
+```
+Teacher scans/photographs a paper worksheet or test
+        │  uploads the image(s)
+        ▼
+Assignable digital object (1+ pages), assigned to a class
+        │
+        ▼
+Student draws / writes on top of the page image  (canvas layer over the image)
+        │  autosaves draft strokes → explicit "submit"
+        ▼
+Teacher reviews the annotated result and grades it MANUALLY
+        │  (reads the child's handwriting the same way they would on paper)
+        ▼
+Grade summary flows into activity_results → same trend lines / 個人カルテ
+```
 
-It solves the five gaps in §0. The design deliberately keeps `class_modules`
-as the "which modules are available to this class + pacing/focus" table and
-adds `kadai` for "dated, trackable tasks", so the existing home page, assign
-UI, module runners, and `focus_units` plumbing keep working unchanged during
-rollout.
-
----
-
-## 2. User stories per role
-
-The five tiers (`docs/codebase-and-db-structure.md` §3.3): platform_admin,
-school_admin, coordinator, educator(担任), student.
-
-### Student (`enrollments.role='student'`)
-- As a student, I open **課題板** from my hub nav and see my tasks grouped
-  **今日まで / 今週 / これから / 完了**, soonest due first.
-- I see each task's subject dot, title, due date, and a status badge
-  (未着手 / 進行中 / 完了), consistent with today's home cards
-  (`hub/index.html` badges).
-- Tapping a module-backed task launches the module's `launch_url` (exactly as
-  the home cards do today, L207–213), pre-scoped to the focus unit if set.
-- When I finish a module task, it moves to 完了 **automatically** (from my
-  `activity_results`), no extra step.
-- For a free-form task ("音読を3回"), I can tap **できた** to self-mark done
-  (if the teacher enabled self-report), or it just shows the teacher's mark.
-- I never see tasks for classes I'm not enrolled in (RLS).
-
-### Educator / 担任 (`school_members.role='educator'` + `class_teachers`)
-- As a 担任, I open **課題板** in the gradebook and post a 課題 for a class I
-  teach: pick an existing module (+ optional focus unit) *or* write a free-form
-  task; set an optional due date and an optional 問題数.
-- I see a **completion strip per task**: "12/25 完了 · 5 進行中 · 8 未着手",
-  and can expand to the roster to see who's where.
-- I can edit or retract a 課題 without destroying the underlying score history
-  (retract hides it from students; `activity_results` stay).
-- I can post the same module twice with different units/due dates across the
-  term (impossible today).
-- I only touch classes I teach (`app_user_taught_class_ids()`); RLS enforces it.
-
-### Coordinator (`school_members.role='coordinator'`)
-- As a coordinator, I can post/curate 課題 for **any class in my school** (same
-  scope as `class_modules` `cmod_write` today: `app_user_staff_school_ids()`),
-  e.g. to seed a school-wide 宿題 across all 3年 classes.
-- I can view completion school-wide but cannot create staff or license modules
-  (unchanged tier limits).
-
-### school_admin (`school_members.role='school_admin'`)
-- Same authoring/oversight scope as coordinator across their one school; plus
-  everything school_admins already do. No special Kadaiban power beyond scope.
-
-### platform_admin (`profiles.is_platform_admin`)
-- Can read/curate across every school (helpers already fold platform admin into
-  `app_user_staff_school_ids()` / `app_user_admin_school_ids()`). Primarily for
-  support/debugging; not a day-to-day authoring role.
+The hard, unsolved "read a child's handwriting automatically" problem is
+**deliberately avoided** by keeping the teacher in the grading loop. There is
+no recognition, no auto-scoring, no per-question breakdown.
 
 ---
 
-## 3. Data model
+## 2. Verification findings (checked against live code + DB, 2026-07-16)
 
-Design principle: **add identity + per-student state, reuse everything else.**
-`activity_results` stays the score/attempt log; `modules`/`class_modules`/
-`focus_units` stay the catalog/pacing layer. Kadaiban adds exactly two tables.
+The original spec asked to verify several things "before assuming." Done:
 
-### 3.1 `kadai` — one row per posted assignment
+| Flagged assumption | Finding | Consequence for the build |
+|---|---|---|
+| **Supabase Storage already used?** | **No.** `grep` of app code (excluding the vendored `hub/supabase.js`) finds zero `storage.from(...)` / bucket usage. | Kadaiban stands up Storage from scratch. Bucket creation + Storage RLS is the real new-infra risk (§5). |
+| **`activity_results` can hold a non-module row?** | **No.** `activity_results.module_id` is **`NOT NULL`** (FK → `modules.id`). `class_id` is nullable; `score`/`max_score` nullable; `payload` NOT NULL. | Register **one catch-all `kadaiban` module** (subject `misc`) as the FK anchor. All Kadaiban grade rows use its `module_id`; `activity_ref` distinguishes assignments (§6). |
+| **Can a teacher write a grade row for a student?** | **Yes, already.** The `ar_insert` policy's first branch is `app_has_role(school_id, ARRAY['educator','school_admin'])` — no `user_id = auth.uid()` restriction. | **No new RLS policy and no Edge Function needed** for grading. The gradebook grade page calls `HubCommon.reportActivityWithItems` directly (§6). |
+| **Reuse nh6's `writing.js` for the canvas?** | **Partial.** Its `WritingCanvas` stores `strokes = [[{x,y},…],…]` (already the `canvas_state` shape) with solid mouse/touch/stylus scaling (`_pos`/`_touchPos`), plus `undo`/`clear`/`redraw`/`isEmpty`. But it has **no** serialize/load, **no** background-image layer (it draws handwriting rulings + guide text instead), **no** `toDataURL` flatten, and single-color/no-eraser. | **Fork-and-adapt, not drop-in** (§7). Reuse the stroke-capture + pointer-scaling core; replace ruling/guide rendering with the worksheet image; add serialize/load/flatten. |
+| **`class_teachers` scoping helpers exist?** | Yes: `app_user_taught_class_ids()`, `app_user_class_ids()`, `app_user_staff_school_ids()`, `app_class_school(class_id)`, `app_has_role(school_id, roles[])` — all SECURITY DEFINER, used throughout existing RLS. | Reuse verbatim in both table RLS and Storage RLS. |
+
+---
+
+## 3. Data model (confirmed, with annotations)
 
 ```sql
-create table public.kadai (
-    id            uuid primary key default gen_random_uuid(),
-    school_id     uuid not null references public.schools(id)  on delete cascade,
-    class_id      uuid not null references public.classes(id)  on delete cascade,
-    -- module-backed when module_id is set; free-form task when null.
-    module_id     uuid          references public.modules(id)  on delete set null,
-    -- focus unit(s) for a module-backed kadai; same key vocabulary as
-    -- class_modules.focus_units (window.MODULE_UNITS keys). null = all units.
-    focus_units   jsonb,
-    title         text not null,          -- teacher-authored, always shown
-    body          text,                   -- optional instructions (free-form tasks)
-    total_items   integer,                -- optional; completion-% denominator
-    -- completion policy for THIS kadai:
-    --   'auto'    → derived from activity_results (module-backed)
-    --   'self'    → student taps できた (free-form, self-report allowed)
-    --   'teacher' → only a teacher mark counts
-    complete_mode text not null default 'auto'
-                  check (complete_mode in ('auto','self','teacher')),
-    assigned_on   date not null default (now() at time zone 'Asia/Tokyo')::date,
-    due_date      date,                   -- optional (matches class_modules)
-    -- soft retract: hidden from students, history preserved. Never hard-delete
-    -- a kadai that has completions.
-    status        text not null default 'active'
-                  check (status in ('active','archived')),
-    created_by    uuid not null references auth.users(id),
-    created_at    timestamptz not null default now(),
-    updated_at    timestamptz not null default now()
+create table kadaiban_assignments (
+  id uuid primary key default gen_random_uuid(),
+  class_id uuid not null references classes(id),
+  created_by uuid not null references profiles(id),   -- which teacher assigned it
+  title text not null,
+  instructions text,
+  due_date date,
+  page_count int not null default 1,
+  created_at timestamptz not null default now()
 );
 
-create index kadai_class_status_idx on public.kadai (class_id, status);
-create index kadai_due_idx          on public.kadai (due_date);
-create index kadai_module_idx       on public.kadai (module_id);
+create table kadaiban_assignment_pages (
+  id uuid primary key default gen_random_uuid(),
+  assignment_id uuid not null references kadaiban_assignments(id) on delete cascade,
+  page_number int not null,
+  source_image_path text not null,                    -- kadaiban-sources bucket path
+  unique (assignment_id, page_number)
+);
+
+create table kadaiban_submissions (
+  id uuid primary key default gen_random_uuid(),
+  assignment_id uuid not null references kadaiban_assignments(id),
+  student_id uuid not null references profiles(id),
+  status text not null default 'not_started'
+    check (status in ('not_started','in_progress','submitted','graded')),
+  submitted_at timestamptz,
+  score numeric,
+  max_score numeric,
+  graded_by uuid references profiles(id),
+  graded_at timestamptz,
+  unique (assignment_id, student_id)
+);
+
+create table kadaiban_submission_pages (
+  id uuid primary key default gen_random_uuid(),
+  submission_id uuid not null references kadaiban_submissions(id) on delete cascade,
+  page_number int not null,
+  canvas_state jsonb,           -- editable stroke data: [[{x,y,...}],...] in IMAGE space.
+                                 -- Lets the student resume/undo a draft. Postgres-side,
+                                 -- protected by table RLS (NOT storage).
+  rendered_image_path text,      -- flattened PNG snapshot, kadaiban-submissions bucket.
+                                 -- Cheap for the teacher's grading view — no re-render.
+  updated_at timestamptz not null default now(),
+  unique (submission_id, page_number)
+);
 ```
 
-Notes / rationale:
-- `school_id` is denormalized onto the row (like `activity_results` does,
-  `remote_schema.sql` L119) so RLS can check it directly without a
-  `classes` join, and a guard trigger enforces `school_id =
-  app_class_school(class_id)` (mirrors the `class_modules_guard` /
-  `enforce_module_enabled` pattern, L534).
-- `module_id ... on delete set null` so a soft-retired/removed module leaves the
-  free-text `title` intact rather than cascading away a graded task.
-- **Does NOT store scores.** For module-backed `kadai`, the score/attempt truth
-  stays in `activity_results`; completion is computed from it (§3.3).
+**Multi-page is in the model from day one** (`page_count` / `page_number`,
+unique constraints) but **Phase 1 only exercises the single-page path** — see
+§10. The columns being present avoids a painful retrofit; the UI simply assumes
+1 page in Phase 1.
 
-### 3.2 `kadai_completions` — per-student completion state
+**Design note — why editable strokes AND a flattened PNG are separate:**
+`canvas_state` (jsonb, in Postgres) is the source of truth the student edits
+and resumes. `rendered_image_path` (PNG, in Storage) is a write-once snapshot
+generated at submit time, so the teacher's grading inbox displays every
+submission cheaply without re-rendering strokes over the source image every
+time. They are deliberately different surfaces with different RLS.
 
-Only needed for `self`/`teacher` modes and for caching/overriding auto results
-(e.g. teacher marks done despite no auto attempt, or excuses a student). For
-pure `auto` kadai this table can stay empty and completion is derived live.
+### 3a. Table RLS (written against the real helpers)
+
+Modeled on the existing `cmod_write` / `ar_insert` self-vs-staff split. RLS ON
+for all four tables; anon/authenticated get only what these grant.
 
 ```sql
-create table public.kadai_completions (
-    kadai_id     uuid not null references public.kadai(id) on delete cascade,
-    user_id      uuid not null references auth.users(id)   on delete cascade,
-    state        text not null default 'done'
-                 check (state in ('done','excused')),
-    -- who set it: the student (self), or a teacher override.
-    source       text not null check (source in ('self','teacher')),
-    marked_by    uuid not null references auth.users(id),
-    -- optional link to the attempt that satisfied it (module-backed self/teacher
-    -- confirmations can cite the evidence row).
-    activity_result_id uuid references public.activity_results(id) on delete set null,
-    note         text,
-    created_at   timestamptz not null default now(),
-    updated_at   timestamptz not null default now(),
-    primary key (kadai_id, user_id)
+-- kadaiban_assignments -------------------------------------------------------
+-- read: staff of the class, or a student enrolled in the class
+create policy kadaiban_asg_read on kadaiban_assignments for select using (
+  class_id in (select app_user_taught_class_ids())
+  or class_id in (select app_user_class_ids())
+);
+-- write: only a teacher of that class
+create policy kadaiban_asg_write on kadaiban_assignments for all using (
+  class_id in (select app_user_taught_class_ids())
+) with check (
+  class_id in (select app_user_taught_class_ids())
+  and created_by = auth.uid()
+);
+
+-- kadaiban_assignment_pages (scope inherited from parent) ---------------------
+create policy kadaiban_asgpage_read on kadaiban_assignment_pages for select using (
+  assignment_id in (select id from kadaiban_assignments)   -- parent RLS filters
+);
+create policy kadaiban_asgpage_write on kadaiban_assignment_pages for all using (
+  assignment_id in (select a.id from kadaiban_assignments a
+                    where a.class_id in (select app_user_taught_class_ids()))
+) with check (
+  assignment_id in (select a.id from kadaiban_assignments a
+                    where a.class_id in (select app_user_taught_class_ids()))
+);
+
+-- kadaiban_submissions -------------------------------------------------------
+create policy kadaiban_sub_read on kadaiban_submissions for select using (
+  student_id = auth.uid()
+  or assignment_id in (select a.id from kadaiban_assignments a
+                       where a.class_id in (select app_user_taught_class_ids()))
+);
+-- student creates/updates their OWN submission (draft + submit)
+create policy kadaiban_sub_student_write on kadaiban_submissions for all using (
+  student_id = auth.uid()
+) with check (
+  student_id = auth.uid()
+  and assignment_id in (select a.id from kadaiban_assignments a
+                        where a.class_id in (select app_user_class_ids()))
+);
+-- teacher updates grade fields for classes they teach
+create policy kadaiban_sub_teacher_grade on kadaiban_submissions for update using (
+  assignment_id in (select a.id from kadaiban_assignments a
+                    where a.class_id in (select app_user_taught_class_ids()))
+) with check (
+  assignment_id in (select a.id from kadaiban_assignments a
+                    where a.class_id in (select app_user_taught_class_ids()))
+);
+
+-- kadaiban_submission_pages (canvas drafts) ----------------------------------
+create policy kadaiban_subpage_student on kadaiban_submission_pages for all using (
+  submission_id in (select id from kadaiban_submissions where student_id = auth.uid())
+) with check (
+  submission_id in (select id from kadaiban_submissions where student_id = auth.uid())
+);
+create policy kadaiban_subpage_teacher_read on kadaiban_submission_pages for select using (
+  submission_id in (
+    select s.id from kadaiban_submissions s
+    join kadaiban_assignments a on a.id = s.assignment_id
+    where a.class_id in (select app_user_taught_class_ids()))
 );
 ```
 
-### 3.3 How completion is computed (reuse, don't duplicate)
+> **Guard-trigger note:** mirror the existing `class_modules_guard` pattern with
+> a `kadaiban_submissions` trigger so a student's own-row write can't flip
+> `status` to `graded` or set `score`/`graded_by` (WITH CHECK can't compare to
+> OLD). The teacher grade path (§6) sets those fields; the student path must not.
 
-- **`complete_mode='auto'` (module-backed):** completion is derived exactly like
-  `hub/index.html::computeStatus` does today (L117–125), but scoped to the
-  kadai's window instead of "any attempt ever." A student is 完了 when they have
-  `activity_results` rows for this `module_id`, dated `>= assigned_on`, whose
-  distinct `activity_ref` (grouped via `HubCommon.assignmentKeyFromRef`, see
-  `hub-common.js` L193–198) count reaches `total_items` (or ≥1 attempt = 進行中
-  when `total_items` is null). **No new score storage.** An optional
-  `kadai_completions` row only appears if a teacher overrides.
-- **`complete_mode='self'`:** student taps できた → `kadai_completions` upsert
-  `(source='self')`.
-- **`complete_mode='teacher'`:** only a teacher row `(source='teacher')` counts.
+---
 
-This keeps `activity_results` as the single source of score truth (the
-CLAUDE.md rule that all module reporting go through
-`HubCommon.reportActivityWithItems` is untouched — Kadaiban never writes
-`activity_results`).
+## 4. Three user flows
 
-### 3.4 RLS policies (reusing the existing SECURITY DEFINER helpers)
+All three live in **Gradebook** (teacher) and the **student hub** (student).
+Kadaiban is a new **section in Gradebook's nav**, not a standalone app shell —
+Gradebook already owns class-scoping, the assign flow, and the roster.
 
-Helpers verified in `remote_schema.sql` L269–351:
-`app_is_platform_admin()`, `app_has_role(school,roles[])`,
-`app_class_school(class)`, `app_user_school_ids()`,
-`app_user_admin_school_ids()`, `app_user_staff_school_ids()`,
-`app_user_class_ids()`, `app_user_taught_class_ids()`.
+### 4a. Teacher — create (`hub/gradebook/kadaiban.html`, create view)
+1. New assignment: title, instructions, due date, target class (reuses the
+   `Gradebook` class chip / scoping).
+2. Upload 1+ page images → each becomes a `kadaiban_assignment_pages` row; the
+   file goes to `kadaiban-sources/<assignment_id>/<page_number>.<ext>`.
+3. **Upload-time attestation checkbox** (§9): "この教材を自分のクラスで使用する
+   権利があります" — recorded, not technically enforced.
 
-**`kadai`** — read: enrolled students of the class (active only) + staff/taught.
-Write: same boundary as `class_modules::cmod_write` (staff school-wide OR taught
-class). Modeled line-for-line on the existing `cmod_read` / `cmod_write`
-(L646–657).
+### 4b. Student — complete & submit (`hub/kadaiban.html`)
+1. Assigned Kadaiban items surface in the student hub **alongside module
+   assignments** (see §8 for ordering consistency).
+2. Open → canvas over the page image. Draw/write. **Autosave** `canvas_state`
+   → `status = 'in_progress'` (multiple short sessions are realistic for this
+   age group; never require one sitting).
+3. **Submit** → `status = 'submitted'`, `submitted_at = now()`, and **flatten
+   each page's canvas to a PNG** into
+   `kadaiban-submissions/<assignment_id>/<student_id>/<page>.png` →
+   `rendered_image_path`.
+
+### 4c. Teacher — grade (`hub/gradebook/kadaiban.html`, inbox view)
+1. Inbox of submissions filtered to assignments the teacher created
+   (`app_user_taught_class_ids()` scoping).
+2. View the flattened PNG, enter `score` / `max_score`.
+3. Submission → `status = 'graded'`, `graded_by`, `graded_at`; **and** write the
+   `activity_results` summary row (§6).
+
+---
+
+## 5. Storage design (NET-NEW — its own pass, done here)
+
+Two **private** buckets (never public; student work + teacher materials must
+not be world-readable):
+
+| Bucket | Path convention | Holds |
+|---|---|---|
+| `kadaiban-sources` | `<assignment_id>/<page_number>.<ext>` | teacher-uploaded original worksheet images |
+| `kadaiban-submissions` | `<assignment_id>/<student_id>/<page>.png` | flattened PNG snapshots of student work |
+
+Path segments carry the identifiers the policies key on
+(`split_part(name,'/',n)`). Storage RLS is a **different surface** than table
+RLS — policies live on `storage.objects`, scoped by `bucket_id` + path — but the
+same SECURITY DEFINER helpers are callable.
 
 ```sql
-alter table public.kadai enable row level security;
-
--- Students see active kadai for classes they're enrolled in; staff/teachers
--- see all (incl. archived) for their scope.
-create policy kadai_read on public.kadai for select to public
-using (
-  ( status = 'active'
-    and class_id in (select app_user_class_ids()) )
-  or class_id in (
-      select classes.id from classes
-      where classes.school_id in (select app_user_staff_school_ids()) )
-  or class_id in (select app_user_taught_class_ids())
+-- SOURCES: teacher of the assignment's class may write; teacher OR enrolled
+-- student may read (a student must see the worksheet to draw on it).
+create policy kadaiban_src_write on storage.objects for all to authenticated using (
+  bucket_id = 'kadaiban-sources'
+  and exists (select 1 from public.kadaiban_assignments a
+              where a.id = split_part(name,'/',1)::uuid
+                and a.class_id in (select app_user_taught_class_ids()))
+) with check (
+  bucket_id = 'kadaiban-sources'
+  and exists (select 1 from public.kadaiban_assignments a
+              where a.id = split_part(name,'/',1)::uuid
+                and a.class_id in (select app_user_taught_class_ids()))
+);
+create policy kadaiban_src_read on storage.objects for select to authenticated using (
+  bucket_id = 'kadaiban-sources'
+  and exists (select 1 from public.kadaiban_assignments a
+              where a.id = split_part(name,'/',1)::uuid
+                and (a.class_id in (select app_user_taught_class_ids())
+                     or a.class_id in (select app_user_class_ids())))
 );
 
--- Authoring: staff school-wide OR the taught-class educator (identical boundary
--- to cmod_write). created_by must be the caller; school_id must match the class.
-create policy kadai_write on public.kadai for all to public
-using (
-  class_id in (
-      select classes.id from classes
-      where classes.school_id in (select app_user_staff_school_ids()) )
-  or class_id in (select app_user_taught_class_ids())
-)
-with check (
-  created_by = auth.uid()
-  and school_id = app_class_school(class_id)
-  and (
-    class_id in (
-        select classes.id from classes
-        where classes.school_id in (select app_user_staff_school_ids()) )
-    or class_id in (select app_user_taught_class_ids())
-  )
+-- SUBMISSIONS: student writes/reads only their OWN (student_id path segment =
+-- auth.uid()); teacher of the assignment's class may read.
+create policy kadaiban_subm_student_write on storage.objects for all to authenticated using (
+  bucket_id = 'kadaiban-submissions'
+  and split_part(name,'/',2)::uuid = auth.uid()
+) with check (
+  bucket_id = 'kadaiban-submissions'
+  and split_part(name,'/',2)::uuid = auth.uid()
+  and exists (select 1 from public.kadaiban_assignments a
+              where a.id = split_part(name,'/',1)::uuid
+                and a.class_id in (select app_user_class_ids()))
 );
-```
-
-**`kadai_completions`** — a student may write only their **own** row for a
-kadai in a class they're enrolled in, and only when the kadai's `complete_mode`
-allows self-report; teachers may write any row in their scope (override /
-excuse). Read: own row, or staff/taught scope. This mirrors the `ar_insert`
-self-vs-staff split (L662–663) and `result_items_insert_own` (L673–678).
-
-```sql
-alter table public.kadai_completions enable row level security;
-
-create policy kadai_comp_read on public.kadai_completions for select to public
-using (
-  user_id = auth.uid()
-  or kadai_id in (
-      select k.id from kadai k
-      where k.class_id in (
-          select classes.id from classes
-          where classes.school_id in (select app_user_staff_school_ids()))
-         or k.class_id in (select app_user_taught_class_ids()) )
-);
-
--- Student self-report: own row, kadai in an enrolled class, mode allows self,
--- source stamped 'self', marked_by = self.
-create policy kadai_comp_self_write on public.kadai_completions for all to public
-using (
-  user_id = auth.uid() and marked_by = auth.uid() and source = 'self'
-)
-with check (
-  user_id = auth.uid() and marked_by = auth.uid() and source = 'self'
-  and kadai_id in (
-      select k.id from kadai k
-      where k.class_id in (select app_user_class_ids())
-        and k.complete_mode in ('self','auto') )
-);
-
--- Teacher override / excuse: any student row within teacher scope.
-create policy kadai_comp_staff_write on public.kadai_completions for all to public
-using (
-  kadai_id in (
-      select k.id from kadai k
-      where k.class_id in (
-          select classes.id from classes
-          where classes.school_id in (select app_user_staff_school_ids()))
-         or k.class_id in (select app_user_taught_class_ids()) )
-)
-with check (
-  marked_by = auth.uid() and source = 'teacher'
-  and kadai_id in (
-      select k.id from kadai k
-      where k.class_id in (
-          select classes.id from classes
-          where classes.school_id in (select app_user_staff_school_ids()))
-         or k.class_id in (select app_user_taught_class_ids()) )
+create policy kadaiban_subm_read on storage.objects for select to authenticated using (
+  bucket_id = 'kadaiban-submissions'
+  and (split_part(name,'/',2)::uuid = auth.uid()
+       or exists (select 1 from public.kadaiban_assignments a
+                  where a.id = split_part(name,'/',1)::uuid
+                    and a.class_id in (select app_user_taught_class_ids())))
 );
 ```
 
-> Two separate INSERT/ALL policies (self vs staff) are used because Postgres
-> ORs multiple permissive policies — this exactly matches the existing
-> `ar_insert` design (student-own path OR staff path) rather than one giant
-> `WITH CHECK`.
+**Access pattern:** private buckets → the client fetches images via short-lived
+**signed URLs** (`createSignedUrl`), gated by these policies. Never public URLs.
 
-**Guard trigger** (mirrors `class_modules_guard`, L534): a
-`BEFORE INSERT OR UPDATE` trigger on `kadai` that (a) forces
-`school_id = app_class_school(class_id)` and (b) — if `module_id` is not null —
-enforces the module is enabled for the class's school (reuse the existing
-`enforce_module_enabled()` logic, or call it), so a free-form task skips the
-check and a module-backed one honors `school_modules`.
-
-### 3.5 Relationship to existing tables (what is reused vs new)
-
-```
-schools ─1─< kadai >─ classes        (new: dated tasks; parallel to class_modules)
-              │  └─(optional)─ modules        (reuse catalog; free-form when null)
-              └─< kadai_completions >─ profiles(students)   (new: per-student state)
-
-modules ─1─< activity_results ─1─< activity_result_items    (REUSED unchanged —
-              ▲                                                score/attempt truth)
-              └── kadai_completions.activity_result_id (optional citation)
-
-class_modules (UNCHANGED — stays "available modules + focus/pacing for a class")
-```
-
-- `class_modules` is **not** replaced. It remains what the module runners read
-  for `focus_units` (CLAUDE.md: `sansu3` reference impl) and what `hub/index.html`
-  reads for the current home block. Kadaiban is additive; §6 phases the home
-  page migration.
-- `activity_results` / `activity_result_items` are **read** by Kadaiban for
-  auto-completion but **never written** by it.
+**Bucket creation is an infra step**, not a SQL migration — create the two
+buckets (private) via the Supabase dashboard or the Storage API, then apply the
+`storage.objects` policies via migration. Document both in the PR.
 
 ---
 
-## 4. UI
+## 6. Reporting integration (confirmed decision)
 
-Two surfaces, each following its side's conventions. **Every new page ships a
-fully self-contained CSS file** copying the token values literally per CLAUDE.md
-hard rule #1 (never linking root `style.css`); Zen Maru Gothic for display text
-(loaded from Google Fonts exactly as the existing pages do).
+On grade, write **one summary row** to `activity_results` so Kadaiban appears in
+the same trend lines / 個人カルテ as everything else — a teacher shouldn't check
+two places for a student's full picture.
 
-Token block to copy verbatim into each new `*.css`
-(from CLAUDE.md / root tokens): `--ink #1c2530`, `--ink-soft #3a4555`,
-`--paper #f7f3ea`, `--paper-dim #efe9db`, `--border #d8d2c2`, `--moss #4a6b4f`,
-`--moss-deep #34503a`, `--moss-tint #e8ede6`, `--gold #c9a24b`, `--clay #b5572e`,
-`--error #a23b2e`.
+- `module_id` = the catch-all **`kadaiban`** module (registered once; subject
+  `misc`; `is_active=false` so it does not render as a launchable tile in the
+  student hub module grid — it's a reporting anchor, not an app).
+- `activity_ref` = `kadaiban/<assignment_id>/<graded_timestamp>`.
+- `score` / `max_score` = the teacher's manual grade.
+- `payload` = `{ "title": <assignment title>, "kind": "kadaiban" }` (for the
+  gradebook label helpers).
+- **Do NOT write `activity_result_items`** — a holistically-graded worksheet has
+  no per-question granularity; forcing items would misrepresent it. Consistent
+  with the project treating `activity_result_items` as optional-but-standard.
 
-### 4.1 Student board — `gakuenza.com/hub/kadaiban.html`
-
-- Loads the standard student shell: `hub-shell.css` + a new self-contained
-  `kadaiban.css`; scripts `supabase.js → config.js → hub-common.js`, then page
-  logic. Uses `HubCommon.requireSession`, `renderSidebar(sb, userId, 'kadaiban')`
-  — **add a "課題板" nav item** to `hub-common.js::renderSidebar` `navItems`
-  (L100–122), placed between ホーム and モジュール一覧.
-- Layout (wireframe):
-
-```
-┌ 課題板 ────────────────────────────────────────────┐
-│  たろうさん の課題            2026年7月16日(木)      │
-├─ 今日まで (2) ───────────────────────────────────── │
-│  ● 算数   [u03] 円と球のふくしゅう   期限:7月16日(木)│
-│                                       [進行中] ▶ ひらく│
-│  ● 国語   音読カード 3かい          期限:7月16日(木)│
-│                                    [自己申告] ✔ できた │
-├─ 今週 (3) ────────────────────────────────────────  │
-│  ● 理科   … 期限:7月19日(日)  [未着手] ▶ ひらく       │
-│  …                                                    │
-├─ これから (1) ──────────────────────────────────── │
-├─ 完了 (5)  ▾ たたむ ─────────────────────────────── │
-└──────────────────────────────────────────────────── ┘
-```
-
-- Card visuals reuse the existing home vocabulary: subject dot
-  (`HubCommon.subjectVar`), status pills (`badge-done`/`badge-progress` already
-  in the hub CSS), `HubCommon.formatDueDate`, `HubCommon.progressBar`.
-- **Module-backed** card → launch button navigates to `modules.launch_url`
-  (absolute per CLAUDE.md rule #4), passing the focus unit as today's cards do.
-- **Free-form self/teacher** card → `できた` button upserts `kadai_completions`
-  (self) or is read-only (teacher-mode, shows teacher's mark).
-- Buckets by due date: 今日まで / 今週 / これから / 完了, soonest first (reuse
-  the `dueRank` lexicographic sort from `hub/index.html` L174–176).
-
-### 4.2 Teacher board — `gakuenza.com/hub/gradebook/kadaiban.html`
-
-- Sits in the gradebook. Reuse `gradebook-common.js` (`window.Gradebook`):
-  `requireContext`, `loadClasses`, class chip, `renderSidebar(..., 'kadaiban', ...)`.
-  **Add a "課題板" item to the gradebook `NAV`** (`gradebook-common.js`
-  L126–134) — likely right after 課題 (assign), or 課題板 *replaces/absorbs*
-  the assign page over time (see §6/§7).
-- Reuse `window.ModuleAssign.focusUnitsFieldHtml` / `readFocusUnitsField` for the
-  unit picker, and `gradeMismatch` for the soft grade warning — all already used
-  by `assign.html`.
-- Self-contained `gradebook.css` already exists and is the pattern; extend it or
-  add page-scoped `<style>` as `assign.html` does (L10–31).
-- Layout (wireframe):
-
-```
-┌ 課題板  [クラス:3年1組 ▾]          成績簿·Gradebook ┐
-│ [＋ 新しい課題]                                       │
-├─ 進行中の課題 ─────────────────────────────────────  │
-│  円と球のふくしゅう  算数·sansu3 [u03] 期限7/16       │
-│    ▓▓▓▓▓▓▓░░░  18/25 完了 · 3 進行中 · 4 未着手       │
-│                                    [ロースター] [編集] │
-│  音読カード3かい   国語·free  自己申告  期限7/16       │
-│    ▓▓▓░░░░░░░   9/25 完了                    [編集]   │
-├─ 予定 (assigned_on 未来) ───────────────────────────  │
-├─ 完了/アーカイブ  ▾ ─────────────────────────────── │
-└──────────────────────────────────────────────────── ┘
-   [新しい課題] modal:  ○既存モジュール ▾  / ○自由記述
-       タイトル __  本文(任意) __  単元☑… 期限[date] 問題数__
-       完了判定: (auto/self/teacher)   [保存]
-```
-
-- The **completion strip** is the headline new capability: per kadai, one query
-  over `kadai_completions` + a bucketed count of `activity_results` (for auto),
-  rendered as done/progress/not-started. Expand → roster list (reuse the roster
-  rendering conventions from `hub/gradebook/roster.html`).
-- The **new-課題 modal** is the `assign.html` modal generalized: adds a
-  module-vs-freeform toggle, `title`/`body`, and `complete_mode`; keeps the
-  existing due-date / total_items / focus-unit fields verbatim.
+The write uses `HubCommon.reportActivityWithItems(sb, { schoolId, classId,
+moduleId, userId: studentId, activityRef, score, maxScore, payload })` (no
+`items`). The `ar_insert` policy already permits an educator/school_admin to
+insert for another `user_id` (§2), so this runs client-side from the grade
+page — no Edge Function.
 
 ---
 
-## 5. Integration points with existing code
+## 7. Canvas implementation (fork nh6, adapt)
 
-| Existing code | Integration |
-|---|---|
-| `hub-common.js::renderSidebar` (L100–128) | Add `{ key:'kadaiban', href:'kadaiban.html', label:'課題板' }` to `navItems`. Same file exports `formatDueDate`, `progressBar`, `subjectVar`, `assignmentKeyFromRef` — all reused by the student board. |
-| `hub/index.html` (L59–213) | Phase 2: the "割り当てられたモジュール" block becomes a compact "今日の課題" summary that links to 課題板, or is replaced by it. Its `computeStatus` completion logic (L117–125) is lifted into a shared helper used by both the home summary and the board. |
-| `gradebook-common.js::NAV` (L126–134) | Add a `kadaiban` nav entry. Reuse `requireContext`, `loadClasses`, `classChipHtml`, `renderSidebar`, `esc`, date helpers as-is. |
-| `module-assign-common.js` (`window.ModuleAssign`) | Reuse `focusUnitsFieldHtml`, `readFocusUnitsField`, `gradeMismatch(Message)` in the new-課題 modal. Add `kadai` CRUD helpers to a new `window.Kadaiban` (or extend ModuleAssign) so the two boards can't drift — same extract-don't-copy discipline the file's header preaches. |
-| `module-units.js` (`window.MODULE_UNITS`) | `kadai.focus_units` uses the **same** unit-key vocabulary as `class_modules.focus_units`; the picker is the existing one. Keep keys in lockstep (CLAUDE.md schema note). |
-| Module runners (e.g. `sansu3`) | **No change required for MVP.** They already read `class_modules.focus_units`. If a kadai should scope the runner to *its* focus unit (not the class's), that's a Phase-3 param passed via the launch URL / query — a real design decision, flagged in §7. Reporting still goes only through `HubCommon.reportActivityWithItems` (unchanged). |
-| `activity_results` / `HubCommon.reportActivityWithItems` | Read-only consumer for auto-completion. Kadaiban never writes activity data — preserves the single reporting contract (CLAUDE.md hard rule #2). |
-| Migrations | New tables ship via `supabase/migrations/<ts>_kadaiban_schema.sql` per CLAUDE.md (MCP `apply_migration` **and** commit the file same PR). `launch_url` stays absolute; no new module registration needed (Kadaiban is hub infra, not a `modules` row). |
+Base: `gakuenza.com/modules/nh6/writing.js` `WritingCanvas`. **Reuse** the stroke
+model (`strokes` = array of point-arrays), pointer/touch scaling, `undo`,
+`clear`, `redraw`, `isEmpty`. **Replace/add:**
 
----
-
-## 6. MVP scope vs. later phases
-
-**Phase 1 — MVP (module-backed, auto-completion, class-wide):**
-- `kadai` table (module-backed only: `module_id` required in the UI, `title`
-  auto-filled from module name, `complete_mode='auto'`) + RLS + guard trigger.
-- **No `kadai_completions` yet** — completion derived live from
-  `activity_results` (§3.3 auto path), scoped by `assigned_on`.
-- Student board `hub/kadaiban.html` (read-only launch board) + sidebar nav.
-- Teacher board `hub/gradebook/kadaiban.html`: create/edit/archive module-backed
-  kadai + completion strip (counts only, no per-student roster yet).
-- This alone delivers the big wins: **multiple dated assignments of the same
-  module** and a **teacher completion count** — impossible today.
-
-**Phase 2 — free-form tasks + explicit completion:**
-- `kadai_completions` table + self/teacher `complete_mode`; `できた` button;
-  free-form (`module_id` null, `body`) tasks.
-- Teacher roster expansion (who's done / progress / not started); teacher
-  override & excuse.
-- Home page (`hub/index.html`) migrates its assignment block to a 課題板 summary.
-
-**Phase 3 — pacing & polish:**
-- Kadai-scoped focus units passed into the module runner at launch (vs. the
-  class-level `focus_units` the runner reads today) — needs runner changes (§7).
-- Assign-to-subset (per-student or group targeting) — would need a
-  `kadai_targets` table; deferred until asked for.
-- Notifications / "due tomorrow" nudges; snapshot integration (weekly completion
-  into `gradebook_snapshots`).
-- Possible consolidation: fold `assign.html` into 課題板, or keep `class_modules`
-  strictly for `focus_units`/availability and move all dating to `kadai`.
+1. **Image-space coordinates.** Size the drawing bitmap to the **source image's
+   native pixel dimensions** (fixed), display scaled via CSS. Then stored stroke
+   coords are image-space → reload and flatten are exact, and no resize
+   invalidates saved coords. (nh6's `resizeTo` changes the bitmap size — do NOT
+   do that after load here.)
+2. **Background layer.** In `redraw()`, draw the worksheet image first, then the
+   strokes on top (drop the handwriting rulings/guide-text rendering).
+3. **Persistence.** `serialize()` → `JSON.stringify(strokes)` into
+   `canvas_state`; `load(json)` → set `strokes` + `redraw()`. Autosave on
+   stroke-end (debounced) → `kadaiban_submission_pages`.
+4. **Flatten.** At submit, composite image + strokes onto an export canvas at
+   **source resolution** and `toDataURL('image/png')` → upload → `rendered_image_path`.
+5. **Tools.** Phase 1 = one pen color + undo. Phase 2 = eraser + color select.
 
 ---
 
-## 7. Open questions / decisions for the user
+## 8. Student-hub ordering consistency
 
-1. **Interpretation (blocking).** Is Kadaiban the assignment/homework board
-   described in §0, or something else (announcements, messaging, parent-facing,
-   attachments)? Everything downstream depends on this.
-2. **`class_modules` vs `kadai` boundary.** Keep both (Kadaiban additive,
-   `class_modules` = availability + `focus_units`), or migrate dating entirely
-   into `kadai` and shrink `class_modules`? MVP assumes *keep both*.
-3. **Does `hub/index.html` keep its own assignment block, or fully defer to
-   課題板?** (Affects whether we duplicate the completion logic or share it.)
-4. **Auto-completion definition.** Is "完了" = reached `total_items` distinct
-   `activity_ref`s since `assigned_on`? Or ≥1 attempt? Or a score threshold?
-   `total_items` is often null today — need a sane default (proposal: ≥1 attempt
-   ⇒ 進行中, `total_items` reached ⇒ 完了, null `total_items` ⇒ never
-   auto-完了, only 進行中). Confirm.
-5. **Should a kadai's focus unit override the class-level `focus_units` inside
-   the running module?** If yes, module runners need a launch-time param
-   (Phase 3, touches every runner — non-trivial, and only `sansu3`+4 others are
-   focus-wired today per CLAUDE.md; `rika3` isn't wired at all).
-6. **Self-report trust.** For `complete_mode='self'`, is a student's `できた`
-   authoritative, or does the teacher still need to confirm? (Affects whether
-   the completion strip counts self-marks.)
-7. **Retention on retract.** Archiving a kadai hides it from students but keeps
-   `activity_results` and `kadai_completions`. Confirm that's the desired
-   behavior (matches how `unassign` already warns history is preserved,
-   `assign.html` L231–233).
-8. **Per-student / group targeting** (differentiated homework) — in scope now,
-   or explicitly Phase 3+? Adds a `kadai_targets` table if yes.
-9. **Timezone for `assigned_on` / `due_date`.** Proposal uses Asia/Tokyo for
-   defaults (school-local); confirm no multi-timezone concern.
-```
+Kadaiban items appear in the student hub next to module assignments. Today
+`hub/index.html` renders an ad-hoc assigned-modules block. When the due-date-
+aware assignment dashboard (see `FEATURE_BACKLOG.md` F1) is built, it must treat
+Kadaiban assignments (`due_date` on `kadaiban_assignments`) **consistently** with
+quiz-module assignments — same sort, same "due soon" styling, one unified list —
+rather than a separate Kadaiban silo. Flagged so the two features converge.
+
+---
+
+## 9. Copyright / use-rights (different from curriculum modules)
+
+This is **teachers uploading their own materials**, not Gakuenza reproducing
+textbook content — so the "reference, don't reproduce" discipline that governs
+curriculum modules does **not** apply the same way. Responsibility shifts to the
+teacher's own right to use what they upload (same as photocopying a worksheet
+for class already does). Implement a **simple attestation at upload time**
+("I have the right to use this material with my class") — not technical
+enforcement, which this project can't do for an arbitrary image and shouldn't
+pretend to.
+
+---
+
+## 10. Phasing (do NOT attempt both at once)
+
+**Phase 1 — prove the new infrastructure in isolation.**
+- Single-page assignments only.
+- Basic pen tool (one color, undo), manual grading.
+- Stand up **Storage + Storage RLS** for both buckets — *the real new-infra
+  risk*; validate it end-to-end before adding complexity.
+- The four tables + table RLS + guard trigger.
+- Catch-all `kadaiban` module registration + `activity_results` integration.
+- Lives in Gradebook; student surface in the hub.
+
+**Phase 2 — richness once the foundation is proven.**
+- Multi-page support (the model already carries it).
+- Richer tools: eraser, color selection.
+- Draft-autosave polish.
+- Due-date-aware ordering integration on the student side (§8, converge with F1).
+
+---
+
+## 11. Remaining open questions / risks
+
+1. **Storage enablement & limits.** Confirm Storage is enabled on the project;
+   decide a max upload size / allowed MIME (image/png, image/jpeg) and enforce
+   it (bucket file-size limit + client check). Large scans → downscale on upload?
+2. **Image orientation / EXIF.** Phone photos carry EXIF rotation; normalize on
+   upload so the canvas overlay aligns.
+3. **Offline during drawing.** Autosave needs the network; a dropped Chromebook
+   Wi-Fi mid-worksheet shouldn't lose strokes. Minimum: keep `canvas_state` in
+   memory + retry; consider a localStorage fallback (ties into
+   `FEATURE_BACKLOG.md` F16 offline-resilient submission).
+4. **Coordinator grading.** `ar_insert` allows `educator`+`school_admin` but not
+   `coordinator`; confirm whether coordinators grade Kadaiban and, if so, widen
+   the grade path accordingly.
+5. **Delete/cleanup.** Deleting an assignment should remove its source images
+   and all submission snapshots from Storage (no FK cascade reaches Storage —
+   needs explicit cleanup, ideally an Edge Function or a scheduled sweep).
+
+---
+
+## Build order (Phase 1, concrete)
+
+1. Migration: 4 tables + table RLS + guard trigger + catch-all `kadaiban`
+   module registration (idempotent; MCP `apply_migration` **and** committed
+   `supabase/migrations/<ts>_kadaiban.sql`).
+2. Infra: create the two private buckets; apply `storage.objects` policies
+   (migration). Verify a signed-URL round-trip end-to-end.
+3. Teacher create view (`hub/gradebook/kadaiban.html`) + nav entry; source
+   upload; attestation.
+4. Student view (`hub/kadaiban.html`): forked canvas over the image, autosave,
+   submit + flatten/upload.
+5. Teacher grade inbox: PNG view, score entry, status → graded, `activity_results`
+   write via `reportActivityWithItems`.
+6. Flow test (headless): teacher upload → student draw/persist/submit → teacher
+   grade → assert `activity_results` row + no `activity_result_items` + Storage
+   RLS denies cross-student/cross-class access.
