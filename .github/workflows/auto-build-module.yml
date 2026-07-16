@@ -30,7 +30,10 @@ jobs:
           # than rely on the prompt alone to not touch them.
           CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Uses the Claude subscription (OAuth) rather than API billing —
+          # switched 2026-07-16. Requires the CLAUDE_CODE_OAUTH_TOKEN repo
+          # secret (`claude setup-token` from a Pro/Max subscription).
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             There may be one or more spec files in docs/specs/pending/.
             For each one:
