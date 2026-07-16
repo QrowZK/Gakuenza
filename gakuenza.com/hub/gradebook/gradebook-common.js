@@ -162,12 +162,14 @@ window.Gradebook = (function () {
           <div class="gb-profile-role">${esc(ctx.schoolName || '')} · ${roleLabel}</div>
         </div>
       </div>
-      <button class="gb-logout" id="gb-logout" type="button">ログアウト</button>`;
+      <button class="gb-logout" id="gb-logout" type="button">ログアウト</button>
+      ${AC.bugReport ? AC.bugReport.buttonHtml() : ''}`;
 
     document.getElementById('gb-logout').addEventListener('click', async () => {
       await sb.auth.signOut();
       window.location.href = '../login.html';
     });
+    if (AC.bugReport) AC.bugReport.wire(sb);
   }
 
   // Most-recent snapshot timestamp for the sidebar "最終実行" line — the only

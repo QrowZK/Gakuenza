@@ -202,3 +202,13 @@ the same PR so it doesn't get picked up again. If the spec is
 ambiguous or you'd need to make a real judgment call beyond what it
 specifies, stop and note that in the PR description rather than
 deciding unilaterally.
+
+**Two other Actions workflows exist besides the spec builder** (all three
+now authenticate with the Claude **subscription** via
+`claude_code_oauth_token` / the `CLAUDE_CODE_OAUTH_TOKEN` secret — NOT
+API billing): `bug-diagnose.yml` (on a `user-report` issue → investigate
+and comment only, never a PR) and `bug-autofix.yml` (only on the
+human-added `approved-for-autofix` label → attempt a fix, PR-only, same
+guardrails as the spec builder). The issues come from the staff-only
+in-app bug button (`AdminCommon.bugReport` → `report-bug` Edge Function →
+`bug_reports` table). Full reference: `docs/bug-report-automation.md`.
