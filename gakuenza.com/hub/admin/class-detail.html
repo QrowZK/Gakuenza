@@ -776,11 +776,12 @@
     const moduleCount = assigned ? assigned.length : '—';
     const teacherNames = classTeachers.map(t => t.profiles?.display_name).filter(Boolean);
     const teacherLabel = teacherNames.length ? teacherNames.join('・') : '未設定';
+    const teacherLabelEsc = H.escapeHtml(teacherLabel);
     statRow.innerHTML = `
       <div class="ac-stat"><b>${studentCount}名</b><span>生徒</span></div>
       <div class="ac-stat"><b>${moduleCount}件</b><span>割当モジュール</span></div>
       <div class="ac-stat">
-        <b style="font-size:0.95rem;">${teacherLabel}</b>
+        <b class="ac-stat-clip" style="font-size:0.95rem;" title="${teacherLabelEsc}">${teacherLabelEsc}</b>
         <span>担当教員　<button class="ac-btn ac-btn-ghost-light" id="btn-edit-teachers" type="button" style="padding:2px 8px;font-size:0.7rem;margin-left:4px;">編集</button></span>
       </div>
     `;
