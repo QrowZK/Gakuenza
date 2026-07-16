@@ -3,6 +3,10 @@
 _Scoping/design doc. Written 2026-07-16. No code changed by this doc — it defines
 direction and effort only._
 
+> **Detail layer.** This is the deep-dive for the visual/UI redesign. The single
+> source of truth for roadmap priority/ordering is [`../ROADMAP.md`](../ROADMAP.md)
+> — change ordering there, keep design detail here.
+
 Audience reminder: the pilot is **羽咋市立瑞穂小学校**, a Japanese public
 elementary school. Most drills are played by **children (小1–小6)** on shared
 tablets/Chromebooks. Legibility, big touch targets, furigana-friendliness, and a

@@ -1,5 +1,9 @@
 # Kadaiban (課題板) — build-ready architecture & spec
 
+> **Detail layer.** This is the build spec for the Kadaiban feature. The single
+> source of truth for roadmap priority/ordering is [`../ROADMAP.md`](../ROADMAP.md)
+> — change ordering there, keep the build spec here.
+
 **Status:** Architecture **confirmed by the product owner** (2026-07-16). This
 supersedes the earlier interpretation-guess draft. All open interpretation
 questions are resolved; what remains below are verified implementation
