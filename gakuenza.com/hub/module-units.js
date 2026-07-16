@@ -70,6 +70,21 @@
       { key: 'u11_water_temp', label: '11. 水のすがたと温度' },
       { key: 'u12_year_review', label: '12. 生き物の1年をふり返って' },
     ],
+    // rika5 unit keys == the `key` of each unit in modules/rika5/rika5-data.js
+    // (RIKA5_DATA.UNIT_KEYS). The module runner reads focus_units and
+    // foregrounds these same keys on its menu.
+    rika5: [
+      { key: 'u01_weather', label: '1. 天気の変化' },
+      { key: 'u02_germination', label: '2. 植物の発芽と成長' },
+      { key: 'u03_fish', label: '3. 魚のたんじょう' },
+      { key: 'u04_flower_fruit', label: '4. 花から実へ' },
+      { key: 'u05_typhoon', label: '5. 台風と天気の変化' },
+      { key: 'u06_running_water', label: '6. 流れる水のはたらき' },
+      { key: 'u07_dissolving', label: '7. 物のとけ方' },
+      { key: 'u08_human_birth', label: '8. 人のたんじょう' },
+      { key: 'u09_electromagnet', label: '9. 電流がうみ出す力' },
+      { key: 'u10_pendulum', label: '10. ふりこのきまり' },
+    ],
     shakai4: [
       { key: 'u1_prefecture', label: '1. わたしたちの県 石川県' },
       { key: 'u2_water_waste', label: '2. 健康なくらしを支える仕組み（水・ごみ）' },
