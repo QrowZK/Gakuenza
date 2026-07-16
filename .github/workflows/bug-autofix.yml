@@ -12,6 +12,7 @@ permissions:
   contents: write        # push the working branch
   pull-requests: write   # open the PR
   issues: write          # comment back on the issue with the result
+  id-token: write        # OIDC token for the claude_code_oauth_token (subscription) auth
 
 jobs:
   autofix:
