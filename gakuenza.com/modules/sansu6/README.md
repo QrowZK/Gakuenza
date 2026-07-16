@@ -22,12 +22,14 @@ of each unit only.
   `style.css`
 
 ## Registration
-`supabase/migrations/20260716120000_register_sansu6_module.sql` —
+`supabase/migrations/20260716120001_register_sansu6_module.sql` —
 idempotent (`ON CONFLICT (key)`), `subject = math`, absolute
 `launch_url`, `is_active = true`, `recommended_grades = {6}`. **Apply
 after the frontend is deployed** so the hub never links a live card at a
 404. (Not applied to prod as part of this PR — the module files must ship
-first.)
+first.) The 14-digit version is a placeholder: the real ledger version is
+assigned at merge by the MCP `apply_migration` (per `supabase/README.md`),
+after which this file is renamed to match repo ⇄ ledger.
 
 ## Canonical unit keys (for `class_modules.focus_units`)
 `app.js` honors `focus_units` for unit-scoped pacing (foreground the
