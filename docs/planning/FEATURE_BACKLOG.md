@@ -5,6 +5,11 @@ _Drafted 2026-07-16. A prioritized, grounded proposal of NEW features for the
 Every item is written to be concrete enough to become a `docs/specs/pending/`
 spec._
 
+> **Detail layer.** This is the deep-dive for product features (F1–F17 +
+> recommend-against). The single source of truth for roadmap priority/ordering
+> is [`../ROADMAP.md`](../ROADMAP.md) — change ordering there, keep feature
+> detail here.
+
 ## Grounding assumptions (from the codebase, not invented)
 
 - **Architecture is fixed:** static frontend (plain HTML/CSS/JS, no build),

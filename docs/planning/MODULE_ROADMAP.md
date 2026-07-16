@@ -4,6 +4,10 @@ _Scoping doc, 2026-07-16. Design/planning only — no code, no migrations.
 The top sketches below are written to be droppable into
 `docs/specs/pending/` later, matching the `docs/specs/completed/` format._
 
+> **Detail layer.** This is the deep-dive for curriculum modules. The single
+> source of truth for roadmap priority/ordering is [`../ROADMAP.md`](../ROADMAP.md)
+> — change ordering there, keep module detail (matrix, gaps, specs) here.
+
 Pilot school: 羽咋市立瑞穂小学校 (Mizuho ES, Hakui). Publisher facts that
 matter and are already established in this repo:
 
