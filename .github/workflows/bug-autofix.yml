@@ -133,7 +133,11 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "Auto-fix: ${ISSUE_TITLE} (#${ISSUE_NUMBER})" -m "$PRBODY"
-          git push -u origin "$BRANCH"
+          # claude-code-action rewrites origin's git auth header to its own
+          # short-lived GitHub App token and revokes it when its step ends, so
+          # the persisted credential is dead by now. Push over an explicit
+          # GITHUB_TOKEN URL instead of relying on origin's stale extraheader.
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
 
           PR_URL="$(printf '%s\n' "$PRBODY" \
             | gh pr create --base main --head "$BRANCH" \
