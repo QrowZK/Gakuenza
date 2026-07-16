@@ -22,6 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Claude Code (v2.1.211+) requires bubblewrap on the runner when
+      # CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1; GitHub runners don't ship it.
+      - name: Install bubblewrap (for subprocess env-scrub isolation)
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+
       - name: Investigate and comment (no fix)
         uses: anthropics/claude-code-action@v1
         env:
