@@ -15,6 +15,45 @@
    moment this stylesheet loaded alongside them — exactly the class of bug
    flagged as a repeat lesson in the project's own module conventions. */
 
+/* ---- self-contained base (2026-07-16) ------------------------------------
+   The admin pages used to <link> the shared root ../../style.css purely for
+   its :root tokens — but that sheet also carries the generic
+   `button { width: 100% }` rule that has broken production zones four times
+   (module-convention rule 1). The console now copies the token VALUES here
+   literally and no longer links the root sheet, so that footgun can't reach
+   it. Notes:
+     - Token values are copied verbatim from ../style.css (keep in sync).
+     - Only `color` is set on body; hub-shell.css owns body background/font
+       and loads first, so re-declaring them here would flip the load order.
+     - The generic `button` base is kept MINUS `width: 100%` — admin buttons
+       use .ac-btn* (explicit width:auto) or inline width, so nothing here
+       wants the full-width default. */
+:root {
+  --ink: #1c2530; --paper: #f7f3ea; --moss: #4a6b4f; --moss-deep: #34503a;
+  --clay: #b5572e; --border: #d8d2c2; --error: #a23b2e;
+  --ink-soft: #3a4555; --paper-dim: #efe9db; --gold: #c9a24b;
+  --subject-english: #c9622a; --subject-math: #4a6fa5; --subject-japanese: #7a6a53;
+  --subject-science: #5c8a3a; --subject-social: #a67c3d; --subject-sougou: #4a8a8a;
+  --subject-misc: #8a8570; --mist: #e4e0d4; --moss-tint: #e8ede6;
+}
+* { box-sizing: border-box; }
+body { color: var(--ink); }
+h1 { font-size: 22px; font-weight: 800; margin: 0 0 4px; }
+label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #444; }
+input, select {
+  width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+  border-radius: 8px; font-size: 14px; margin-bottom: 14px; background: #fdfcf9;
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+th { color: #777; font-weight: 700; text-transform: uppercase; font-size: 11px; }
+a { color: var(--moss-deep); }
+button {
+  padding: 11px; border: none; border-radius: 8px; background: var(--moss);
+  color: #fff; font-weight: 700; font-size: 14px; cursor: pointer;
+}
+button:hover { background: var(--moss-deep); }
+
 .ac-page-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
 .ac-breadcrumb { font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 10px; }
 .ac-page-title { font-family: var(--font-display); font-size: 1.5rem; color: var(--ink); margin: 0; font-weight: 700; }
