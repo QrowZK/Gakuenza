@@ -58,10 +58,12 @@ window.HubCommon = (function () {
   }
 
   // Every page calls this first. Redirects to login if there's no session;
-  // otherwise returns it so the page can read session.user.id.
-  async function requireSession(sb) {
+  // otherwise returns it so the page can read session.user.id. loginPath
+  // defaults to 'login.html' for pages that live directly in hub/; pages one
+  // level deeper (e.g. hub/admin/*.html) must pass '../login.html'.
+  async function requireSession(sb, loginPath = 'login.html') {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) { window.location.href = 'login.html'; return null; }
+    if (!session) { window.location.href = loginPath; return null; }
     return session;
   }
 
