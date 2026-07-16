@@ -33,7 +33,12 @@ jobs:
       # next step — running in the normal runner env with GITHUB_TOKEN — posts
       # it as the issue comment.
       - name: Investigate (write diagnosis to file)
+        id: claude
         uses: anthropics/claude-code-action@v1
+        # Keep going to the post step even if the agent run ends is_error — a
+        # 17-turn investigation that ends without a clean result still often
+        # produced a usable final message we can recover from the exec log.
+        continue-on-error: true
         env:
           # Defense-in-depth env scrub: this job never needs the site-deploy
           # secrets (SSH key / DreamHost), so strip them from the subprocess env.
@@ -60,7 +65,9 @@ jobs:
                the described symptom and the page URL, and locate the likely
                cause in the code.
             3. Write your diagnosis as GitHub-flavored Markdown to a file named
-               exactly `diagnosis.md` in the repository root. It must contain:
+               exactly `diagnosis.md` in the repository root, AND repeat that
+               same Markdown as your final chat message (a later step recovers
+               whichever of the two survived). It must contain:
                - **Likely cause** — a concise explanation.
                - **Affected files** — specific paths (and lines where you can).
                - **Suggested fix** — a short sketch, not a full change.
@@ -80,15 +87,40 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Path the action prints as "Log saved to ..."; prefer the step's own
+          # output if it exposes one, else fall back to the stable temp path.
+          EXEC_FILE: ${{ steps.claude.outputs.execution_file }}
         run: |
+          set +e
+          HEADER=$(printf '%s\n%s\n' \
+            "🔎 **自動診断 (Stage 1)** — Claude による初期調査です。修正はまだ行われていません。" \
+            "内容が妥当で安全に対応できる場合は \`approved-for-autofix\` ラベルを付けると自動修正 (PR) を試みます。")
+
+          BODY=""
+          # 1) The file the agent was asked to write, if it landed in the workdir.
           if [ -s diagnosis.md ]; then
-            {
-              echo "🔎 **自動診断 (Stage 1)** — Claude による初期調査です。修正はまだ行われていません。"
-              echo "内容が妥当で安全に対応できる場合は \`approved-for-autofix\` ラベルを付けると自動修正 (PR) を試みます。"
-              echo ""
-              cat diagnosis.md
-            } | gh issue comment "${{ github.event.issue.number }}" --body-file -
+            BODY="$(cat diagnosis.md)"
+          fi
+
+          # 2) Fallback: recover the agent's final text message from the
+          #    execution log. `flatten` normalises both the array-form and
+          #    JSONL-form the action may emit; we take the last assistant text.
+          if [ -z "$BODY" ]; then
+            LOG="${EXEC_FILE:-/home/runner/work/_temp/claude-execution-output.json}"
+            if [ -f "$LOG" ]; then
+              BODY="$(jq -rs '
+                flatten
+                | map(select(.type=="assistant")
+                      | .message.content[]?
+                      | select(.type=="text") | .text)
+                | last // empty' "$LOG" 2>/dev/null)"
+            fi
+          fi
+
+          if [ -n "$BODY" ]; then
+            { printf '%s\n\n' "$HEADER"; printf '%s\n' "$BODY"; } \
+              | gh issue comment "${{ github.event.issue.number }}" --body-file -
           else
             gh issue comment "${{ github.event.issue.number }}" \
-              --body "⚠️ 自動診断は実行されましたが、診断結果ファイル (diagnosis.md) が生成されませんでした。GitHub Actions のログをご確認ください。"
+              --body "⚠️ 自動診断は実行されましたが、診断結果を取得できませんでした（diagnosis.md も実行ログも空でした）。GitHub Actions のログをご確認ください。"
           fi
