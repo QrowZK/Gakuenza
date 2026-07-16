@@ -1,0 +1,15 @@
+# Shared, append-only registries that many parallel module PRs all edit at
+# once. `merge=union` keeps BOTH sides' added lines instead of raising a
+# conflict — safe here because each module is a self-contained, comma-
+# terminated block appended before the closing brace, so concatenating two
+# branches' additions stays valid.
+#
+# CAVEAT: union merge only helps APPENDS. If two branches edit the *same*
+# existing lines it will silently keep both (possibly invalid) — after any
+# noisy merge, sanity-check with `node --check gakuenza.com/hub/module-units.js`.
+#
+# This is a stopgap. The durable fix is to stop having a single shared file at
+# all — move each module's focus-unit keys into its own registration migration
+# (a `modules.unit_keys` column the assignment UI reads) so parallel module PRs
+# never touch a common file. Tracked separately.
+gakuenza.com/hub/module-units.js merge=union
