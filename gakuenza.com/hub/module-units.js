@@ -53,6 +53,27 @@
       { key: 'kotowaza', label: 'ことば：ことわざ・故事成語' },
       { key: 'romaji', label: 'ことば：ローマ字' },
     ],
+    // kokugo5 unit keys == the literal 'kanji' (the kanji drill) + each key of
+    // GRAMMAR_UNITS in modules/kokugo5/grammar-generators.js. (No reading-
+    // comprehension units yet — kokugo5 ships kanji + grammar only; see its
+    // build spec.)
+    kokugo5: [
+      { key: 'kanji', label: '漢字れんしゅう' },
+      { key: 'keigo', label: 'ことば：敬語' },
+      { key: 'kanyouku', label: 'ことば：慣用句' },
+      { key: 'goshu', label: 'ことば：和語・漢語・外来語' },
+      { key: 'doukun', label: 'ことば：同じ読み方の漢字' },
+    ],
+    // kokugo6 unit keys == 'kanji' (the kanji drill) + each key of GRAMMAR_UNITS
+    // in modules/kokugo6/grammar-generators.js. Reading-comprehension units are
+    // deliberately deferred, so there are no reading keys here yet.
+    kokugo6: [
+      { key: 'kanji', label: '漢字れんしゅう' },
+      { key: 'keigo', label: 'ことば：敬語' },
+      { key: 'jukugo', label: 'ことば：熟語の成り立ち' },
+      { key: 'goshu', label: 'ことば：和語・漢語・外来語' },
+      { key: 'yoji', label: 'ことば：四字熟語・故事成語' },
+    ],
     // rika4 unit keys == the `key` of each unit in modules/rika4/rika4-data.js
     // (RIKA4_DATA.UNIT_KEYS). The module runner reads focus_units and
     // foregrounds these same keys on its menu.
@@ -70,12 +91,74 @@
       { key: 'u11_water_temp', label: '11. 水のすがたと温度' },
       { key: 'u12_year_review', label: '12. 生き物の1年をふり返って' },
     ],
+    // rika5 unit keys == the `key` of each unit in modules/rika5/rika5-data.js
+    // (RIKA5_DATA.UNIT_KEYS). The module runner reads focus_units and
+    // foregrounds these same keys on its menu.
+    rika5: [
+      { key: 'u01_weather', label: '1. 天気の変化' },
+      { key: 'u02_germination', label: '2. 植物の発芽と成長' },
+      { key: 'u03_fish', label: '3. 魚のたんじょう' },
+      { key: 'u04_flower_fruit', label: '4. 花から実へ' },
+      { key: 'u05_typhoon', label: '5. 台風と天気の変化' },
+      { key: 'u06_running_water', label: '6. 流れる水のはたらき' },
+      { key: 'u07_dissolving', label: '7. 物のとけ方' },
+      { key: 'u08_human_birth', label: '8. 人のたんじょう' },
+      { key: 'u09_electromagnet', label: '9. 電流がうみ出す力' },
+      { key: 'u10_pendulum', label: '10. ふりこのきまり' },
+    ],
+    // rika6 unit keys == the `key` of each unit in modules/rika6/rika6-data.js
+    // (RIKA6_DATA.UNIT_KEYS). The module runner reads focus_units and
+    // foregrounds these same keys on its menu. Listed in the real 11-unit
+    // teaching order (units cross the two strand families, so this ordering
+    // differs from the module's B-then-A menu grouping).
+    rika6: [
+      { key: 'u01_combustion', label: '1. 物の燃え方と空気' },
+      { key: 'u02_animal_body', label: '2. 動物のからだのはたらき' },
+      { key: 'u03_plant_body', label: '3. 植物のからだのはたらき' },
+      { key: 'u04_ecosystem', label: '4. 生き物どうしのかかわり' },
+      { key: 'u05_moon_sun', label: '5. 月の形と太陽' },
+      { key: 'u06_strata', label: '6. 大地のつくり' },
+      { key: 'u07_changing_land', label: '7. 変わり続ける大地' },
+      { key: 'u08_lever', label: '8. てこのはたらきとしくみ' },
+      { key: 'u09_electricity', label: '9. 電気と私たちのくらし' },
+      { key: 'u10_solutions', label: '10. 水溶液の性質とはたらき' },
+      { key: 'u11_earth_and_us', label: '11. 地球に生きる' },
+    ],
     shakai4: [
       { key: 'u1_prefecture', label: '1. わたしたちの県 石川県' },
       { key: 'u2_water_waste', label: '2. 健康なくらしを支える仕組み（水・ごみ）' },
       { key: 'u3_disaster_prep', label: '3. 自然災害からくらしを守る' },
       { key: 'u4_heritage_and_pioneers', label: '4. 県内の伝統・文化と先人の働き' },
       { key: 'u5_featured_areas', label: '5. 県内の特色ある地域' },
+    ],
+    // shakai5 unit keys == the `key` of each unit in modules/shakai5/questions.js
+    // (window.SHAKAI5_DATA.UNITS). Grade-5 content is national in scope. The
+    // module runner reads focus_units and foregrounds these same keys.
+    shakai5: [
+      { key: 'u1_national_land', label: '1. わたしたちの国土' },
+      { key: 'u2_food_production', label: '2. わたしたちの生活と食料生産' },
+      { key: 'u3_industrial_production', label: '3. わたしたちの生活と工業生産' },
+      { key: 'u4_information_society', label: '4. 情報化した社会と産業の発展' },
+      { key: 'u5_environment', label: '5. わたしたちの生活と環境' },
+    ],
+    // shakai6 focus keys are matched at the SECTION level (see
+    // modules/shakai6/app.js partitionUnits): units 1 & 3 share one key each,
+    // history (unit 2) has a distinct key per chronological period.
+    shakai6: [
+      { key: 'u1_politics', label: '1. わたしたちの生活と政治' },
+      { key: 'u2a_jomon_kofun', label: '2-① 縄文・弥生・古墳の時代' },
+      { key: 'u2b_asuka_nara', label: '2-② 天皇中心の国づくり' },
+      { key: 'u2c_heian', label: '2-③ 貴族のくらし' },
+      { key: 'u2d_kamakura', label: '2-④ 武士の世の始まり' },
+      { key: 'u2e_muromachi', label: '2-⑤ 室町文化' },
+      { key: 'u2f_sengoku_unification', label: '2-⑥ 戦国から天下統一へ' },
+      { key: 'u2g_edo_bakufu', label: '2-⑦ 江戸幕府の政治' },
+      { key: 'u2h_edo_culture', label: '2-⑧ 町人の文化と新しい学問' },
+      { key: 'u2i_meiji', label: '2-⑨ 明治の国づくり' },
+      { key: 'u2j_meiji_world', label: '2-⑩ 世界に歩み出した日本' },
+      { key: 'u2k_wwii', label: '2-⑪ 長く続いた戦争と人々のくらし' },
+      { key: 'u2l_postwar_japan', label: '2-⑫ 新しい日本、平和な日本へ' },
+      { key: 'u3_japan_and_the_world', label: '3. 世界の中の日本' },
     ],
     // sansu4 unit keys == the `key` of each unit in modules/sansu4/generators.js
     // (window.SANSU4_DATA.UNITS), documented in modules/sansu4/README.md.
@@ -96,6 +179,30 @@
       { key: 'u12_area', label: '12. 面積のくらべ方と表し方' },
       { key: 'u13_decimal_muldiv', label: '13. 小数のかけ算とわり算' },
       { key: 'u14_boxes', label: '14. 直方体と立方体' },
+    ],
+    // sansu5 unit keys == the `key` of each unit in modules/sansu5/generators.js
+    // (window.SANSU5_DATA.UNITS), documented in modules/sansu5/README.md.
+    // u19_review (5年のまとめ) is intentionally excluded — a mixed review,
+    // not a focus-unit target.
+    sansu5: [
+      { key: 'u01_decimals', label: '1. 整数と小数' },
+      { key: 'u02_volume', label: '2. 直方体や立方体の体積' },
+      { key: 'u03_proportion', label: '3. 比例' },
+      { key: 'u04_decimal_mul', label: '4. 小数のかけ算' },
+      { key: 'u05_decimal_div', label: '5. 小数のわり算' },
+      { key: 'u06_congruence', label: '6. 合同な図形' },
+      { key: 'u07_angles', label: '7. 図形の角' },
+      { key: 'u08_multiples_factors', label: '8. 偶数と奇数、倍数と約数' },
+      { key: 'u09_fraction_decimal', label: '9. 分数と小数、整数の関係' },
+      { key: 'u10_fraction_addsub', label: '10. 分数のたし算とひき算' },
+      { key: 'u11_average', label: '11. 平均' },
+      { key: 'u12_per_unit', label: '12. 単位量あたりの大きさ' },
+      { key: 'u13_area', label: '13. 四角形と三角形の面積' },
+      { key: 'u14_percentage', label: '14. 割合' },
+      { key: 'u15_graphs', label: '15. 帯グラフと円グラフ' },
+      { key: 'u16_functional', label: '16. 変わり方調べ' },
+      { key: 'u17_polygon_circle', label: '17. 正多角形と円周の長さ' },
+      { key: 'u18_prisms_cylinders', label: '18. 角柱と円柱' },
     ],
     // sansu6 unit keys == the `key` of each unit in modules/sansu6/generators.js
     // (window.SANSU6_DATA.UNITS), documented in modules/sansu6/README.md.

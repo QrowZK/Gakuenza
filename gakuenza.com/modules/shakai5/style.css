@@ -1,0 +1,461 @@
+/* 社会5年 module — fully self-contained.
+   Gakuenza palette VALUES, module-local variable NAMES (--s5-*)
+   to avoid any collision with root or other module stylesheets.
+   Never links the shared root style.css (button{width:100%} bug). */
+
+:root {
+  --s5-ink: #1c2530;
+  --s5-ink-soft: #3a4555;
+  --s5-paper: #f7f3ea;
+  --s5-paper-dim: #efe9db;
+  --s5-surface: #fffdf8;
+  --s5-moss: #4a6b4f;
+  --s5-moss-deep: #34503a;
+  --s5-moss-tint: #e8ede6;
+  --s5-clay: #b5572e;
+  --s5-gold: #c9a24b;
+  --s5-border: #d8d2c2;
+  --s5-error: #a23b2e;
+  --s5-ok: #4a6b4f;
+  --s5-radius: 14px;
+  --s5-shadow: 0 2px 10px rgba(28, 37, 48, 0.07);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--s5-paper);
+  color: var(--s5-ink);
+  font-family: "Zen Maru Gothic", "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Yu Gothic", Meiryo, system-ui, sans-serif;
+  min-height: 100%;
+}
+
+button { font-family: inherit; }
+
+/* ---------- topbar (self-styled, per module rule) ---------- */
+.module-topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  background: var(--s5-surface);
+  border-bottom: 1px solid var(--s5-border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.module-topbar .back-link {
+  color: var(--s5-moss-deep);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+.module-topbar .back-link:hover { background: var(--s5-paper-dim); }
+.module-topbar .module-name {
+  font-weight: 700;
+  font-size: 1.02rem;
+  color: var(--s5-ink);
+}
+.module-topbar .spacer { flex: 1; }
+
+/* account bubble */
+.account-bubble { position: relative; }
+.account-bubble .bubble-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--s5-border);
+  background: var(--s5-paper);
+  border-radius: 999px;
+  padding: 4px 12px 4px 4px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--s5-ink);
+}
+.account-bubble .avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--s5-moss);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+.account-bubble .dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--s5-surface);
+  border: 1px solid var(--s5-border);
+  border-radius: 10px;
+  box-shadow: var(--s5-shadow);
+  min-width: 160px;
+  overflow: hidden;
+}
+.account-bubble.open .dropdown { display: block; }
+.account-bubble .dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--s5-ink);
+}
+.account-bubble .dropdown button:hover { background: var(--s5-paper-dim); }
+
+/* ---------- layout ---------- */
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 22px 16px 60px;
+}
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+h1.page-title {
+  font-size: 1.3rem;
+  margin: 6px 0 18px;
+  color: var(--s5-moss-deep);
+}
+
+/* ---------- focus-unit banner (class_modules.focus_units) ---------- */
+.focus-note {
+  background: var(--s5-moss-tint, #e8ede6);
+  border: 1px solid var(--s5-moss);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 0 0 18px;
+  font-size: 0.9rem;
+  color: var(--s5-moss-deep);
+  line-height: 1.6;
+}
+.units-divider {
+  margin: 26px 0 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--s5-ink-soft);
+  border-top: 1px dashed var(--s5-border);
+  padding-top: 16px;
+}
+.unit-block.dimmed { opacity: 0.7; }
+
+/* ---------- unit / section menu ---------- */
+.unit-block { margin-bottom: 26px; }
+.unit-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.unit-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 700;
+}
+.unit1 .unit-badge { background: var(--s5-clay); }
+.unit2 .unit-badge { background: var(--s5-moss); }
+.unit3 .unit-badge { background: #a23b2e; }
+.unit4 .unit-badge { background: var(--s5-gold); }
+.unit5 .unit-badge { background: var(--s5-moss-deep); }
+.unit-title { font-weight: 700; font-size: 1.06rem; }
+
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.section-card {
+  background: var(--s5-surface);
+  border: 1px solid var(--s5-border);
+  border-radius: var(--s5-radius);
+  box-shadow: var(--s5-shadow);
+  padding: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.section-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(28, 37, 48, 0.11);
+}
+.section-card .sec-title {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+.section-card .sec-meta {
+  font-size: 0.82rem;
+  color: var(--s5-ink-soft);
+}
+.section-card .sec-done {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--s5-moss-deep);
+  font-weight: 700;
+}
+
+/* ---------- lesson cards ---------- */
+.lesson-card {
+  background: var(--s5-surface);
+  border: 1px solid var(--s5-border);
+  border-radius: var(--s5-radius);
+  box-shadow: var(--s5-shadow);
+  padding: 24px 26px;
+  min-height: 220px;
+}
+.lesson-card h2 {
+  margin: 0 0 12px;
+  font-size: 1.12rem;
+  color: var(--s5-moss-deep);
+}
+.lesson-card p.body { line-height: 1.9; margin: 0 0 12px; font-size: 1rem; }
+.lesson-card .point {
+  background: var(--s5-paper-dim);
+  border-left: 4px solid var(--s5-gold);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.94rem;
+  line-height: 1.7;
+}
+.lesson-card .point::before { content: "ポイント "; font-weight: 700; color: var(--s5-clay); }
+.lesson-card .care {
+  background: #f4f1ec;
+  border-left: 4px solid var(--s5-moss);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  margin-top: 12px;
+  color: var(--s5-ink-soft);
+}
+
+.lesson-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+.lesson-dots { display: flex; gap: 6px; }
+.lesson-dots .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--s5-border);
+}
+.lesson-dots .dot.on { background: var(--s5-moss); }
+
+/* ---------- buttons ---------- */
+.btn {
+  border: 1px solid var(--s5-border);
+  background: var(--s5-surface);
+  color: var(--s5-ink);
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn:hover { background: var(--s5-paper-dim); }
+.btn.primary {
+  background: var(--s5-moss);
+  border-color: var(--s5-moss-deep);
+  color: #fff;
+}
+.btn.primary:hover { background: var(--s5-moss-deep); }
+.btn.ghost { background: none; border: none; color: var(--s5-ink-soft); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+/* ---------- drill ---------- */
+.drill-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 0.88rem;
+  color: var(--s5-ink-soft);
+}
+.progress-track {
+  flex: 1;
+  height: 8px;
+  background: var(--s5-paper-dim);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--s5-moss);
+  border-radius: 999px;
+  width: 0;
+  transition: width 0.25s ease;
+}
+
+.question-card {
+  background: var(--s5-surface);
+  border: 1px solid var(--s5-border);
+  border-radius: var(--s5-radius);
+  box-shadow: var(--s5-shadow);
+  padding: 26px;
+}
+.question-card .q-text {
+  font-size: 1.08rem;
+  line-height: 1.9;
+  margin: 0 0 18px;
+}
+
+.answer-row { display: flex; gap: 10px; }
+.answer-input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 1.05rem;
+  padding: 12px 14px;
+  border: 2px solid var(--s5-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--s5-ink);
+}
+.answer-input:focus { outline: none; border-color: var(--s5-moss); }
+.answer-input.correct { border-color: var(--s5-ok); background: #f2f7f2; }
+.answer-input.wrong { border-color: var(--s5-error); background: #fbf1ef; }
+
+.feedback {
+  margin-top: 16px;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.96rem;
+  line-height: 1.7;
+  display: none;
+}
+.feedback.show { display: block; }
+.feedback.ok { background: #eef4ee; border: 1px solid var(--s5-moss); }
+.feedback.ng { background: #faf0ed; border: 1px solid var(--s5-error); }
+.feedback .verdict { font-weight: 700; margin-bottom: 4px; }
+.feedback.ok .verdict { color: var(--s5-moss-deep); }
+.feedback.ng .verdict { color: var(--s5-error); }
+.feedback .the-answer { font-weight: 700; }
+
+.drill-actions { margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ---------- review ---------- */
+.review-summary {
+  background: var(--s5-surface);
+  border: 1px solid var(--s5-border);
+  border-radius: var(--s5-radius);
+  box-shadow: var(--s5-shadow);
+  padding: 26px;
+  text-align: center;
+  margin-bottom: 18px;
+}
+.review-summary .score {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--s5-moss-deep);
+}
+.review-summary .msg { color: var(--s5-ink-soft); margin-top: 6px; }
+.review-list { display: flex; flex-direction: column; gap: 10px; }
+.review-item {
+  background: var(--s5-surface);
+  border: 1px solid var(--s5-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+.review-item .mark { font-weight: 700; margin-right: 6px; }
+.review-item.ok .mark { color: var(--s5-ok); }
+.review-item.ng .mark { color: var(--s5-error); }
+.review-item .ri-user { color: var(--s5-ink-soft); }
+.review-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+
+@media (max-width: 560px) {
+  .lesson-card, .question-card { padding: 18px; }
+  .section-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- figures (maps / diagrams) ---------- */
+.fig {
+  margin: 14px 0 18px;
+  border: 1px solid var(--s5-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.fig svg { display: block; width: 100%; height: auto; }
+
+/* ---------- order (sequencing) questions ---------- */
+.order-area { display: flex; flex-direction: column; gap: 12px; }
+.order-picked {
+  min-height: 54px;
+  border: 2px dashed var(--s5-border);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  background: var(--s5-paper-dim);
+}
+.order-pool { display: flex; flex-wrap: wrap; gap: 8px; }
+.order-hint { font-size: 0.86rem; color: var(--s5-ink-soft); padding: 4px 6px; }
+.order-chip {
+  border: 1px solid var(--s5-border);
+  background: var(--s5-surface);
+  color: var(--s5-ink);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.order-chip:hover { background: var(--s5-paper-dim); }
+.order-chip.picked { background: var(--s5-moss); border-color: var(--s5-moss-deep); color: #fff; }
+.order-chip.picked.correct { background: var(--s5-moss-deep); }
+.order-chip.picked.wrong { background: var(--s5-error); border-color: var(--s5-error); }
+
+/* ---------- hint ---------- */
+.hint-row { margin: 10px 0 0; display: flex; align-items: center; gap: 10px; }
+.hint-row .btn.ghost { padding: 4px 8px; font-size: 0.86rem; }
+.hint-text { font-size: 0.9rem; color: var(--s5-clay); }
+
+/* ---------- menu extras ---------- */
+.matome-btn {
+  margin-left: auto;
+  border: 1px solid var(--s5-gold);
+  background: var(--s5-surface);
+  color: var(--s5-moss-deep);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.matome-btn:hover { background: var(--s5-paper-dim); }
+.fukushu-card {
+  width: 100%;
+  margin-bottom: 22px;
+  border-left: 5px solid var(--s5-clay);
+}
+.fukushu-card:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+/* drill title in progress row */
+.drill-title { font-weight: 700; color: var(--s5-moss-deep); }
+
+/* hidden attribute must always win, even over display:flex rules */
+[hidden] { display: none !important; }
