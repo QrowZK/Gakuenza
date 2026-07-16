@@ -15,6 +15,13 @@
 -- gakuenza.com/modules/kokugo6/ have been rsynced (which happens on merge to
 -- main). Apply this migration AFTER the module ships, not before, or the hub
 -- shows a card that 404s.
+--
+-- VERSION / LEDGER LOCKSTEP: this file's version (20260716043359) is stamped
+-- after the prod ledger tip at the time of writing (…041856 register_kokugo5).
+-- If further migrations reach the prod ledger before this PR merges, re-stamp
+-- to a fresh unique version at apply time and rename this file to match, so the
+-- repo migrations dir and prod ledger stay in the same order (per
+-- supabase/README.md). Apply via MCP apply_migration (writes the ledger).
 insert into public.modules (key, name, name_en, subject, launch_url, is_active, recommended_grades)
 values ('kokugo6', '国語 6年', 'Japanese 6', 'japanese', '/modules/kokugo6/index.html', true, '{6}')
 on conflict (key) do update set
