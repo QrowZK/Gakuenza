@@ -64,6 +64,16 @@
       { key: 'goshu', label: 'ことば：和語・漢語・外来語' },
       { key: 'doukun', label: 'ことば：同じ読み方の漢字' },
     ],
+    // kokugo6 unit keys == 'kanji' (the kanji drill) + each key of GRAMMAR_UNITS
+    // in modules/kokugo6/grammar-generators.js. Reading-comprehension units are
+    // deliberately deferred, so there are no reading keys here yet.
+    kokugo6: [
+      { key: 'kanji', label: '漢字れんしゅう' },
+      { key: 'keigo', label: 'ことば：敬語' },
+      { key: 'jukugo', label: 'ことば：熟語の成り立ち' },
+      { key: 'goshu', label: 'ことば：和語・漢語・外来語' },
+      { key: 'yoji', label: 'ことば：四字熟語・故事成語' },
+    ],
     // rika4 unit keys == the `key` of each unit in modules/rika4/rika4-data.js
     // (RIKA4_DATA.UNIT_KEYS). The module runner reads focus_units and
     // foregrounds these same keys on its menu.
