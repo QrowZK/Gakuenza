@@ -80,7 +80,7 @@
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
   const esc = H.escapeHtml;
 
-  const session = await H.requireSession(sb);
+  const session = await H.requireSession(sb, '../login.html');
   if (!session) return;
   const userId = session.user.id;
   const admin = await AC.requireAdminAccess(sb, userId);
