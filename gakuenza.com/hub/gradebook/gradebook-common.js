@@ -54,15 +54,28 @@ window.Gradebook = (function () {
       const { data } = await sb
         .from('classes').select('id, name, school_id, year, gumi')
         .in('id', ids).order('year').order('gumi');
-      return data || [];
+      const rows = data || [];
+      // Resolve school names for the taught classes (usually one school, but an
+      // educator can teach across schools) so the class chip can group by school.
+      const schoolIds = [...new Set(rows.map(c => c.school_id))];
+      let nameById = {};
+      if (schoolIds.length) {
+        const { data: sch } = await sb.from('schools').select('id, name').in('id', schoolIds);
+        (sch || []).forEach(s => { nameById[s.id] = s.name; });
+      }
+      return rows.map(c => ({ ...c, school_name: nameById[c.school_id] || '' }));
     }
     const schools = await AC.getAccessibleSchools(sb, ctx);
     const schoolIds = schools.map(s => s.id);
     if (!schoolIds.length) return [];
+    const nameById = Object.fromEntries(schools.map(s => [s.id, s.name]));
     const { data } = await sb
       .from('classes').select('id, name, school_id, year, gumi')
       .in('school_id', schoolIds).order('year').order('gumi');
-    return data || [];
+    // Attach school_name so the class chip can group multi-school lists (a
+    // platform admin sees every school's classes, and "3年1組" repeats per
+    // school — grouping is what makes them findable).
+    return (data || []).map(c => ({ ...c, school_name: nameById[c.school_id] || '' }));
   }
 
   function getCurrentClassId(classes) {
@@ -74,11 +87,31 @@ window.Gradebook = (function () {
 
   // Class filter chip — a styled <select id="gb-class-chip">. Pages read its
   // value and persist via setCurrentClassId on change.
+  //
+  // When the accessible classes span more than one school (platform admin, or
+  // an educator teaching across schools), the options are grouped under
+  // <optgroup> headers labelled by school — otherwise every school's "3年1組"
+  // renders as an indistinguishable flat list. Single-school users keep the
+  // flat list unchanged.
   function classChipHtml(classes, currentId) {
     if (!classes.length) return '';
-    return `<span class="gb-chip"><select id="gb-class-chip" aria-label="クラス">${
-      classes.map(c => `<option value="${c.id}"${c.id === currentId ? ' selected' : ''}>${esc(c.name)}</option>`).join('')
-    }</select></span>`;
+    const opt = c => `<option value="${c.id}"${c.id === currentId ? ' selected' : ''}>${esc(c.name)}</option>`;
+    const schoolNames = [...new Set(classes.map(c => c.school_name || ''))];
+    let inner;
+    if (schoolNames.length > 1) {
+      const bySchool = new Map();
+      classes.forEach(c => {
+        const k = c.school_name || 'その他';
+        if (!bySchool.has(k)) bySchool.set(k, []);
+        bySchool.get(k).push(c);
+      });
+      inner = [...bySchool.keys()].sort().map(sn =>
+        `<optgroup label="${esc(sn)}">${bySchool.get(sn).map(opt).join('')}</optgroup>`
+      ).join('');
+    } else {
+      inner = classes.map(opt).join('');
+    }
+    return `<span class="gb-chip"><select id="gb-class-chip" aria-label="クラス">${inner}</select></span>`;
   }
 
   function subjectChipHtml(currentKey, opts) {
