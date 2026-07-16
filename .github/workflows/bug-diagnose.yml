@@ -12,6 +12,7 @@ on:
 permissions:
   contents: read       # read the code to investigate; cannot push
   issues: write        # post the diagnosis comment
+  id-token: write      # OIDC token for the claude_code_oauth_token (subscription) auth
 
 jobs:
   diagnose:
