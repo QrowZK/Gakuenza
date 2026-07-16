@@ -77,6 +77,16 @@
       { key: 'u4_heritage_and_pioneers', label: '4. 県内の伝統・文化と先人の働き' },
       { key: 'u5_featured_areas', label: '5. 県内の特色ある地域' },
     ],
+    // shakai5 unit keys == the `key` of each unit in modules/shakai5/questions.js
+    // (window.SHAKAI5_DATA.UNITS). Grade-5 content is national in scope. The
+    // module runner reads focus_units and foregrounds these same keys.
+    shakai5: [
+      { key: 'u1_national_land', label: '1. わたしたちの国土' },
+      { key: 'u2_food_production', label: '2. わたしたちの生活と食料生産' },
+      { key: 'u3_industrial_production', label: '3. わたしたちの生活と工業生産' },
+      { key: 'u4_information_society', label: '4. 情報化した社会と産業の発展' },
+      { key: 'u5_environment', label: '5. わたしたちの生活と環境' },
+    ],
     // sansu4 unit keys == the `key` of each unit in modules/sansu4/generators.js
     // (window.SANSU4_DATA.UNITS), documented in modules/sansu4/README.md.
     // u15_review (4年のまとめ) is intentionally excluded — a mixed review,
