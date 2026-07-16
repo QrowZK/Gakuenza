@@ -21,10 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Claude Code (v2.1.211+) requires bubblewrap on the runner when
-      # CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1; GitHub runners don't ship it.
-      - name: Install bubblewrap (for subprocess env-scrub isolation)
-        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+      # Claude Code's subprocess sandbox (CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1)
+      # needs BOTH bubblewrap and socat; GitHub runners ship neither. Without
+      # socat the Bash tool fails on every call ("socat not installed").
+      - name: Install sandbox deps (bubblewrap + socat)
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap socat
 
       - name: Build against pending spec(s)
         uses: anthropics/claude-code-action@v1
