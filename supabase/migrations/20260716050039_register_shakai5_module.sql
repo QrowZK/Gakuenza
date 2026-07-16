@@ -2,13 +2,10 @@
 -- Idempotent (ON CONFLICT (key) do update) so it converges the row to the
 -- intended state on re-run — same shape as sansu4/shakai4.
 --
--- NOTE ON VERSION: the 14-digit filename version here is PROVISIONAL. Apply
--- this at merge (AFTER the frontend deploys, so the hub never links a card at
--- a 404 launch_url) via the MCP apply_migration, which stamps a fresh unique
--- version into the prod ledger; then rename this file to the assigned
--- <version>_register_shakai5_module.sql so repo ⇄ ledger match (see
--- supabase/README.md). The prod ledger tip was 20260716041856 when this
--- branch was cut.
+-- APPLIED to prod at ledger version 20260716050039 (via MCP apply_migration,
+-- after the frontend deploy). This file has been renamed from its original
+-- placeholder version to match, per the repo ⇄ ledger lockstep convention in
+-- supabase/README.md.
 --   key                 shakai5
 --   subject             social        (valid against modules_subject_check)
 --   launch_url          absolute       (/modules/shakai5/index.html)

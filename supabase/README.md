@@ -17,7 +17,7 @@ instead of being applied ad-hoc to the live project and hand-mirrored into
 ## Current state (2026-07-16)
 
 `migrations/` and the production ledger (`supabase_migrations.schema_migrations`)
-are reconciled — five tracked migrations, five files, nothing pending:
+are reconciled — 15 tracked migrations, 15 files, nothing pending:
 
 ```
 20260706000000_remote_schema                              ← squashed baseline
@@ -25,12 +25,32 @@ are reconciled — five tracked migrations, five files, nothing pending:
 20260715235133_revoke_truncate_from_gradebook_v2_tables
 20260716012834_register_sansu4_module
 20260716012842_register_shakai4_module
+20260716040823_register_rika6_module
+20260716041856_register_kokugo5_module
+20260716043000_register_shakai6_module
+20260716045252_register_sansu5_module
+20260716045905_register_kokugo6_module
+20260716050000_register_rika5_module
+20260716050039_register_shakai5_module
+20260716055904_profiles_read_taught_class_students
+20260716063714_bug_reports_table
+20260716120001_register_sansu6_module
 ```
 
 (The baseline + schools-fix + revoke-truncate came from the migrations-adoption
-work; the two `register_*` rows are the first modules — sansu4, shakai4 — shipped
-through the new system. An earlier split where the baseline files existed on one
-branch and the `register_*` files on `main` has been reconciled here.)
+work; the `register_*` rows are modules shipped through the new system. An
+earlier split where the baseline files existed on one branch and the
+`register_*` files on `main` has been reconciled here.)
+
+**Lockstep note:** several `register_*` files for grade-5/6 modules were cut
+in parallel PRs with provisional placeholder versions (documented in each
+file's own header at the time) because the real version is only known once
+`apply_migration` stamps it in prod — which must happen after the frontend
+deploys, so the hub never links a module card at a 404 `launch_url`. Three of
+those (kokugo5, sansu5, shakai5) were merged without the follow-up rename and
+drifted from the ledger for a few hours on 2026-07-16; they've since been
+renamed to their actual applied versions above. If you cut a similar
+placeholder migration, don't skip the rename step.
 
 **Origin of the baseline.** The base schema (tables, RLS, helper functions,
 triggers, views; project created 2026-07-06) and every `db/*.sql` change were

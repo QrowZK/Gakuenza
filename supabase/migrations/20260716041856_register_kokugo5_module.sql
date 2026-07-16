@@ -4,6 +4,10 @@
 -- subject 'japanese' matches the modules_subject CHECK constraint; launch_url is
 -- absolute per project convention; is_active set explicitly though it defaults
 -- true; recommended_grades = {5}.
+--
+-- Filename renamed to match the version apply_migration actually stamped in
+-- the prod ledger (20260716041856), per the repo ⇄ ledger lockstep convention
+-- in supabase/README.md.
 insert into public.modules (key, name, name_en, subject, launch_url, is_active, recommended_grades)
 values ('kokugo5', '国語 5年', 'Japanese 5', 'japanese', '/modules/kokugo5/index.html', true, '{5}')
 on conflict (key) do update set
