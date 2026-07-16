@@ -168,10 +168,15 @@ search.
 ## Known, currently-unresolved things — don't be surprised by them,
 ## not your job to fix incidentally
 
-- The admin console (`hub/admin/*.html`) still loads the shared root
-  `style.css` with no defense against the button-width bug (confirmed
-  still present 2026-07-15: all five admin HTML files `<link>`
-  `../../style.css`).
+- (Resolved 2026-07-16) The admin console (`hub/admin/*.html`) used to
+  load the shared root `style.css` with no defense against the
+  button-width bug. `admin.css` is now self-contained — it copies the
+  `:root` token values literally and carries the base element rules the
+  admin pages use (`h1`/`label`/`input`/`table`/`a`), **minus** the
+  `button { width:100% }` footgun — and all five admin pages dropped the
+  `../../style.css` `<link>` (they load `hub-shell.css` → `admin.css`
+  only). `body` background/font stay owned by `hub-shell.css`. Keep the
+  copied tokens in sync with root `style.css`.
 - (Resolved 2026-07-15) `rika4` was built + deployed but unregistered
   in the live `modules` table; `db/2026-07-15_register_rika4_module.sql`
   had never been applied. Registered during this review — the live
