@@ -53,6 +53,17 @@
       { key: 'kotowaza', label: 'ことば：ことわざ・故事成語' },
       { key: 'romaji', label: 'ことば：ローマ字' },
     ],
+    // kokugo5 unit keys == the literal 'kanji' (the kanji drill) + each key of
+    // GRAMMAR_UNITS in modules/kokugo5/grammar-generators.js. (No reading-
+    // comprehension units yet — kokugo5 ships kanji + grammar only; see its
+    // build spec.)
+    kokugo5: [
+      { key: 'kanji', label: '漢字れんしゅう' },
+      { key: 'keigo', label: 'ことば：敬語' },
+      { key: 'kanyouku', label: 'ことば：慣用句' },
+      { key: 'goshu', label: 'ことば：和語・漢語・外来語' },
+      { key: 'doukun', label: 'ことば：同じ読み方の漢字' },
+    ],
     // rika4 unit keys == the `key` of each unit in modules/rika4/rika4-data.js
     // (RIKA4_DATA.UNIT_KEYS). The module runner reads focus_units and
     // foregrounds these same keys on its menu.
