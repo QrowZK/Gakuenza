@@ -6,9 +6,11 @@
      units 1 & 3 share one key each (u1_politics / u3_japan_and_the_world).
      hub/module-units.js entry added. Registration migration committed
      (db/2026-07-16_register_shakai6_module.sql +
-     supabase/migrations/20260716013000_register_shakai6_module.sql) but NOT yet
+     supabase/migrations/20260716043000_register_shakai6_module.sql) but NOT yet
      applied to the live project — apply on merge, same as prior module
-     registrations. Tested: structural/collision test (115 Q, 0 errors) +
+     registrations. (Version stamped after the live ledger tip 20260716041856;
+     re-stamp to a fresh unique version at merge via MCP apply_migration, after
+     the frontend deploys, per supabase/README.md.) Tested: structural/collision test (115 Q, 0 errors) +
      headless-browser flow test (activity_result_items populated, focus_units
      section-level foregrounding verified). -->
 
