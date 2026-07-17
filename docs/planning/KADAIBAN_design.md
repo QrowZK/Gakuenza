@@ -11,6 +11,21 @@ decisions and a phased build plan. Every "verify before assuming" flag in the
 original spec has been checked against the live codebase and database — see
 **§2 Verification findings**.
 
+**Phase 1 built (2026-07-17).** The four tables + table RLS + the
+`kadaiban_submissions` guard trigger + the catch-all `kadaiban` module
+(`supabase/migrations/20260717000000_kadaiban.sql`), the two private buckets +
+`storage.objects` policies (`20260717000100_kadaiban_storage.sql`), the forked
+canvas (`gakuenza.com/hub/kadaiban-draw.js`, `window.KadaibanCanvas`), the
+teacher surface (`hub/gradebook/kadaiban.html` + a 課題板 nav entry in
+`gradebook-common.js`), and the student surface (`hub/kadaiban.html`, plus a
+手書きプリント section surfaced on `hub/index.html`). Migrations applied to the
+live project via MCP; an end-to-end RLS/guard/reporting flow was verified in a
+rolled-back transaction (teacher create → student draft → guard blocks student
+self-grade → cross-student read denied → teacher grade → `activity_results`
+write). Signed-URL image round-trips and the canvas serialize/load/flatten were
+validated headless. Phase 2 (§10) — multi-page, eraser/colour, offline
+resilience, F1 ordering convergence — remains open.
+
 Kadaiban is genuinely new territory: the **first Gakuenza feature to use
 Supabase Storage, file uploads, and persisted freehand drawing.** None of that
 exists anywhere else in the project today (confirmed — §2).
