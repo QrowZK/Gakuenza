@@ -145,6 +145,7 @@ button:hover { background: var(--moss-deep); }
 /* ---- card grid (teachers list, modules catalog — added 2026-07-09) ---- */
 .ac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 .ac-person-card { display: flex; align-items: center; gap: 12px; }
+.ac-person-card .ac-roster-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ac-subject-group { margin-bottom: 28px; }
 .ac-subject-group:last-child { margin-bottom: 0; }
 .ac-subject-label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 0.82rem; font-weight: 600; color: var(--ink); }

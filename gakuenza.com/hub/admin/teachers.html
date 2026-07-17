@@ -197,7 +197,7 @@
         <div class="ac-card ac-person-card">
           <div class="ac-avatar-sm">${given.slice(0, 2) || '?'}</div>
           <div style="flex:1;min-width:0;">
-            <div class="ac-roster-name">${name}</div>
+            <div class="ac-roster-name" title="${name.replace(/"/g, '&quot;')}">${name}</div>
           </div>
           <span class="ac-badge ${isAdmin ? 'ac-badge-gold' : 'ac-badge-moss'}">${roleLabel}</span>
           ${editBtn}
