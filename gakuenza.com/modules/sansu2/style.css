@@ -1,0 +1,383 @@
+/* 算数2年 module — fully self-contained (established convention: every
+   module owns its CSS; only literal token VALUES are copied from the
+   shared palette, variable NAMES are module-local --m2-* so nothing
+   collides with root or other module stylesheets).
+   NOTE: never put a literal close-comment sequence inside these comments
+   when referencing glob-like paths — that has shipped a real bug before. */
+
+:root {
+  --m2-ink: #1c2530;
+  --m2-ink-soft: #3a4555;
+  --m2-paper: #f7f3ea;
+  --m2-paper-dim: #efe9db;
+  --m2-surface: #fffdf8;
+  --m2-moss: #4a6b4f;
+  --m2-moss-deep: #34503a;
+  --m2-clay: #b5572e;
+  --m2-gold: #c9a24b;
+  --m2-border: #d8d2c2;
+  --m2-error: #a23b2e;
+  --m2-ok: #4a6b4f;
+  --m2-radius: 14px;
+  --m2-shadow: 0 2px 10px rgba(28, 37, 48, 0.07);
+}
+
+* { box-sizing: border-box; }
+
+/* author display rules (flex/grid) would otherwise override the UA's
+   default [hidden] handling — caught by the rendered-DOM E2E test */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--m2-paper);
+  color: var(--m2-ink);
+  font-family: "Zen Maru Gothic", "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Yu Gothic", Meiryo, system-ui, sans-serif;
+  min-height: 100%;
+}
+
+/* guard against style.css's generic full-width button rule ever leaking
+   in — this module never loads it, but buttons are still sized
+   explicitly so a future include can't break layout */
+button { font-family: inherit; width: auto; }
+
+/* ---------- topbar ---------- */
+.module-topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  background: var(--m2-surface);
+  border-bottom: 1px solid var(--m2-border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.module-topbar .back-link {
+  color: var(--m2-moss-deep);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+.module-topbar .back-link:hover { background: var(--m2-paper-dim); }
+.module-topbar .module-name { font-weight: 700; font-size: 1.02rem; }
+.module-topbar .spacer { flex: 1; }
+
+.account-bubble { position: relative; }
+.account-bubble .bubble-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--m2-border);
+  background: var(--m2-paper);
+  border-radius: 999px;
+  padding: 4px 12px 4px 4px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--m2-ink);
+}
+.account-bubble .avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--m2-moss);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.account-bubble .dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--m2-surface);
+  border: 1px solid var(--m2-border);
+  border-radius: 10px;
+  box-shadow: var(--m2-shadow);
+  min-width: 150px;
+  overflow: hidden;
+}
+.account-bubble.open .dropdown { display: block; }
+.account-bubble .dropdown button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--m2-ink);
+}
+.account-bubble .dropdown button:hover { background: var(--m2-paper-dim); }
+
+/* ---------- layout ---------- */
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 22px 16px 60px;
+}
+.screen { display: none; }
+.screen.active { display: block; }
+
+.page-title {
+  font-size: 1.4rem;
+  margin: 8px 0 6px;
+  color: var(--m2-moss-deep);
+}
+.page-note {
+  margin: 0 0 18px;
+  color: var(--m2-ink-soft);
+  font-size: 0.92rem;
+}
+
+/* ---------- menu ---------- */
+.vol-head {
+  font-size: 1.05rem;
+  color: var(--m2-clay);
+  border-bottom: 2px solid var(--m2-gold);
+  padding-bottom: 4px;
+  margin: 26px 0 12px;
+}
+.unit-card {
+  background: var(--m2-surface);
+  border: 1px solid var(--m2-border);
+  border-radius: var(--m2-radius);
+  box-shadow: var(--m2-shadow);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.unit-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.unit-num {
+  background: var(--m2-moss);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 700;
+  min-width: 32px;
+  text-align: center;
+  padding: 3px 6px;
+}
+.unit-title { font-weight: 700; font-size: 1.02rem; }
+
+/* Unit-scoped pacing (focus_units): foreground this week's units without
+   hiding the rest. Calm treatment — a warm border + a small "今週" badge. */
+.vol-head--focus { color: var(--m2-moss-deep); border-bottom-color: var(--m2-moss); }
+.unit-card--focus {
+  border-color: var(--m2-moss);
+  box-shadow: 0 2px 12px rgba(74, 107, 79, 0.18);
+}
+.unit-focus-badge {
+  margin-left: auto;
+  background: var(--m2-moss);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.sec-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid var(--m2-border);
+  background: var(--m2-paper);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-top: 8px;
+  cursor: pointer;
+  font-size: 0.96rem;
+  color: var(--m2-ink);
+  text-align: left;
+}
+.sec-btn:hover { background: var(--m2-paper-dim); border-color: var(--m2-moss); }
+.sec-btn .sec-meta { color: var(--m2-ink-soft); font-size: 0.84rem; white-space: nowrap; }
+
+/* ---------- drill ---------- */
+.drill-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  color: var(--m2-ink-soft);
+  font-size: 0.92rem;
+}
+.drill-title { font-weight: 700; color: var(--m2-moss-deep); }
+.progress-track {
+  flex-basis: 100%;
+  height: 8px;
+  background: var(--m2-paper-dim);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--m2-gold);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.question-card {
+  background: var(--m2-surface);
+  border: 1px solid var(--m2-border);
+  border-radius: var(--m2-radius);
+  box-shadow: var(--m2-shadow);
+  padding: 20px 18px;
+}
+.q-fig {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.q-fig svg { max-width: 100%; height: auto; }
+.q-text {
+  font-size: 1.12rem;
+  line-height: 1.7;
+  white-space: pre-line;
+  margin: 6px 0 16px;
+}
+
+.answer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.answer-input {
+  flex: 1;
+  max-width: 320px;
+  font-size: 1.15rem;
+  padding: 10px 14px;
+  border: 2px solid var(--m2-border);
+  border-radius: 10px;
+  background: var(--m2-paper);
+  color: var(--m2-ink);
+  font-family: inherit;
+}
+.answer-input:focus {
+  outline: none;
+  border-color: var(--m2-moss);
+  background: var(--m2-surface);
+}
+.unit-suffix { font-size: 1.05rem; color: var(--m2-ink-soft); font-weight: 700; }
+
+.choice-area {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.choice-btn {
+  border: 2px solid var(--m2-border);
+  background: var(--m2-paper);
+  border-radius: 10px;
+  padding: 12px 10px;
+  font-size: 1.02rem;
+  cursor: pointer;
+  color: var(--m2-ink);
+}
+.choice-btn:hover:not(:disabled) { border-color: var(--m2-moss); background: var(--m2-surface); }
+.choice-btn:disabled { cursor: default; opacity: 0.85; }
+.choice-btn.is-correct { border-color: var(--m2-ok); background: #eef3ee; font-weight: 700; }
+.choice-btn.is-wrong { border-color: var(--m2-error); background: #f6e9e6; }
+
+.feedback {
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0 6px;
+}
+.feedback.ok { background: #eef3ee; border: 1px solid var(--m2-ok); }
+.feedback.ng { background: #f6e9e6; border: 1px solid var(--m2-error); }
+.feedback .verdict { font-weight: 700; margin-bottom: 4px; }
+.feedback.ok .verdict { color: var(--m2-moss-deep); }
+.feedback.ng .verdict { color: var(--m2-error); }
+.feedback p { margin: 4px 0; font-size: 0.95rem; line-height: 1.6; }
+
+.drill-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  border: 1px solid var(--m2-border);
+  background: var(--m2-paper);
+  color: var(--m2-ink);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn:hover { background: var(--m2-paper-dim); }
+.btn.primary {
+  background: var(--m2-moss);
+  border-color: var(--m2-moss-deep);
+  color: #fff;
+}
+.btn.primary:hover { background: var(--m2-moss-deep); }
+.btn.primary:disabled { opacity: 0.5; cursor: default; }
+.btn.ghost { background: none; border-color: transparent; color: var(--m2-ink-soft); }
+.btn.ghost:hover { background: var(--m2-paper-dim); }
+
+/* ---------- review ---------- */
+.review-summary {
+  background: var(--m2-surface);
+  border: 1px solid var(--m2-border);
+  border-radius: var(--m2-radius);
+  box-shadow: var(--m2-shadow);
+  padding: 18px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.review-summary .score {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--m2-moss-deep);
+}
+.review-summary .msg { color: var(--m2-ink-soft); margin-top: 4px; }
+
+.review-item {
+  background: var(--m2-surface);
+  border: 1px solid var(--m2-border);
+  border-left-width: 5px;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.review-item.ok { border-left-color: var(--m2-ok); }
+.review-item.ng { border-left-color: var(--m2-error); }
+.review-item .ri-head { display: flex; gap: 8px; align-items: flex-start; }
+.review-item .ri-mark { font-weight: 700; }
+.review-item.ok .ri-mark { color: var(--m2-moss-deep); }
+.review-item.ng .ri-mark { color: var(--m2-error); }
+.review-item .ri-q { white-space: pre-line; line-height: 1.6; }
+.review-item .ri-detail { margin-top: 6px; font-size: 0.92rem; }
+.review-item .ri-exp { margin-top: 6px; font-size: 0.88rem; color: var(--m2-ink-soft); line-height: 1.6; }
+
+.review-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+@media (max-width: 480px) {
+  .q-text { font-size: 1.04rem; }
+  .drill-actions { flex-wrap: wrap; }
+}
