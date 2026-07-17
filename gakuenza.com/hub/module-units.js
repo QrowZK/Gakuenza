@@ -20,6 +20,18 @@
   'use strict';
 
   window.MODULE_UNITS = {
+    // kokugo1 unit keys == the five mode keys in modules/kokugo1/index.html
+    // (data-unit): the four かな/助詞/句読点 units in unit-generators.js
+    // (KOKUGO1_UNITS) plus the literal 'kanji' for the kanji drill. Grade 1 is
+    // かな-first; reading-comprehension units are deferred, so there are no
+    // reading keys here.
+    kokugo1: [
+      { key: 'hiragana', label: 'ひらがな' },
+      { key: 'katakana', label: 'カタカナ' },
+      { key: 'joshi', label: 'は・を・へ' },
+      { key: 'kutouten', label: '句読点・かぎ' },
+      { key: 'kanji', label: 'かんじ（80字）' },
+    ],
     sansu3: [
       { key: 'u01', label: '1. かけ算（九九の表とかけ算）' },
       { key: 'u02', label: '2. 時こくと時間' },

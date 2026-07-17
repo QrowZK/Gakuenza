@@ -1,0 +1,80 @@
+/* style.css — self-contained per this project's established convention
+   (the shared root style.css's generic button{width:100%} rule has caused a
+   real shipped bug four times when a zone wasn't self-contained). Token VALUES
+   are copied from the shared palette, NOT var()-inherited from a linked sheet.
+   Grade 1 = 6-year-olds: larger type, bigger touch targets, generous spacing
+   (see UI_REDESIGN child-UX notes). */
+:root {
+  --ink: #1c2530;
+  --ink-soft: #3a4555;
+  --paper: #f7f3ea;
+  --paper-dim: #efe9db;
+  --border: #d8d2c2;
+  --moss: #4a6b4f;
+  --moss-deep: #34503a;
+  --moss-tint: #e8ede6;
+  --gold: #c9a24b;
+  --clay: #b5572e;
+  --error: #a23b2e;
+  --subject-japanese: #7a6a53;
+  --font-display: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-display), -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Segoe UI", sans-serif; }
+.wrap { max-width: 660px; margin: 0 auto; padding: 32px 20px 80px; }
+
+.k1-header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+.k1-dot { width: 12px; height: 12px; border-radius: 999px; background: var(--subject-japanese); flex: 0 0 auto; }
+.k1-title { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; margin: 0; }
+.k1-sub { font-size: 0.9rem; color: var(--ink-soft); margin: 2px 0 0; }
+
+.k1-card { background: #fffcf5; border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 16px; }
+.k1-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 520px) { .k1-mode-grid { grid-template-columns: 1fr; } }
+.k1-mode-btn { display: block; text-align: left; background: #fffcf5; border: 2px solid var(--border); border-radius: 14px; padding: 20px; cursor: pointer; font-family: inherit; transition: border-color 140ms, transform 140ms; }
+.k1-mode-btn:hover { border-color: var(--moss); transform: translateY(-1px); }
+/* Unit-scoped pacing (focus_units): foreground this week's units, don't hide. */
+.k1-mode-btn.k1-focus { border-color: var(--moss); box-shadow: 0 2px 12px rgba(74, 107, 79, 0.18); }
+.k1-focus-badge { display: inline-block; background: var(--moss); color: #fff; font-size: 0.72rem; font-weight: 700; border-radius: 999px; padding: 2px 10px; vertical-align: middle; margin-left: 6px; }
+.k1-mode-btn h3 { font-family: var(--font-display); font-size: 1.2rem; margin: 0 0 6px; }
+.k1-mode-btn p { font-size: 0.85rem; color: var(--ink-soft); margin: 0; line-height: 1.6; }
+
+.k1-progress { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 10px; }
+.k1-note { background: var(--moss-tint); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 0.88rem; color: var(--ink-soft); margin-bottom: 18px; line-height: 1.6; }
+
+.k1-prompt { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; line-height: 1.8; margin: 0 0 22px; white-space: pre-wrap; }
+.k1-cat { display: inline-block; font-size: 0.78rem; color: var(--ink-soft); background: var(--paper-dim); border-radius: 999px; padding: 4px 12px; margin-bottom: 12px; }
+
+.k1-options { display: flex; flex-direction: column; gap: 12px; }
+.k1-opt { text-align: center; background: #fffcf5; border: 2px solid var(--border); border-radius: 14px; padding: 18px 18px; font-size: 1.35rem; font-family: inherit; font-weight: 700; cursor: pointer; min-height: 60px; transition: border-color 120ms, background 120ms; }
+.k1-opt:hover:not(:disabled) { border-color: var(--moss); }
+.k1-opt:disabled { cursor: default; }
+.k1-opt.correct { border-color: var(--moss); background: var(--moss-tint); }
+.k1-opt.wrong { border-color: var(--error); background: rgba(162,59,46,0.08); }
+
+.k1-btn { display: inline-block; background: var(--moss); color: #fff; border: none; border-radius: 10px; padding: 13px 26px; font-weight: 700; font-size: 1.05rem; font-family: inherit; cursor: pointer; transition: background 140ms, transform 140ms; }
+.k1-btn:hover { background: var(--moss-deep); transform: translateY(-1px); }
+.k1-btn-ghost { background: none; color: var(--ink-soft); border: 2px solid var(--border); border-radius: 10px; padding: 10px 20px; font-size: 0.95rem; font-family: inherit; cursor: pointer; }
+
+.k1-result-score { font-family: var(--font-display); font-size: 2.6rem; font-weight: 700; text-align: center; margin: 8px 0 4px; }
+.k1-result-label { text-align: center; color: var(--ink-soft); font-size: 0.95rem; margin-bottom: 24px; }
+.k1-review-item { border-top: 1px solid var(--border); padding: 14px 0; font-size: 0.95rem; }
+.k1-review-item:first-child { border-top: none; }
+.k1-review-item .prompt { font-weight: 700; margin-bottom: 4px; white-space: pre-wrap; }
+.k1-review-item .yours { color: var(--error); }
+.k1-review-item .correct-ans { color: var(--moss); }
+
+/* ── Nav topbar (back to hub + account bubble) — self-contained, shared markup ── */
+.module-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 20px; background: #1C2530; }
+.module-topbar .module-back { font-size: 13px; font-weight: 600; color: #C9CFD8; text-decoration: none; white-space: nowrap; }
+.module-topbar .module-back:hover { color: #F7F3EA; }
+.module-topbar .module-name { font-family: "Zen Maru Gothic", "Noto Sans JP", sans-serif; font-weight: 700; font-size: 15px; color: #F7F3EA; padding-left: 14px; border-left: 1px solid rgba(247,243,234,.2); }
+.module-account { position: relative; margin-left: auto; }
+.module-account-btn { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; border: 1px solid rgba(247,243,234,.25); background: rgba(247,243,234,.08); cursor: pointer; font-family: inherit; transition: background .15s; }
+.module-account-btn:hover { background: rgba(247,243,234,.16); }
+.module-account-avatar { width: 26px; height: 26px; border-radius: 50%; background: #C9A24B; color: #1C2530; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.module-account-name { font-size: 13px; font-weight: 600; color: #F7F3EA; white-space: nowrap; }
+.module-account-menu { position: absolute; top: calc(100% + 6px); right: 0; background: #fff; border: 1px solid #e0dccb; border-radius: 10px; box-shadow: 0 4px 16px rgba(28,37,48,.14); min-width: 140px; overflow: hidden; z-index: 60; }
+.module-account-menu.hidden { display: none; }
+.module-account-signout { display: block; width: 100%; padding: 10px 14px; background: none; border: none; text-align: left; font-size: 13px; font-family: inherit; color: #a23b2e; cursor: pointer; }
+.module-account-signout:hover { background: #fdecea; }

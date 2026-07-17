@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>国語 1年 — がくえん座</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<header class="module-topbar">
+  <a class="module-back" href="../../hub/index.html">‹ ハブへもどる</a>
+  <span class="module-name">国語 1年</span>
+  <div id="module-account-mount"></div>
+</header>
+<div class="wrap">
+  <div class="k1-header">
+    <span class="k1-dot"></span>
+    <div>
+      <h1 class="k1-title">国語 1年</h1>
+      <p class="k1-sub" id="k1-subtitle">かな・かんじ・ことばの れんしゅう</p>
+    </div>
+  </div>
+
+  <div id="view-select">
+    <div class="k1-card">
+      <div class="k1-mode-grid">
+        <button type="button" class="k1-mode-btn" id="btn-mode-hiragana" data-unit="hiragana">
+          <h3>ひらがな</h3>
+          <p>ごじゅうおん・だくおん・小さい じ（っ・ゃゅょ）・のばす おと。</p>
+        </button>
+        <button type="button" class="k1-mode-btn" id="btn-mode-katakana" data-unit="katakana">
+          <h3>カタカナ</h3>
+          <p>ごじゅうおんと、のばす おと（ー）の ある ことば。</p>
+        </button>
+        <button type="button" class="k1-mode-btn" id="btn-mode-joshi" data-unit="joshi">
+          <h3>は・を・へ</h3>
+          <p>「は」「を」「へ」の つかいかたを たしかめます。</p>
+        </button>
+        <button type="button" class="k1-mode-btn" id="btn-mode-kutouten" data-unit="kutouten">
+          <h3>。、「」</h3>
+          <p>まる・てん・かぎかっこの つけかたを たしかめます。</p>
+        </button>
+        <button type="button" class="k1-mode-btn" id="btn-mode-kanji" data-unit="kanji">
+          <h3>かんじ</h3>
+          <p>1年生で ならう 80字から、よみかた・かんじえらび・かくすうの もんだい。</p>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-quiz" style="display:none;">
+    <div class="k1-progress" id="k1-progress"></div>
+    <div class="k1-card">
+      <span class="k1-cat" id="k1-cat"></span>
+      <p class="k1-prompt" id="k1-prompt"></p>
+      <div class="k1-options" id="k1-options"></div>
+    </div>
+  </div>
+
+  <div id="view-result" style="display:none;">
+    <div class="k1-card">
+      <div class="k1-result-score" id="k1-score"></div>
+      <div class="k1-result-label" id="k1-score-label"></div>
+      <div id="k1-review"></div>
+    </div>
+    <button type="button" class="k1-btn" id="btn-restart">もういちど</button>
+  </div>
+</div>
+
+<script src="kanji-data.js"></script>
+<script src="kanji-generator.js"></script>
+<script src="unit-generators.js"></script>
+<script src="../../hub/supabase.js"></script>
+<script src="../../hub/config.js"></script>
+<script src="../../hub/hub-common.js"></script>
+<script src="kokugo1-report.js"></script>
+<script>
+(async function () {
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  const H = window.HubCommon;
+
+  const params = new URLSearchParams(window.location.search);
+  const classId = params.get('class_id') || null;
+
+  let ctx = { schoolId: null, classId, moduleId: null, userId: null };
+  let session = null;
+  try {
+    session = await H.requireSession(sb);
+    ctx.userId = session.user.id;
+    H.mountModuleAccount(sb, ctx.userId);
+    // Resolve school/class via enrollments -> classes, the established pattern
+    // every other module's report shim uses — deliberately NOT
+    // profiles.home_school_id, which is not the right source for a module's
+    // active class/school context.
+    const { data: enr } = await sb
+      .from('enrollments').select('class_id, classes ( id, school_id )')
+      .eq('user_id', session.user.id).eq('role', 'student').limit(1);
+    if (enr && enr.length && enr[0].classes) {
+      ctx.classId = ctx.classId || enr[0].class_id;
+      ctx.schoolId = enr[0].classes.school_id;
+    }
+    const { data: mod } = await sb.from('modules').select('id').eq('key', 'kokugo1').maybeSingle();
+    ctx.moduleId = mod?.id || null;
+  } catch (e) {
+    // If session/reporting context can't be resolved, the quiz itself still
+    // works — reporting is attempted best-effort at the end and silently
+    // skipped on failure, matching every other module's convention.
+  }
+
+  // Unit-scoped pacing (focus_units): foreground this week's units without
+  // hiding the rest. kokugo1's unit keys are the five mode keys (hiragana,
+  // katakana, joshi, kutouten, kanji) — see hub/module-units.js. Fails soft:
+  // any error leaves the set empty and nothing is foregrounded (no regression).
+  const focusUnits = new Set();
+  try {
+    if (ctx.moduleId && ctx.userId) {
+      const { data: enrAll } = await sb.from('enrollments').select('class_id').eq('user_id', ctx.userId);
+      const classIds = (enrAll || []).map(r => r.class_id);
+      if (classIds.length) {
+        const { data: cms } = await sb.from('class_modules')
+          .select('focus_units, class_id').eq('module_id', ctx.moduleId).in('class_id', classIds);
+        let anyAll = false, hasRow = false;
+        (cms || []).forEach(row => {
+          hasRow = true;
+          if (row.focus_units == null) anyAll = true;
+          else if (Array.isArray(row.focus_units)) row.focus_units.forEach(k => focusUnits.add(k));
+        });
+        if (!hasRow || anyAll) focusUnits.clear();
+      }
+    }
+  } catch (e) { focusUnits.clear(); }
+
+  (function applyModeFocus() {
+    document.querySelectorAll('.k1-mode-btn').forEach(btn => {
+      if (!focusUnits.has(btn.dataset.unit)) return;
+      btn.classList.add('k1-focus');
+      const h = btn.querySelector('h3');
+      if (h && !h.querySelector('.k1-focus-badge')) h.insertAdjacentHTML('beforeend', ' <span class="k1-focus-badge">今週</span>');
+    });
+  })();
+
+  const viewSelect = document.getElementById('view-select');
+  const viewQuiz = document.getElementById('view-quiz');
+  const viewResult = document.getElementById('view-result');
+  function showView(v) {
+    [viewSelect, viewQuiz, viewResult].forEach(el => el.style.display = 'none');
+    v.style.display = 'block';
+  }
+
+  let currentUnitKey = null;
+  let questions = [];
+  let qIndex = 0;
+  let results = [];
+
+  document.querySelectorAll('.k1-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentUnitKey = btn.dataset.unit;
+      questions = (currentUnitKey === 'kanji')
+        ? generateKanjiQuiz(KANJI1, 10)
+        : window.generateUnitQuiz(currentUnitKey, 10);
+      startQuiz();
+    });
+  });
+
+  function startQuiz() {
+    qIndex = 0;
+    results = [];
+    showView(viewQuiz);
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    const q = questions[qIndex];
+    document.getElementById('k1-progress').textContent = `${qIndex + 1} / ${questions.length}`;
+    document.getElementById('k1-cat').textContent = q.category;
+    document.getElementById('k1-prompt').textContent = q.prompt;
+    const optsEl = document.getElementById('k1-options');
+    optsEl.innerHTML = '';
+    q.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'k1-opt';
+      btn.textContent = opt;
+      btn.addEventListener('click', () => selectAnswer(opt));
+      optsEl.appendChild(btn);
+    });
+  }
+
+  function selectAnswer(selected) {
+    const q = questions[qIndex];
+    const correct = selected === q.correctAnswer;
+    results.push({
+      itemRef: q.itemRef, category: q.category, prompt: q.prompt,
+      correct, selectedAnswer: selected, correctAnswer: q.correctAnswer,
+    });
+
+    document.querySelectorAll('.k1-opt').forEach(btn => {
+      btn.disabled = true;
+      if (btn.textContent === q.correctAnswer) btn.classList.add('correct');
+      else if (btn.textContent === selected) btn.classList.add('wrong');
+    });
+
+    setTimeout(() => {
+      qIndex++;
+      if (qIndex < questions.length) renderQuestion();
+      else finishQuiz();
+    }, 700);
+  }
+
+  async function finishQuiz() {
+    const score = results.filter(r => r.correct).length;
+    document.getElementById('k1-score').textContent = `${score} / ${results.length}`;
+    document.getElementById('k1-score-label').textContent = 'せいかいの かず';
+
+    const wrong = results.filter(r => !r.correct);
+    const reviewEl = document.getElementById('k1-review');
+    if (wrong.length) {
+      reviewEl.innerHTML = wrong.map(r => `
+        <div class="k1-review-item">
+          <div class="prompt">${r.prompt}</div>
+          <div>あなたの こたえ：<span class="yours">${r.selectedAnswer}</span> 　せいかい：<span class="correct-ans">${r.correctAnswer}</span></div>
+        </div>`).join('');
+    } else {
+      reviewEl.innerHTML = '<p style="text-align:center;color:var(--ink-soft);font-size:0.9rem;">ぜんもん せいかいでした！</p>';
+    }
+    showView(viewResult);
+
+    if (ctx.userId && ctx.moduleId) {
+      try {
+        await window.Kokugo1Report.reportKokugo1(sb, ctx, { unitKey: currentUnitKey, results });
+      } catch (e) {
+        // best-effort — never block the result screen on a reporting failure
+      }
+    }
+  }
+
+  document.getElementById('btn-restart').addEventListener('click', () => showView(viewSelect));
+})();
+</script>
+</body>
+</html>
