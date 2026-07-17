@@ -20,6 +20,25 @@
   'use strict';
 
   window.MODULE_UNITS = {
+    // sansu1 unit keys == the `key` of each unit in
+    // modules/sansu1/generators.js (window.SANSU1_DATA.UNITS). The module
+    // runner reads focus_units and foregrounds these same keys on its menu.
+    sansu1: [
+      { key: 'u01_to10', label: '1. 10までのかず' },
+      { key: 'u02_ordinal', label: '2. なんばんめ' },
+      { key: 'u03_compose', label: '3. いくつといくつ' },
+      { key: 'u04_add1', label: '4. たしざん(1)' },
+      { key: 'u05_sub1', label: '5. ひきざん(1)' },
+      { key: 'u06_to20', label: '6. 20までのかず' },
+      { key: 'u07_clock', label: '7. なんじ・なんじはん' },
+      { key: 'u08_three_terms', label: '8. 3つのかずのけいさん' },
+      { key: 'u09_add2', label: '9. たしざん(2)' },
+      { key: 'u10_sub2', label: '10. ひきざん(2)' },
+      { key: 'u11_to100', label: '11. 大きいかず' },
+      { key: 'u12_addsub2digit', label: '12. たしざんとひきざん' },
+      { key: 'u13_compare', label: '13. どちらがながい・おおい・ひろい' },
+      { key: 'u14_shapes', label: '14. かたちづくり・いろいろなかたち' },
+    ],
     sansu3: [
       { key: 'u01', label: '1. かけ算（九九の表とかけ算）' },
       { key: 'u02', label: '2. 時こくと時間' },
