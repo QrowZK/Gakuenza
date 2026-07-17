@@ -245,6 +245,40 @@
       { key: 'u11_proportion', label: '11. 比例と反比例' },
       { key: 'u12_combinatorics', label: '12. 並べ方と組み合わせ方' },
     ],
+    // sansu1 unit keys == the `key` of each unit in modules/sansu1/generators.js.
+    sansu1: [
+      { key: 'u01_to10', label: '1. 10までのかず' },
+      { key: 'u02_ordinal', label: '2. なんばんめ' },
+      { key: 'u03_compose', label: '3. いくつといくつ' },
+      { key: 'u04_add1', label: '4. たしざん(1)' },
+      { key: 'u05_sub1', label: '5. ひきざん(1)' },
+      { key: 'u06_to20', label: '6. 20までのかず' },
+      { key: 'u07_clock', label: '7. なんじ・なんじはん' },
+      { key: 'u08_three_terms', label: '8. 3つのかずのけいさん' },
+      { key: 'u09_add2', label: '9. たしざん(2)' },
+      { key: 'u10_sub2', label: '10. ひきざん(2)' },
+      { key: 'u11_to100', label: '11. 大きいかず' },
+      { key: 'u12_addsub2digit', label: '12. たしざんとひきざん' },
+      { key: 'u13_compare', label: '13. どちらがながい・おおい・ひろい' },
+      { key: 'u14_shapes', label: '14. かたちづくり・いろいろなかたち' },
+    ],
+    // kokugo1 keys == the module's internal unit keys (kana-first + 80 kanji).
+    kokugo1: [
+      { key: 'hiragana', label: 'ひらがな' },
+      { key: 'katakana', label: 'カタカナ' },
+      { key: 'joshi', label: 'は・を・へ' },
+      { key: 'kutouten', label: '句読点・かぎ' },
+      { key: 'kanji', label: 'かんじ（80字）' },
+    ],
+    // kokugo2 keys == the module's internal unit keys (kanji + kana/grammar).
+    kokugo2: [
+      { key: 'kanji', label: '漢字れんしゅう' },
+      { key: 'katakana', label: 'ことば：カタカナ' },
+      { key: 'kanazukai', label: 'ことば：かなづかい' },
+      { key: 'shugo_jutsugo', label: 'ことば：主語と述語' },
+      { key: 'nakama', label: 'ことば：なかま・反対の言葉' },
+      { key: 'kutouten', label: 'ことば：丸・点・かぎ' },
+    ],
   };
 
   // Convenience: the unit list for a module key, or [] if it has no units.
