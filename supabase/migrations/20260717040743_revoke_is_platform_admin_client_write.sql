@@ -1,0 +1,20 @@
+-- SECURITY (P0): block client-side self-escalation to platform admin.
+--
+-- `authenticated`/`anon` held column-level INSERT+UPDATE on
+-- profiles.is_platform_admin (Supabase default ALTER DEFAULT PRIVILEGES grant,
+-- never revoked for this column). Combined with profiles_update_admin — an
+-- UPDATE policy with NO WITH CHECK whose USING admits the caller's own
+-- school_members row — a coordinator/school_admin could
+--   PATCH /rest/v1/profiles?id=eq.<own-uid>  {"is_platform_admin": true}
+-- and gain full control over every school (present + future). Verified live.
+--
+-- is_platform_admin is only ever set via migration / service_role, never the
+-- client REST API, so revoking the client column-write grant closes the hole
+-- with zero legitimate-flow impact. service_role and postgres are unaffected.
+--
+-- NOTE: this REVOKE removes the column-level INSERT grant but is a NO-OP for
+-- UPDATE, because anon/authenticated also hold TABLE-level UPDATE on profiles
+-- (Postgres won't downgrade a table grant per-column). The table-level UPDATE
+-- is revoked + safe columns re-granted in the immediately-following migration
+-- 20260717040949_revoke_profiles_table_update_regrant_safe_columns.sql.
+revoke insert, update (is_platform_admin) on public.profiles from anon, authenticated;
