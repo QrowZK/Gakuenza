@@ -228,7 +228,7 @@
         <p>${graded ? '先生が見て、○つけをしてくれました。' : '先生が見て、○つけをしてくれます。'}</p>
         <button class="kb-donebtn" id="kb-home" type="button">ホームにもどる</button>
       </div></div>`);
-    document.getElementById('kb-home').addEventListener('click', renderHome);
+    document.getElementById('kb-home').addEventListener('click', () => { window.location.href = 'index.html'; });
   }
 
   // ── draw surface ─────────────────────────────────────────────────────────
@@ -413,7 +413,7 @@
         <p>「${esc(title)}」を先生におくりました。先生が見て、○つけをしてくれます。</p>
         <button class="kb-donebtn" id="kb-home" type="button">ホームにもどる</button>
       </div></div>`);
-    document.getElementById('kb-home').addEventListener('click', renderHome);
+    document.getElementById('kb-home').addEventListener('click', () => { window.location.href = 'index.html'; });
   }
 
   // ── boot ──────────────────────────────────────────────────────────────
