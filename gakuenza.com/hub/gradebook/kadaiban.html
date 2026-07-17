@@ -20,7 +20,9 @@
   .kb-newbtn { background:var(--moss); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-weight:700; font-size:12.5px; white-space:nowrap; flex:0 0 auto; }
   .kb-newbtn:hover { background:var(--moss-deep); }
 
-  .kb-asg-select { margin:2px 0 0; }
+  /* filter row under the header — mirrors gb-head-filters; holds the subject
+     chip + assignment picker so they read as controls, not subtitle text. */
+  .kb-filterrow { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; }
 
   /* segmented filter */
   .kb-seg { display:inline-flex; background:var(--paper-dim); border:1px solid var(--mist); border-radius:999px; padding:3px; margin-bottom:18px; }
@@ -50,7 +52,8 @@
   .kb-form { max-width:560px; background:var(--paper); border:1px solid var(--mist); border-radius:10px; padding:22px; }
   .kb-field { margin-bottom:16px; }
   .kb-field label { display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:5px; font-weight:600; }
-  .kb-field input[type=text], .kb-field input[type=date], .kb-field textarea {
+  .kb-field input[type=text], .kb-field input[type=date], .kb-field textarea,
+  .kb-field-row select {
     width:100%; padding:9px 11px; border:1px solid var(--mist); border-radius:8px; font-size:13px; background:var(--paper-dim); font-family:inherit; color:var(--ink); }
   .kb-field textarea { min-height:60px; resize:vertical; }
   .kb-field-row { display:flex; gap:12px; }
@@ -167,8 +170,9 @@
   let roster = [];              // [{ userId, name, number }]
   let rows = [];                // enriched per-student submission rows
   let filter = 'submitted';     // submitted | graded | all
+  let subjectFilter = '';       // '' = all subjects; else a GB.SUBJECTS key
   let gradeStudentId = null;
-  const create = { title: '', instructions: '', due: '', file: null, meta: null, attest: false };
+  const create = { title: '', instructions: '', due: '', subject: '', file: null, meta: null, attest: false };
 
   // ── helpers ───────────────────────────────────────────────────────────
   function toast(msg) {
@@ -220,7 +224,7 @@
   // ── data loads ────────────────────────────────────────────────────────
   async function loadAssignments() {
     const { data } = await sb.from('kadaiban_assignments')
-      .select('id, title, instructions, due_date, page_count, created_at, class_id')
+      .select('id, title, instructions, due_date, page_count, created_at, class_id, subject')
       .eq('class_id', classId).order('created_at', { ascending: false });
     assignments = data || [];
     if (!activeAsg || !assignments.some(a => a.id === activeAsg.id)) activeAsg = assignments[0] || null;
@@ -306,23 +310,40 @@
     if (filter === 'submitted') shown = rows.filter(r => r.status === 'submitted');
     else if (filter === 'graded') shown = rows.filter(r => r.status === 'graded');
 
-    const asgSelect = assignments.length > 1
-      ? `<span class="gb-chip kb-asg-select"><select id="kb-asg" aria-label="課題を選ぶ">${
-          assignments.map(a => `<option value="${a.id}"${a.id === activeAsg.id ? ' selected' : ''}>${esc(a.title)}</option>`).join('')
+    // Assignment picker (only worth showing with >1 assignment) narrowed by an
+    // optional subject filter; the subject chip appears only when there's more
+    // than one assignment and at least one carries a subject tag. Both live in a
+    // dedicated filter row (mirrors gb-head-filters) so the picker reads as a
+    // control, not subtitle text (#82 Part A + B3).
+    const showPicker = assignments.length > 1;
+    const presentSubjects = GB.SUBJECTS.filter(s => assignments.some(a => a.subject === s.key));
+    const showSubjChip = showPicker && presentSubjects.length > 0;
+    const visibleAsg = subjectFilter ? assignments.filter(a => a.subject === subjectFilter) : assignments;
+    const subjLabel = k => GB.SUBJECT_LABEL[k] || '';
+
+    const asgChip = showPicker
+      ? `<span class="gb-chip"><span class="gb-chip-label">課題</span><select id="kb-asg" aria-label="課題を選ぶ">${
+          visibleAsg.map(a => `<option value="${a.id}"${a.id === activeAsg.id ? ' selected' : ''}>${a.subject ? '［' + esc(subjLabel(a.subject)) + '］' : ''}${esc(a.title)}</option>`).join('')
         }</select></span>`
       : '';
+    const subjChip = showSubjChip
+      ? `<span class="gb-chip"><span class="gb-chip-label">教科</span><select id="kb-subj" aria-label="教科でしぼりこむ"><option value="">すべて</option>${
+          presentSubjects.map(s => `<option value="${esc(s.key)}"${s.key === subjectFilter ? ' selected' : ''}>${esc(s.label)}</option>`).join('')
+        }</select></span>`
+      : '';
+    const filterRow = (subjChip || asgChip) ? `<div class="kb-filterrow">${subjChip}${asgChip}</div>` : '';
 
     viewEl.innerHTML = `
       <div class="kb-breadcrumb">課題板 <span class="sep">›</span> 提出物の確認・採点</div>
       <div class="kb-headrow">
         <div>
           <h1 class="gb-title">${esc(activeAsg.title)}</h1>
-          <div class="kb-sub">${esc(className)}${classSwitcherHtml()} · ${esc(fmtDue(activeAsg.due_date))} · 手書き提出（${activeAsg.page_count}ページ）</div>
-          ${asgSelect ? `<div style="margin-top:8px;">${asgSelect}</div>` : ''}
+          <div class="kb-sub">${esc(className)}${classSwitcherHtml()} · ${esc(fmtDue(activeAsg.due_date))} · 手書き提出（${activeAsg.page_count}ページ）${activeAsg.subject ? ` · ${esc(subjLabel(activeAsg.subject))}` : ''}</div>
         </div>
         <span class="kb-spacer"></span>
         <button class="kb-newbtn" id="kb-new" type="button">＋ 新しい課題</button>
       </div>
+      ${filterRow}
       <hr class="gb-rule">
       <div class="kb-seg" role="tablist">
         <button type="button" data-f="submitted" class="${filter === 'submitted' ? 'active' : ''}">未採点 ${cSubmitted}</button>
@@ -337,6 +358,13 @@
     wireClassSwitcher();
     const sel = document.getElementById('kb-asg');
     if (sel) sel.addEventListener('change', async () => { activeAsg = assignments.find(a => a.id === sel.value); filter = 'submitted'; await loadRows(); renderInbox(); });
+    const subj = document.getElementById('kb-subj');
+    if (subj) subj.addEventListener('change', async () => {
+      subjectFilter = subj.value;
+      const vis = subjectFilter ? assignments.filter(a => a.subject === subjectFilter) : assignments;
+      if (!vis.some(a => a.id === (activeAsg && activeAsg.id))) { activeAsg = vis[0] || null; filter = 'submitted'; await loadRows(); }
+      renderInbox();
+    });
     viewEl.querySelectorAll('.kb-seg button').forEach(b => b.addEventListener('click', () => { filter = b.dataset.f; renderInbox(); }));
     viewEl.querySelectorAll('.kb-card.clickable').forEach(c => c.addEventListener('click', () => openGrade(c.dataset.student)));
   }
@@ -387,6 +415,9 @@
         </div>
         <div class="kb-field-row" style="margin-bottom:18px;">
           <div><label for="kb-due">提出期限（任意）</label><input type="date" id="kb-due" value="${esc(create.due)}"></div>
+          <div><label for="kb-subject">教科（任意）</label><select id="kb-subject"><option value="">選択なし</option>${
+            GB.SUBJECTS.map(s => `<option value="${esc(s.key)}"${s.key === create.subject ? ' selected' : ''}>${esc(s.label)}</option>`).join('')
+          }</select></div>
           <div><label>配信するクラス</label><div class="kb-readonly">${esc(className)}</div></div>
         </div>
         <label style="display:block;font-size:11.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;">ワークシートの画像</label>
@@ -405,6 +436,7 @@
     document.getElementById('kb-title').addEventListener('input', e => { create.title = e.target.value; syncCreateBtn(); });
     document.getElementById('kb-instr').addEventListener('input', e => { create.instructions = e.target.value; });
     document.getElementById('kb-due').addEventListener('input', e => { create.due = e.target.value; });
+    document.getElementById('kb-subject').addEventListener('change', e => { create.subject = e.target.value; });
     document.getElementById('kb-attest').addEventListener('click', () => { create.attest = !create.attest; renderCreate(); });
     document.getElementById('kb-cancel').addEventListener('click', () => { resetCreate(); view = 'inbox'; renderInbox(); });
     document.getElementById('kb-create').addEventListener('click', submitCreate);
@@ -466,7 +498,8 @@
       // 1. assignment row
       const { data: asg, error: asgErr } = await sb.from('kadaiban_assignments').insert({
         class_id: classId, created_by: userId, title: create.title.trim(),
-        instructions: create.instructions.trim() || null, due_date: create.due || null, page_count: 1,
+        instructions: create.instructions.trim() || null, due_date: create.due || null,
+        subject: create.subject || null, page_count: 1,
       }).select('id').single();
       if (asgErr || !asg) throw asgErr || new Error('assignment insert failed');
 
@@ -494,7 +527,7 @@
     }
   }
 
-  function resetCreate() { create.title = ''; create.instructions = ''; create.due = ''; create.file = null; create.meta = null; create.attest = false; }
+  function resetCreate() { create.title = ''; create.instructions = ''; create.due = ''; create.subject = ''; create.file = null; create.meta = null; create.attest = false; }
 
   async function openGrade(studentId) {
     const r = rows.find(x => x.userId === studentId);
