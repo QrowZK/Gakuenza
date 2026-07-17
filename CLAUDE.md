@@ -84,7 +84,10 @@ gakuenza.com/modules/<key>/
    constraint on `modules`. The constraint currently allows exactly:
    `english`, `math`, `japanese`, `science`, `social`, `sougou`,
    `misc` — no others, no aliases (a 社会 module is `social`, not
-   `japanese` or `english`).
+   `japanese` or `english`). Include `publisher` (nullable free-text
+   textbook-series attribution, added #81) in the idempotent insert…
+   on-conflict-update alongside `key/name/subject/launch_url` so a new
+   module's catalog card carries its publisher badge from day one.
 
 ## Schema notes worth knowing before touching module-adjacent tables
 
