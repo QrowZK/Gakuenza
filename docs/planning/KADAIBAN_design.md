@@ -13,8 +13,8 @@ original spec has been checked against the live codebase and database — see
 
 **Phase 1 built (2026-07-17).** The four tables + table RLS + the
 `kadaiban_submissions` guard trigger + the catch-all `kadaiban` module
-(`supabase/migrations/20260717000000_kadaiban.sql`), the two private buckets +
-`storage.objects` policies (`20260717000100_kadaiban_storage.sql`), the forked
+(`supabase/migrations/20260717002543_kadaiban.sql`), the two private buckets +
+`storage.objects` policies (`20260717002655_kadaiban_storage.sql`), the forked
 canvas (`gakuenza.com/hub/kadaiban-draw.js`, `window.KadaibanCanvas`), the
 teacher surface (`hub/gradebook/kadaiban.html` + a 課題板 nav entry in
 `gradebook-common.js`), and the student surface (`hub/kadaiban.html`, plus a

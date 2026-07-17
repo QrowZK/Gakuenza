@@ -6,7 +6,7 @@
 -- confirmed 2026-07-16). This is genuinely new territory — the first Gakuenza
 -- feature to use file uploads + persisted freehand drawing. Storage buckets
 -- and their storage.objects policies live in the sibling migration
--- 20260717000100_kadaiban_storage.sql (buckets are an infra object, not a
+-- 20260717002655_kadaiban_storage.sql (buckets are an infra object, not a
 -- public-schema table).
 --
 -- Fully idempotent (create ... if not exists / drop policy if exists +
