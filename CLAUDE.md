@@ -138,6 +138,28 @@ gakuenza.com/modules/<key>/
   commit the matching `supabase/migrations/<ts>_<name>.sql` in the same
   PR. Never apply schema via `execute_sql`/dashboard — that bypasses the
   ledger and is how the untracked history accumulated.
+- **`profiles.is_platform_admin` must never be client-writable, and this is
+  enforced by column grants — do not undo it.** `is_platform_admin` is the
+  master key (full control of every school). A real, live P0 existed
+  (2026-07-17): `authenticated`/`anon` held **table-level** `UPDATE` on
+  `public.profiles`, and `profiles_update_admin` (an `UPDATE` policy with **no
+  `WITH CHECK`**) admits the caller's own `school_members` row, so a
+  coordinator/school_admin could `PATCH /rest/v1/profiles {"is_platform_admin":
+  true}` and take over every tenant. Fixed by revoking the table-level `UPDATE`
+  and re-granting `UPDATE` only on the safe columns (`id, home_school_id,
+  display_name, student_number, created_at, must_change_password`) —
+  `is_platform_admin` deliberately excluded (migrations
+  `20260717040743`, `20260717040949`). **Never `GRANT UPDATE ON public.profiles`
+  at the table level again** (it re-includes `is_platform_admin` and reopens the
+  hole — a column-level `REVOKE (is_platform_admin)` does NOT fix a table grant).
+  The flag is only ever set via migration / `service_role`, never the client.
+- **New tables re-inherit Supabase's default privileges — revoke the dangerous
+  ones.** `ALTER DEFAULT PRIVILEGES` re-grants `TRUNCATE` (and table-level
+  `UPDATE`/`DELETE`) to `anon`/`authenticated` on every freshly-created table.
+  `TRUNCATE` bypasses RLS. The 2026-07-15 hardening revoked it everywhere, but
+  the kadaiban tables (created later) re-inherited it and had to be re-revoked
+  (`20260717041107`). When a migration creates a table, `revoke truncate` (and
+  audit table-level `update`) from `anon, authenticated` as part of it.
 
 ## Copyright — "reference, don't reproduce"
 
