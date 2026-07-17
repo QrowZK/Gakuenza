@@ -6,8 +6,9 @@
 -- confirmed 2026-07-16). This is genuinely new territory — the first Gakuenza
 -- feature to use file uploads + persisted freehand drawing. Storage buckets
 -- and their storage.objects policies live in the sibling migration
--- 20260717000100_kadaiban_storage.sql (buckets are an infra object, not a
--- public-schema table).
+-- 20260717002655_kadaiban_storage.sql (buckets are an infra object, not a
+-- public-schema table). The teacher-only RLS below was later widened to
+-- teacher-OR-staff-of-school in 20260717011536_kadaiban_staff_access.sql (#70).
 --
 -- Fully idempotent (create ... if not exists / drop policy if exists +
 -- create / create or replace): safe to run twice with no duplicate rows.
