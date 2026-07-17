@@ -1,8 +1,19 @@
 # Module Roadmap — closing the grades 1–6 coverage gap
 
-_Scoping doc, 2026-07-16. Design/planning only — no code, no migrations.
+_Scoping doc, 2026-07-16. Design/planning only — no code, no migrations._
+
+> **Update 2026-07-17:** sansu1, sansu2, kokugo1, and kokugo2 (Priority tier A
+> item 1–2 and tier B items 4–5 below) all **shipped today** — see
+> `docs/specs/completed/`. Coverage matrix and gap table below updated
+> accordingly. Only kokugo4 and eigo5 remain from the original six-item gap
+> list. **Before either ships, build
+> `docs/specs/SPEC_decentralize_module_units.md` first** — the shared
+> `hub/module-units.js` registry has now corrupted twice under parallel
+> module PRs (see `../ROADMAP.md` Near-term debt #5); a third parallel batch
+> without that fix risks a third corruption.
+
 The top sketches below are written to be droppable into
-`docs/specs/pending/` later, matching the `docs/specs/completed/` format._
+`docs/specs/pending/` later, matching the `docs/specs/completed/` format.
 
 > **Detail layer.** This is the deep-dive for curriculum modules. The single
 > source of truth for roadmap priority/ordering is [`../ROADMAP.md`](../ROADMAP.md)
@@ -30,8 +41,8 @@ curriculum.
 
 | Subject (constraint value)        | G1 | G2 | G3 | G4 | G5 | G6 |
 |-----------------------------------|----|----|----|----|----|----|
-| 算数 math (`math`)                | ❌ | ❌ | ✅ sansu3 | ✅ sansu4 | ✅ sansu5 | ✅ sansu6 |
-| 国語 japanese (`japanese`)        | ❌ | ❌ | ✅ kokugo3 | ❌ | ✅ kokugo5 | ✅ kokugo6 |
+| 算数 math (`math`)                | ✅ sansu1 | ✅ sansu2 | ✅ sansu3 | ✅ sansu4 | ✅ sansu5 | ✅ sansu6 |
+| 国語 japanese (`japanese`)        | ✅ kokugo1 | ✅ kokugo2 | ✅ kokugo3 | ❌ | ✅ kokugo5 | ✅ kokugo6 |
 | 理科 science (`science`)          | — | — | ✅ rika3 | ✅ rika4 | ✅ rika5 | ✅ rika6 |
 | 社会 social (`social`)            | — | — | ✅ shakai3 | ✅ shakai4 | ✅ shakai5 | ✅ shakai6 |
 | 外国語 english (`english`)        | — | — | ✅ letstry1* | ✅ letstry2* | ❌ | ✅ nh6 |
@@ -59,19 +70,15 @@ sit at the bottom of the priority list.
 
 | # | Missing module | Subject | Grade | Fills |
 |---|----------------|---------|-------|-------|
-| 1 | **sansu1** | math | 1 | grade-1 math (grade 1 currently has ZERO modules) |
-| 2 | **sansu2** | math | 2 | grade-2 math (grade 2 currently has ZERO modules) |
+| 1 | ~~sansu1~~ ✅ shipped 2026-07-17 | math | 1 | grade-1 math |
+| 2 | ~~sansu2~~ ✅ shipped 2026-07-17 | math | 2 | grade-2 math |
 | 3 | **kokugo4** | japanese | 4 | hole in the middle of the built japanese line |
-| 4 | **kokugo1** | japanese | 1 | grade-1 japanese |
-| 5 | **kokugo2** | japanese | 2 | grade-2 japanese |
+| 4 | ~~kokugo1~~ ✅ shipped 2026-07-17 | japanese | 1 | grade-1 japanese |
+| 5 | ~~kokugo2~~ ✅ shipped 2026-07-17 | japanese | 2 | grade-2 japanese |
 | 6 | **eigo5 / nh5** | english | 5 | only remaining 外国語 grade gap |
 
-Everything else (理科 3–6, 社会 3–6) is **complete**.
-
-**The single most important structural fact:** grades 1 and 2 currently have
-**no modules at all in any subject** (science/social don't start until grade
-3). A grade-1 or grade-2 class logging into the hub today sees an empty
-shelf. That, plus the kokugo4 hole, drives the priority order below.
+Everything else (理科 3–6, 社会 3–6) is **complete**. **kokugo4** and
+**eigo5** are the only two items left in the core grid.
 
 ---
 
@@ -79,7 +86,7 @@ shelf. That, plus the kokugo4 hole, drives the priority order below.
 
 ### Priority tier A — build first (pilot breadth, low risk, fast)
 
-1. **sansu1 (算数 1年)** and **2. sansu2 (算数 2年)**
+1. **sansu1 (算数 1年)** and **2. sansu2 (算数 2年)** — ✅ shipped 2026-07-17
    - _Why first:_ grades 1–2 have zero coverage; math is the most
      proceduralizable, copyright-safe, and battle-tested generator family in
      the repo (sansu3–6 share one architecture). Highest ROI per hour.
@@ -91,17 +98,20 @@ shelf. That, plus the kokugo4 hole, drives the priority order below.
      highest-value, most drillable objects in the entire elementary
      curriculum. Reason enough to prioritize sansu2 even alone.
 
-3. **kokugo4 (国語 4年) — kanji + grammar only**
+3. **kokugo4 (国語 4年) — kanji + grammar only** — next up (see spec §3.3)
    - _Why:_ fills the conspicuous hole between kokugo3 and kokugo5/6, and the
      safe half (grade-4 kanji list is a closed MEXT set; grammar is closed
      rule systems) is exactly the kokugo5/6 pattern already shipped twice.
      Reading-comprehension units deferred, same as kokugo5/6.
    - _Risk:_ low for the kanji+grammar scope; the deferred reading units are
-     where the copyright care lives (see §4).
+     where the copyright care lives (see §4). **Build order note:** land
+     `SPEC_decentralize_module_units.md` before this if eigo5 is being built
+     in parallel — see the 2026-07-17 update note at the top of this doc.
 
 ### Priority tier B — completes lines, moderate effort
 
 4. **kokugo1 (国語 1年)** and **5. kokugo2 (国語 2年) — kanji + kana + grammar**
+   — ✅ shipped 2026-07-17
    - _Why after tier A:_ completes the japanese line for the youngest grades
      and pairs with sansu1/sansu2 to give grades 1–2 a real two-subject shelf.
    - _Risk / extra design:_ grade 1 is an early-literacy grade — the drill is
@@ -113,7 +123,7 @@ shelf. That, plus the kokugo4 hole, drives the priority order below.
 
 ### Priority tier C — completes english line, higher effort
 
-6. **eigo5 / nh5 (外国語 5年)**
+6. **eigo5 / nh5 (外国語 5年)** — next up alongside kokugo4
    - _Why last of the core set:_ the only remaining English grade gap, but
      English modules are the "ported app" family (nh6, nhvocab, eiken,
      letstry1/2) — heavier to stand up than a native generator, and grade-5
