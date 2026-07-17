@@ -163,6 +163,24 @@ gakuenza.com/modules/<key>/
   the kadaiban tables (created later) re-inherited it and had to be re-revoked
   (`20260717041107`). When a migration creates a table, `revoke truncate` (and
   audit table-level `update`) from `anon, authenticated` as part of it.
+- **Recent schema additions (2026-07-17) — know these exist:**
+  - **Kadaiban (課題板)** added a whole DB surface: four tables
+    (`kadaiban_assignments`, `kadaiban_assignment_pages`, `kadaiban_submissions`,
+    `kadaiban_submission_pages`) with `taught-OR-staff-of-school` RLS (widened
+    from teacher-only in `20260717011536` — see #70), a `kadaiban_submissions`
+    guard trigger, **two private Supabase Storage buckets**
+    (`kadaiban-sources`, `kadaiban-submissions` — the project's *first* Storage
+    use) with `storage.objects` path-segment policies, and a catch-all
+    `kadaiban` module row (`subject='misc'`, `is_active=false`) that anchors
+    graded submissions in `activity_results`. Full design:
+    `docs/planning/KADAIBAN_design.md`.
+  - **`kadaiban_assignments.subject`** (nullable, CHECK mirrors
+    `modules_subject_check`) — optional subject tag for the assignment picker (#82).
+  - **`modules.publisher`** (nullable free-text) — textbook-series attribution,
+    backfilled for existing modules and shown on catalog cards (#81); include it
+    in registration migrations (hard rule 5).
+  - **Catalog grew to full grades 1–6 for 算数/国語:** `sansu1/2` + `kokugo1/2`
+    registered live 2026-07-17, so grades 1–2 are no longer an empty hub.
 
 ## Copyright — "reference, don't reproduce"
 
@@ -204,11 +222,12 @@ search.
   copied tokens in sync with root `style.css`.
 - (Resolved 2026-07-15) `rika4` was built + deployed but unregistered
   in the live `modules` table; `db/2026-07-15_register_rika4_module.sql`
-  had never been applied. Registered during this review — the live
-  catalog now has 13 modules matching the 13 directories. Left here as
+  had never been applied. Registered during this review. Left here as
   the canonical example of the `db/`-is-a-mirror hazard: a fresh module
   is not live in the hub until its registration row exists in the DB,
-  regardless of whether its migration file is committed.
+  regardless of whether its migration file is committed. **(The old "13
+  modules" count is historical — the catalog has since grown well past it;
+  always verify against the live `modules` table, not a note in this file.)**
 - (Resolved 2026-07-15) `shakai3` had `subject = 'english'`; corrected
   to `'social'` (mirror: `db/2026-07-15_fix_shakai3_subject.sql`).
 
