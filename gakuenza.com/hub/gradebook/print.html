@@ -19,9 +19,17 @@
     </div>
     <hr class="gb-rule">
     <div class="gb-two-col" style="grid-template-columns:1fr 1.1fr;align-items:start;">
-      <div class="gb-grid">
+      <div class="gb-grid gb-no-print">
         <div class="gb-card">
-          <h2 class="gb-card-head">1. だれ向け？</h2>
+          <h2 class="gb-card-head">1. 教科</h2>
+          <div class="gb-pills" id="gb-subject">
+            <button class="gb-pill active" data-s="math" type="button">さんすう③</button>
+            <button class="gb-pill" data-s="kokugo" type="button">こくご③</button>
+          </div>
+        </div>
+
+        <div class="gb-card">
+          <h2 class="gb-card-head">2. だれ向け？</h2>
           <div class="gb-pills" id="gb-target">
             <button class="gb-pill active" data-t="individual" type="button">個別（1名）</button>
             <button class="gb-pill" data-t="group" type="button">グループ</button>
@@ -33,18 +41,14 @@
         </div>
 
         <div class="gb-card">
-          <h2 class="gb-card-head">2. 出題の重み <span class="gb-badge gb-badge-gold">弱点から自動提案</span></h2>
+          <h2 class="gb-card-head">3. 出題の重み <span class="gb-badge gb-badge-gold">弱点から自動提案</span></h2>
           <div id="gb-weights"><div class="gb-skel" style="height:120px;"></div></div>
           <p class="gb-section-note" style="margin-top:8px;">activity_result_items の設問単位の正答から、弱い順に初期値を設定。スライダーで調整できます。</p>
         </div>
 
         <div class="gb-card">
-          <h2 class="gb-card-head">3. 形式</h2>
-          <div class="gb-pills" id="gb-format">
-            <button class="gb-pill active" data-f="20" type="button">計算 20問</button>
-            <button class="gb-pill" data-f="40" type="button">計算 40問</button>
-            <button class="gb-pill" data-f="mix" type="button">文章題まぜ</button>
-          </div>
+          <h2 class="gb-card-head">4. 形式</h2>
+          <div class="gb-pills" id="gb-format"></div>
           <label class="gb-switch" style="margin-top:12px;">
             <input type="checkbox" id="gb-answers"> 答え付きの先生用も出力
           </label>
@@ -67,6 +71,12 @@
 <script src="../hub-common.js"></script>
 <script src="../admin/admin-common.js"></script>
 <script src="gradebook-common.js"></script>
+<!-- こくご③ の既存生成エンジンをそのまま再利用（新規の問題内容は書き起こさない）。
+     kanji-data.js は KANJI3 を、kanji-generator.js は generateKanjiQuiz 等を、
+     grammar-generators.js は window.generateGrammarQuiz / window.GRAMMAR_UNITS を公開する。 -->
+<script src="../../modules/kokugo3/kanji-data.js"></script>
+<script src="../../modules/kokugo3/kanji-generator.js"></script>
+<script src="../../modules/kokugo3/grammar-generators.js"></script>
 <script>
 (async function () {
   const GB = window.Gradebook;
@@ -105,23 +115,51 @@
   document.getElementById('gb-student').innerHTML =
     roster.map(r => `<option value="${esc(r.id)}"${r.id === preStudent ? ' selected' : ''}>${esc(r.number)}. ${esc(r.name)}</option>`).join('');
 
+  let subject = 'math';
   let target = 'individual';
   let format = '20';
   let weights = []; // [{cat, type, pct, weight}]
 
-  // ── weakness → auto weights (math items) ──────────────────────────────
+  // ── subject config ────────────────────────────────────────────────────
+  // Each subject maps to (a) the modules.subject value its activity_results
+  // live under, (b) a sensible default weakness set for the no-data case,
+  // and (c) a category → generator-type mapper. catType returning null means
+  // "we can't produce a printable drill for this category" — such rows are
+  // dropped before weighting (e.g. こくご③'s 読み reading-comprehension items,
+  // which aren't a procedurally-generatable worksheet).
+  const SUBJECTS = {
+    math: {
+      moduleSubject: 'math',
+      defaultCats: [
+        { cat: 'わり算の筆算', pct: 60 }, { cat: '文章題', pct: 70 },
+        { cat: 'かけ算', pct: 82 }, { cat: '図形', pct: 88 },
+      ],
+      catType: mathCatType,
+    },
+    kokugo: {
+      moduleSubject: 'japanese',
+      defaultCats: [
+        { cat: '漢字：読み方', pct: 62 }, { cat: 'ことば：こそあど言葉', pct: 70 },
+        { cat: '漢字：画数', pct: 80 }, { cat: 'ことば：修飾語', pct: 86 },
+      ],
+      catType: kokugoCatType,
+    },
+  };
+
+  // ── weakness → auto weights ───────────────────────────────────────────
   async function computeWeights() {
-    let q = sb.from('activity_results')
+    const S = SUBJECTS[subject];
+    const { data: results } = await sb.from('activity_results')
       .select('user_id, modules(subject), activity_result_items(category, correct)')
       .eq('class_id', classId);
-    const { data: results } = await q;
     const studentId = document.getElementById('gb-student').value;
     const byCat = {};
     for (const r of (results || [])) {
-      if (r.modules?.subject !== 'math') continue;
+      if (r.modules?.subject !== S.moduleSubject) continue;
       if (target === 'individual' && r.user_id !== studentId) continue;
       for (const it of (r.activity_result_items || [])) {
         if (!it.category) continue;
+        if (!S.catType(it.category)) continue; // skip categories we can't generate a drill for
         (byCat[it.category] ||= { c: 0, t: 0 });
         byCat[it.category].t++; if (it.correct) byCat[it.category].c++;
       }
@@ -129,7 +167,7 @@
     let cats = Object.entries(byCat).map(([cat, d]) => ({ cat, pct: GB.pct(d.c, d.t) }));
     if (!cats.length) {
       // sensible default set when there's no data yet
-      cats = [{ cat: 'わり算の筆算', pct: 60 }, { cat: '文章題', pct: 70 }, { cat: 'かけ算', pct: 82 }, { cat: '図形', pct: 88 }];
+      cats = S.defaultCats.slice();
     }
     cats.sort((a, b) => a.pct - b.pct);
     cats = cats.slice(0, 4);
@@ -137,14 +175,14 @@
     const raw = cats.map(c => Math.max(1, 100 - c.pct));
     const sum = raw.reduce((a, b) => a + b, 0);
     weights = cats.map((c, i) => ({
-      cat: c.cat, type: catType(c.cat), pct: c.pct,
+      cat: c.cat, type: S.catType(c.cat), pct: c.pct,
       weight: Math.round((raw[i] / sum) * 100),
     }));
     renderWeights();
     renderPreview();
   }
 
-  function catType(name) {
+  function mathCatType(name) {
     if (/かけ|乗/.test(name)) return 'mul';
     if (/わり|除/.test(name)) return 'div';
     if (/たし|加/.test(name)) return 'add';
@@ -152,6 +190,19 @@
     if (/文章/.test(name)) return 'word';
     if (/図形|角/.test(name)) return 'shape';
     return 'div';
+  }
+
+  // こくご③ categories → generator descriptors. Unmapped categories (e.g.
+  // 読み reading comprehension) return null and are dropped from weighting.
+  function kokugoCatType(name) {
+    if (/読み方/.test(name)) return 'k_reading';
+    if (/漢字えらび/.test(name)) return 'k_select';
+    if (/画数/.test(name)) return 'k_strokes';
+    if (/こそあど/.test(name)) return 'g_kosoado';
+    if (/修飾/.test(name)) return 'g_shuushoku';
+    if (/ことわざ|故事/.test(name)) return 'g_kotowaza';
+    if (/ローマ字/.test(name)) return 'g_romaji';
+    return null;
   }
 
   function renderWeights() {
@@ -187,7 +238,81 @@
     return { q: `${total}このあめを ${groups}人で同じ数ずつ分けます。1人分は何こになりますか。`, a: `${per}こ` };
   }
 
+  // こくご③: delegate to the module's own already-vetted generators. Kanji
+  // functions (genReadingQuestion 等) are global from kanji-generator.js and
+  // take the global KANJI3 array; grammar goes through window.generateGrammarQuiz.
+  // Each returns { prompt, options[], correctAnswer, category }.
+  function genKokugo(type) {
+    switch (type) {
+      case 'k_reading': return genReadingQuestion(KANJI3);
+      case 'k_select': return genKanjiSelectQuestion(KANJI3);
+      case 'k_strokes': return genStrokeCountQuestion(KANJI3);
+      case 'g_kosoado': return (window.generateGrammarQuiz('kosoado', 1) || [])[0] || null;
+      case 'g_shuushoku': return (window.generateGrammarQuiz('shuushoku', 1) || [])[0] || null;
+      case 'g_kotowaza': return (window.generateGrammarQuiz('kotowaza', 1) || [])[0] || null;
+      case 'g_romaji': return (window.generateGrammarQuiz('romaji', 1) || [])[0] || null;
+      default: return genReadingQuestion(KANJI3);
+    }
+  }
+
+  function currentStudentName() {
+    return target === 'individual'
+      ? (roster.find(r => r.id === document.getElementById('gb-student').value)?.name || '')
+      : target === 'class' ? '' : 'グループ';
+  }
+
   function renderPreview() {
+    return subject === 'kokugo' ? renderKokugoPreview() : renderMathPreview();
+  }
+
+  function renderKokugoPreview() {
+    const showAns = document.getElementById('gb-answers').checked;
+    const N = format === 'k20' ? 20 : 10;
+
+    // distribute questions across weighted, generatable categories
+    const wq = weights.filter(w => w.weight > 0 && w.type);
+    const wsum = wq.reduce((a, w) => a + w.weight, 0) || 1;
+    const qs = [];
+    wq.forEach(w => {
+      const count = Math.round((w.weight / wsum) * N);
+      for (let i = 0; i < count; i++) { const q = genKokugo(w.type); if (q) qs.push(q); }
+    });
+    const fallbackType = (wq[0] || { type: 'k_reading' }).type;
+    let guard = 0;
+    while (qs.length < N && guard++ < N * 5) { const q = genKokugo(fallbackType); if (q) qs.push(q); }
+    qs.length = Math.min(qs.length, N);
+
+    const letters = 'アイウエオ';
+    const items = qs.map((q, i) => {
+      const opts = (q.options || []).map((o, j) =>
+        `<span class="gb-ws-opt">${letters[j] || (j + 1)}．${esc(String(o))}</span>`).join('');
+      const promptHtml = esc(q.prompt).replace(/\n/g, '<br>');
+      let ans = '';
+      if (showAns) {
+        const ci = (q.options || []).findIndex(o => String(o) === String(q.correctAnswer));
+        const cl = ci >= 0 ? (letters[ci] || String(ci + 1)) : '';
+        ans = `<div class="gb-ws-ans">こたえ：<b>${esc(cl)}．${esc(String(q.correctAnswer))}</b></div>`;
+      }
+      return `<li class="gb-ws-q"><div class="gb-ws-qprompt">${circledNum(i + 1)}　${promptHtml}</div>` +
+        `<div class="gb-ws-qopts">${opts}</div>${ans}</li>`;
+    }).join('');
+
+    const topCat = weights[0]?.cat || '漢字';
+    const footWeights = weights.filter(w => w.weight > 0)
+      .map(w => `${esc(w.cat)}${w.weight}%`).join(' · ');
+
+    document.getElementById('gb-preview').innerHTML = `
+      <div class="gb-worksheet">
+        <div class="gb-worksheet-title">
+          <span>${esc(topCat)} ふくしゅうプリント</span>
+          <span class="gb-worksheet-meta">${esc(classObj?.name || '')}　名前（${esc(currentStudentName())}）</span>
+        </div>
+        <ol class="gb-ws-qlist">${items}</ol>
+        <div class="gb-ws-foot">${esc(footWeights)} で出題</div>
+      </div>`;
+  }
+
+  function renderMathPreview() {
     const showAns = document.getElementById('gb-answers').checked;
     const N = format === '40' ? 40 : format === 'mix' ? 12 : 20;
     const includeWord = format === 'mix' || weights.some(w => w.type === 'word' && w.weight > 0);
@@ -232,18 +357,44 @@
   }
 
   // ── wiring ────────────────────────────────────────────────────────────
+  // Format options depend on subject; re-rendered (and re-wired) on switch.
+  const FORMAT_PILLS = {
+    math: [
+      { f: '20', label: '計算 20問' },
+      { f: '40', label: '計算 40問' },
+      { f: 'mix', label: '文章題まぜ' },
+    ],
+    kokugo: [
+      { f: 'k10', label: '10問' },
+      { f: 'k20', label: '20問' },
+    ],
+  };
+  function renderFormatPills() {
+    const pills = FORMAT_PILLS[subject];
+    format = pills[0].f;
+    document.getElementById('gb-format').innerHTML = pills.map((p, i) =>
+      `<button class="gb-pill${i === 0 ? ' active' : ''}" data-f="${p.f}" type="button">${p.label}</button>`).join('');
+    document.querySelectorAll('#gb-format .gb-pill').forEach(p => p.addEventListener('click', () => {
+      document.querySelectorAll('#gb-format .gb-pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      format = p.dataset.f;
+      renderPreview();
+    }));
+  }
+
+  document.querySelectorAll('#gb-subject .gb-pill').forEach(p => p.addEventListener('click', () => {
+    document.querySelectorAll('#gb-subject .gb-pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    subject = p.dataset.s;
+    renderFormatPills();
+    computeWeights();
+  }));
   document.querySelectorAll('#gb-target .gb-pill').forEach(p => p.addEventListener('click', () => {
     document.querySelectorAll('#gb-target .gb-pill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
     target = p.dataset.t;
     document.getElementById('gb-studentwrap').style.display = target === 'individual' ? 'block' : 'none';
     computeWeights();
-  }));
-  document.querySelectorAll('#gb-format .gb-pill').forEach(p => p.addEventListener('click', () => {
-    document.querySelectorAll('#gb-format .gb-pill').forEach(x => x.classList.remove('active'));
-    p.classList.add('active');
-    format = p.dataset.f;
-    renderPreview();
   }));
   document.getElementById('gb-student').addEventListener('change', computeWeights);
   document.getElementById('gb-answers').addEventListener('change', renderPreview);
@@ -252,6 +403,7 @@
     setTimeout(() => window.print(), 60);
   });
 
+  renderFormatPills();
   computeWeights();
 })();
 </script>
