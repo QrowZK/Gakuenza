@@ -39,6 +39,18 @@
       { key: 'u16', label: '16. 三角形' },
       { key: 'u17', label: '17. 3年のまとめ' },
     ],
+    // kokugo2 unit keys == the literal 'kanji' (the kanji drill) + each key of
+    // GRAMMAR_UNITS in modules/kokugo2/grammar-generators.js. (Kanji + kana/
+    // orthography/grammar only — Mitsumura reading units are deferred, so no
+    // reading keys here; see its build spec.)
+    kokugo2: [
+      { key: 'kanji', label: '漢字れんしゅう' },
+      { key: 'katakana', label: 'ことば：カタカナ' },
+      { key: 'kanazukai', label: 'ことば：かなづかい' },
+      { key: 'shugo_jutsugo', label: 'ことば：主語と述語' },
+      { key: 'nakama', label: 'ことば：なかま・反対の言葉' },
+      { key: 'kutouten', label: 'ことば：丸・点・かぎ' },
+    ],
     kokugo3: [
       { key: 'kanji', label: '漢字れんしゅう' },
       { key: 'haru', label: '読解：春風をたどって' },
