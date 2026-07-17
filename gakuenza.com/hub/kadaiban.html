@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手書きプリント — がくえん座</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="hub-shell.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Kadaiban student surfaces. Tokens come from style.css; hub-shell.css owns
+     the page frame. These are the worksheet-card + full-screen draw surface
+     the hub home doesn't otherwise have. All hairlines use var(--mist). */
+  .kb-worklist { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+  .kb-wcard { background:var(--paper); border:1px solid var(--mist); border-radius:10px; overflow:hidden; cursor:pointer; transition:transform .14s, box-shadow .14s; }
+  .kb-wcard:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(28,37,48,.1); }
+  @media (prefers-reduced-motion: reduce) { .kb-wcard { transition:none; } .kb-wcard:hover { transform:none; } }
+  .kb-wthumb { height:130px; background:var(--paper-dim); border-bottom:1px solid var(--mist); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+  .kb-wthumb img { width:100%; height:100%; object-fit:cover; object-position:top center; opacity:.96; }
+  .kb-wpill { position:absolute; top:8px; left:8px; font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:999px; }
+  .kb-wbody { padding:16px 16px 18px; }
+  .kb-wcat { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .kb-wdot { width:10px; height:10px; border-radius:50%; background:var(--moss); flex:0 0 auto; }
+  .kb-wcat span { font-size:11.5px; font-weight:600; color:var(--ink-soft); }
+  .kb-wtitle { font-family:'Zen Maru Gothic',sans-serif; font-weight:700; font-size:15px; color:var(--ink); margin-bottom:4px; }
+  .kb-winstr { font-size:12px; color:var(--ink-soft); margin-bottom:14px; min-height:1.2em; }
+  .kb-wfoot { display:flex; align-items:center; justify-content:space-between; }
+  .kb-wdue { font-size:11.5px; color:var(--clay); font-weight:700; white-space:nowrap; }
+  .kb-wcta { background:var(--moss); color:#fff; border-radius:999px; padding:7px 16px; font-size:12.5px; font-weight:700; }
+
+  /* full-screen overlay (draw / done / view) */
+  .kb-overlay { position:fixed; inset:0; z-index:70; display:none; }
+  .kb-overlay.show { display:block; }
+
+  /* draw surface */
+  .kb-draw { display:flex; flex-direction:column; height:100vh; background:#3a4453; }
+  .kb-topbar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--ink); color:var(--paper); flex:0 0 auto; }
+  .kb-topback { background:rgba(247,243,234,.14); color:var(--paper); border:none; border-radius:7px; padding:8px 14px; font-size:12.5px; font-weight:600; white-space:nowrap; flex:0 0 auto; }
+  .kb-topmeta { min-width:0; }
+  .kb-toptitle { font-family:'Zen Maru Gothic',sans-serif; font-weight:700; font-size:14px; }
+  .kb-topinstr { font-size:11px; opacity:.7; }
+  .kb-spacer { flex:1; }
+  .kb-save { font-size:11.5px; opacity:.75; display:flex; align-items:center; gap:6px; }
+  .kb-save .dot { width:7px; height:7px; border-radius:50%; background:var(--gold); }
+  .kb-stage { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; overflow:auto; padding:18px; }
+  .kb-page { position:relative; height:100%; max-height:760px; max-width:92vw; box-shadow:0 8px 30px rgba(0,0,0,.34); border-radius:4px; overflow:hidden; background:#fff; }
+  .kb-page canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .kb-page canvas.ink { touch-action:none; cursor:crosshair; }
+  .kb-toolbar { flex:0 0 auto; background:var(--paper); border-top:1px solid var(--mist); padding:12px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center; }
+  .kb-toolgroup { display:inline-flex; gap:6px; align-items:center; background:var(--paper-dim); border:1px solid var(--mist); border-radius:10px; padding:6px; }
+  .kb-tool { background:transparent; color:var(--ink-soft); border:none; border-radius:7px; padding:8px 13px; font-size:12.5px; font-weight:700; white-space:nowrap; }
+  .kb-tool.active { background:var(--moss); color:#fff; }
+  .kb-p2tag { font-size:9.5px; color:var(--moss-deep); font-weight:700; align-self:center; padding:0 2px; white-space:nowrap; }
+  .kb-swatch { width:24px; height:24px; border-radius:50%; border:2px solid rgba(0,0,0,.12); cursor:pointer; padding:0; }
+  .kb-swatch.active { border:3px solid var(--ink); }
+  .kb-undo { background:var(--paper); border:1px solid var(--mist); border-radius:8px; padding:9px 14px; font-size:12.5px; font-weight:600; }
+  .kb-clear { background:var(--paper); border:1px solid var(--mist); border-radius:8px; padding:9px 14px; font-size:12.5px; font-weight:600; color:var(--clay); }
+  .kb-submit { border:none; border-radius:9px; padding:11px 24px; font-size:13.5px; font-weight:700; background:var(--moss); color:#fff; }
+  .kb-submit:disabled { background:var(--mist); color:#9a958a; cursor:not-allowed; }
+
+  /* done / view centered card */
+  .kb-center { min-height:100vh; background:var(--paper-dim); display:flex; align-items:center; justify-content:center; padding:24px; }
+  .kb-donecard { max-width:440px; text-align:center; background:var(--paper); border:1px solid var(--mist); border-radius:16px; padding:40px 34px; box-shadow:var(--shadow-card); }
+  .kb-badge { width:72px; height:72px; border-radius:50%; background:var(--moss-tint); color:var(--moss-deep); display:flex; align-items:center; justify-content:center; font-size:36px; margin:0 auto 18px; }
+  .kb-donecard h1 { font-family:'Zen Maru Gothic',sans-serif; font-size:22px; margin:0 0 8px; color:var(--ink); }
+  .kb-donecard p { font-size:13.5px; color:var(--ink-soft); line-height:1.6; margin:0 0 24px; }
+  .kb-donebtn { background:var(--moss); color:#fff; border:none; border-radius:8px; padding:12px 26px; font-weight:700; font-size:13.5px; }
+  .kb-viewimg { max-width:100%; max-height:70vh; border:1px solid var(--mist); border-radius:6px; box-shadow:var(--shadow-card); background:#fff; margin-bottom:20px; }
+</style>
+</head>
+<body>
+
+<div class="page-frame" id="kb-frame">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+  <main class="main">
+    <div class="hub-section">
+      <h1 class="greeting-title" id="greeting">…</h1>
+      <p class="greeting-date" id="greeting-date"></p>
+    </div>
+    <div>
+      <div class="section-header"><h2 class="section-title">手書きプリント</h2></div>
+      <div id="kb-worklist"><p class="calm-msg">読み込み中…</p></div>
+    </div>
+  </main>
+</div>
+
+<div class="kb-overlay" id="kb-overlay"></div>
+
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="hub-common.js"></script>
+<script src="kadaiban-draw.js"></script>
+<script>
+(async function () {
+  const H = window.HubCommon;
+  const esc = H.escapeHtml;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const SOURCES = 'kadaiban-sources';
+  const SUBMISSIONS = 'kadaiban-submissions';
+  const SIGNED_TTL = 60 * 60;
+
+  const session = await H.requireSession(sb);
+  if (!session) return;
+  const userId = session.user.id;
+
+  const { given } = await H.renderSidebar(sb, userId, 'home');
+  document.getElementById('greeting').textContent = given ? `${given}さん、おかえりなさい` : 'おかえりなさい';
+  document.getElementById('greeting-date').textContent = H.formatGreetingDate(new Date());
+
+  const frame = document.getElementById('kb-frame');
+  const overlay = document.getElementById('kb-overlay');
+
+  // ── helpers ─────────────────────────────────────────────────────────────
+  const STATUS = {
+    not_started: { label: '未着手',   color: '#8a8f98',        bg: '#efe9db' },
+    in_progress: { label: '下書き中', color: '#8a6d1f',        bg: 'rgba(201,162,75,.16)' },
+    submitted:   { label: '提出ずみ', color: 'var(--clay)',     bg: 'rgba(181,87,46,.12)' },
+    graded:      { label: '採点ずみ', color: 'var(--moss-deep)', bg: 'var(--moss-tint)' },
+  };
+  function fmtDue(d) { if (!d) return '期限なし'; const x = new Date(d + 'T00:00:00'); return `${x.getMonth() + 1}月${x.getDate()}日まで`; }
+  async function signedUrl(bucket, path) {
+    if (!path) return null;
+    const { data } = await sb.storage.from(bucket).createSignedUrl(path, SIGNED_TTL);
+    return data ? data.signedUrl : null;
+  }
+  function showOverlay(html) { overlay.innerHTML = html; overlay.classList.add('show'); frame.style.display = 'none'; }
+  function hideOverlay() { overlay.classList.remove('show'); overlay.innerHTML = ''; frame.style.display = 'flex'; }
+
+  // ── data ────────────────────────────────────────────────────────────────
+  const { data: enrollmentRows } = await sb
+    .from('enrollments').select('class_id').eq('user_id', userId).eq('role', 'student');
+  const classIds = (enrollmentRows || []).map(r => r.class_id);
+
+  let items = []; // { assignment, page(source_image_path), sourceUrl, sub, status }
+  async function loadItems() {
+    items = [];
+    if (!classIds.length) return;
+    const { data: asgs } = await sb.from('kadaiban_assignments')
+      .select('id, title, instructions, due_date, page_count, class_id')
+      .in('class_id', classIds).order('due_date', { ascending: true, nullsFirst: false });
+    if (!asgs || !asgs.length) return;
+
+    const asgIds = asgs.map(a => a.id);
+    const [{ data: pages }, { data: subs }] = await Promise.all([
+      sb.from('kadaiban_assignment_pages').select('assignment_id, source_image_path').in('assignment_id', asgIds).eq('page_number', 1),
+      sb.from('kadaiban_submissions').select('id, assignment_id, status, score, max_score').eq('student_id', userId).in('assignment_id', asgIds),
+    ]);
+    const pageBy = {}; (pages || []).forEach(p => { pageBy[p.assignment_id] = p.source_image_path; });
+    const subBy = {}; (subs || []).forEach(s => { subBy[s.assignment_id] = s; });
+
+    // sign the source thumbnails in one batch
+    const paths = asgs.map(a => pageBy[a.id]).filter(Boolean);
+    const urlBy = {};
+    if (paths.length) {
+      const { data: signed } = await sb.storage.from(SOURCES).createSignedUrls(paths, SIGNED_TTL);
+      (signed || []).forEach(s => { if (s.path && s.signedUrl) urlBy[s.path] = s.signedUrl; });
+    }
+    items = asgs.map(a => {
+      const sub = subBy[a.id] || null;
+      return {
+        assignment: a,
+        sourcePath: pageBy[a.id] || null,
+        sourceUrl: pageBy[a.id] ? urlBy[pageBy[a.id]] || null : null,
+        sub, status: sub ? sub.status : 'not_started',
+      };
+    });
+  }
+
+  function ctaLabel(status) {
+    return (status === 'submitted' || status === 'graded') ? '提出ずみ（見る）'
+      : status === 'in_progress' ? 'つづきを書く' : 'はじめる';
+  }
+
+  function renderHome() {
+    hideOverlay();
+    const el = document.getElementById('kb-worklist');
+    if (!classIds.length) { el.innerHTML = `<p class="calm-msg">クラスに登録されていません。</p>`; return; }
+    if (!items.length) { el.innerHTML = `<p class="calm-msg">いまは手書きのプリントはありません。</p>`; return; }
+    el.innerHTML = `<div class="kb-worklist">${items.map((it, i) => {
+      const m = STATUS[it.status]; const a = it.assignment;
+      return `
+        <div class="kb-wcard" data-idx="${i}">
+          <div class="kb-wthumb">
+            ${it.sourceUrl ? `<img src="${esc(it.sourceUrl)}" alt="プリント">` : ''}
+            <span class="kb-wpill" style="background:${m.bg};color:${m.color};">${m.label}</span>
+          </div>
+          <div class="kb-wbody">
+            <div class="kb-wcat"><span class="kb-wdot"></span><span>手書きプリント</span></div>
+            <div class="kb-wtitle">${esc(a.title)}</div>
+            <div class="kb-winstr">${esc(a.instructions || '')}</div>
+            <div class="kb-wfoot">
+              <span class="kb-wdue">${esc(fmtDue(a.due_date))}</span>
+              <span class="kb-wcta">${ctaLabel(it.status)}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('')}</div>`;
+    el.querySelectorAll('.kb-wcard').forEach(c => c.addEventListener('click', () => openItem(items[+c.dataset.idx])));
+  }
+
+  // ── open an item: submitted → view; else → draw ──────────────────────────
+  async function openItem(it) {
+    if (it.status === 'submitted' || it.status === 'graded') return openView(it);
+    return openDraw(it);
+  }
+
+  // ── read-only view of a submitted worksheet ──────────────────────────────
+  async function openView(it) {
+    showOverlay(`<div class="kb-center"><div class="kb-donecard"><p class="calm-msg">読み込み中…</p></div></div>`);
+    let url = null;
+    if (it.sub) {
+      const { data: pg } = await sb.from('kadaiban_submission_pages')
+        .select('rendered_image_path').eq('submission_id', it.sub.id).eq('page_number', 1).maybeSingle();
+      if (pg) url = await signedUrl(SUBMISSIONS, pg.rendered_image_path);
+    }
+    const graded = it.status === 'graded';
+    const scoreLine = graded && it.sub && it.sub.score != null
+      ? `<p style="font-size:15px;color:var(--ink);font-weight:700;margin:0 0 20px;">先生の○つけ： ${it.sub.score} / ${it.sub.max_score}</p>` : '';
+    showOverlay(`
+      <div class="kb-center"><div class="kb-donecard">
+        <div class="kb-badge">${graded ? '💮' : '✓'}</div>
+        <h1>${graded ? '○つけがおわりました' : 'ていしゅつできました！'}</h1>
+        ${url ? `<img class="kb-viewimg" src="${esc(url)}" alt="提出した解答">` : ''}
+        ${scoreLine}
+        <p>${graded ? '先生が見て、○つけをしてくれました。' : '先生が見て、○つけをしてくれます。'}</p>
+        <button class="kb-donebtn" id="kb-home" type="button">ホームにもどる</button>
+      </div></div>`);
+    document.getElementById('kb-home').addEventListener('click', renderHome);
+  }
+
+  // ── draw surface ─────────────────────────────────────────────────────────
+  let canvas = null, curItem = null, curSub = null, curPage = null, saveTimer = null;
+
+  async function openDraw(it) {
+    curItem = it; curSub = it.sub || null; curPage = null;
+    if (!it.sourcePath) { alert('プリントの画像が見つかりません。先生に知らせてください。'); return; }
+    const a = it.assignment;
+    showOverlay(`
+      <div class="kb-draw">
+        <div class="kb-topbar">
+          <button class="kb-topback" id="kb-back" type="button">← もどる</button>
+          <div class="kb-topmeta">
+            <div class="kb-toptitle">${esc(a.title)}</div>
+            <div class="kb-topinstr">${esc(a.instructions || '')}</div>
+          </div>
+          <span class="kb-spacer"></span>
+          <span class="kb-save"><span class="dot"></span><span id="kb-savelabel">自動保存</span></span>
+        </div>
+        <div class="kb-stage">
+          <div class="kb-page" id="kb-page"><div class="calm-msg" style="color:#fff;">よみこみ中…</div></div>
+        </div>
+        <div class="kb-toolbar">
+          <div class="kb-toolgroup">
+            <button class="kb-tool active" id="kb-pen" type="button">✎ ペン</button>
+            <button class="kb-tool" id="kb-eraser" type="button">◪ けしゴム</button>
+            <span class="kb-p2tag">フェーズ2</span>
+          </div>
+          <div class="kb-toolgroup" id="kb-swatches"></div>
+          <div style="display:inline-flex;gap:6px;">
+            <button class="kb-undo" id="kb-undo" type="button">↩ もどす</button>
+            <button class="kb-clear" id="kb-clearall" type="button">ぜんぶ消す</button>
+          </div>
+          <span class="kb-spacer"></span>
+          <button class="kb-submit" id="kb-submit" type="button" disabled>ていしゅつする</button>
+        </div>
+      </div>`);
+    document.getElementById('kb-back').addEventListener('click', () => { flushSave(); loadItems().then(renderHome); });
+
+    // fetch a signed URL for the worksheet source, then build the canvas
+    const url = await signedUrl(SOURCES, it.sourcePath);
+    const page = document.getElementById('kb-page');
+    page.innerHTML = '<canvas class="bg"></canvas><canvas class="ink"></canvas>';
+    const bg = page.querySelector('canvas.bg'), ink = page.querySelector('canvas.ink');
+
+    canvas = new KadaibanCanvas(bg, ink, { onChange: onStroke });
+    try {
+      const dims = await canvas.loadImage(url);
+      page.style.aspectRatio = `${dims.width} / ${dims.height}`;
+    } catch (e) {
+      page.innerHTML = '<div class="calm-msg" style="color:#fff;">プリントを読み込めませんでした。</div>';
+      return;
+    }
+
+    // load an existing draft (canvas_state) if any
+    if (curSub) {
+      const { data: pg } = await sb.from('kadaiban_submission_pages')
+        .select('id, canvas_state').eq('submission_id', curSub.id).eq('page_number', 1).maybeSingle();
+      if (pg) { curPage = { id: pg.id }; if (pg.canvas_state) canvas.load(pg.canvas_state); }
+    }
+    syncSubmit();
+
+    // tools
+    const pen = document.getElementById('kb-pen'), eraser = document.getElementById('kb-eraser');
+    pen.addEventListener('click', () => { canvas.setTool('pen'); pen.classList.add('active'); eraser.classList.remove('active'); });
+    eraser.addEventListener('click', () => { canvas.setTool('eraser'); eraser.classList.add('active'); pen.classList.remove('active'); });
+    document.getElementById('kb-undo').addEventListener('click', () => { canvas.undo(); });
+    document.getElementById('kb-clearall').addEventListener('click', () => { canvas.clear(); });
+    document.getElementById('kb-submit').addEventListener('click', submitWork);
+
+    // colour swatches (Phase 2 affordance; pen is one colour in Phase 1)
+    const COLORS = ['#1f4e8c', '#26313f', '#b5572e', '#4a6b4f'];
+    const sw = document.getElementById('kb-swatches');
+    sw.innerHTML = COLORS.map((c, i) => `<button class="kb-swatch${i === 0 ? ' active' : ''}" data-c="${c}" style="background:${c};" type="button" aria-label="いろ"></button>`).join('');
+    sw.querySelectorAll('.kb-swatch').forEach(b => b.addEventListener('click', () => {
+      canvas.setColor(b.dataset.c);
+      sw.querySelectorAll('.kb-swatch').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      pen.classList.add('active'); eraser.classList.remove('active');
+    }));
+  }
+
+  function syncSubmit() {
+    const btn = document.getElementById('kb-submit');
+    if (btn) btn.disabled = canvas.isEmpty();
+  }
+  function setSaveLabel(t) { const el = document.getElementById('kb-savelabel'); if (el) el.textContent = t; }
+
+  // debounced autosave on every committed stroke / undo / clear
+  function onStroke() {
+    syncSubmit();
+    setSaveLabel('保存中…');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(persistDraft, 650);
+  }
+  function flushSave() { clearTimeout(saveTimer); persistDraft(); }
+
+  // ensure a submission row + page row exist, then write canvas_state
+  async function ensureSubmission() {
+    if (curSub) return curSub;
+    // re-check the server in case a row exists but wasn't loaded
+    const { data: existing } = await sb.from('kadaiban_submissions')
+      .select('id, status').eq('assignment_id', curItem.assignment.id).eq('student_id', userId).maybeSingle();
+    if (existing) { curSub = existing; return curSub; }
+    const { data: ins, error } = await sb.from('kadaiban_submissions')
+      .insert({ assignment_id: curItem.assignment.id, student_id: userId, status: 'not_started' })
+      .select('id, status').single();
+    if (error) throw error;
+    curSub = ins; return curSub;
+  }
+
+  async function persistDraft() {
+    if (!canvas) return;
+    try {
+      const sub = await ensureSubmission();
+      const state = canvas.serialize();
+      // upsert the page draft
+      if (curPage && curPage.id) {
+        await sb.from('kadaiban_submission_pages')
+          .update({ canvas_state: state, updated_at: new Date().toISOString() }).eq('id', curPage.id);
+      } else {
+        const { data: pg } = await sb.from('kadaiban_submission_pages')
+          .insert({ submission_id: sub.id, page_number: 1, canvas_state: state })
+          .select('id').single();
+        if (pg) curPage = { id: pg.id };
+      }
+      // not_started → in_progress on first real draft
+      if (sub.status === 'not_started' && !canvas.isEmpty()) {
+        await sb.from('kadaiban_submissions').update({ status: 'in_progress' }).eq('id', sub.id);
+        curSub.status = 'in_progress';
+      }
+      setSaveLabel('下書きを保存しました');
+    } catch (e) {
+      console.error('[kadaiban] autosave failed', e);
+      setSaveLabel('保存できませんでした');
+    }
+  }
+
+  async function submitWork() {
+    if (!canvas || canvas.isEmpty()) return;
+    const btn = document.getElementById('kb-submit');
+    btn.disabled = true; btn.textContent = 'そうしんちゅう…';
+    try {
+      flushSave();
+      const sub = await ensureSubmission();
+      const blob = await canvas.flattenBlob('image/png');
+      const path = `${curItem.assignment.id}/${userId}/1.png`;
+      const { error: upErr } = await sb.storage.from(SUBMISSIONS).upload(path, blob, { contentType: 'image/png', upsert: true });
+      if (upErr) throw upErr;
+
+      // write rendered path + latest strokes to the page
+      const state = canvas.serialize();
+      if (curPage && curPage.id) {
+        await sb.from('kadaiban_submission_pages')
+          .update({ canvas_state: state, rendered_image_path: path, updated_at: new Date().toISOString() }).eq('id', curPage.id);
+      } else {
+        const { data: pg } = await sb.from('kadaiban_submission_pages')
+          .insert({ submission_id: sub.id, page_number: 1, canvas_state: state, rendered_image_path: path })
+          .select('id').single();
+        if (pg) curPage = { id: pg.id };
+      }
+      // mark submitted
+      const { error: subErr } = await sb.from('kadaiban_submissions')
+        .update({ status: 'submitted', submitted_at: new Date().toISOString() }).eq('id', sub.id);
+      if (subErr) throw subErr;
+      curSub.status = 'submitted';
+
+      showDone(curItem.assignment.title);
+      loadItems(); // refresh home state in the background
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'ていしゅつする';
+      alert('ていしゅつできませんでした。もう一度おためしください。' + (e && e.message ? '（' + e.message + '）' : ''));
+    }
+  }
+
+  function showDone(title) {
+    showOverlay(`
+      <div class="kb-center"><div class="kb-donecard">
+        <div class="kb-badge">✓</div>
+        <h1>ていしゅつできました！</h1>
+        <p>「${esc(title)}」を先生におくりました。先生が見て、○つけをしてくれます。</p>
+        <button class="kb-donebtn" id="kb-home" type="button">ホームにもどる</button>
+      </div></div>`);
+    document.getElementById('kb-home').addEventListener('click', renderHome);
+  }
+
+  // ── boot ──────────────────────────────────────────────────────────────
+  await loadItems();
+  renderHome();
+
+  // Deep link: ?a=<assignmentId> opens that item directly (from the hub home card).
+  const wantA = new URLSearchParams(location.search).get('a');
+  if (wantA) { const it = items.find(x => x.assignment.id === wantA); if (it) openItem(it); }
+})();
+</script>
+</body>
+</html>

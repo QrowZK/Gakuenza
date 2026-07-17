@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>課題板 — がくえん座 成績簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gradebook.css">
+<style>
+  /* Kadaiban-specific chrome. gradebook.css carries the tokens + base chrome;
+     these are the submission-grid / upload / grade surfaces the prototype
+     defines that no other gradebook page needs. Prefixed .kb- so they never
+     collide with the shared .gb- classes. */
+  .kb-breadcrumb { font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .kb-breadcrumb .sep { opacity:.5; }
+  .kb-headrow { display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap; }
+  .kb-headrow .kb-sub { font-size:12px; color:var(--ink-soft); margin-top:4px; }
+  .kb-spacer { flex:1; }
+  .kb-newbtn { background:var(--moss); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-weight:700; font-size:12.5px; white-space:nowrap; flex:0 0 auto; }
+  .kb-newbtn:hover { background:var(--moss-deep); }
+
+  .kb-asg-select { margin:2px 0 0; }
+
+  /* segmented filter */
+  .kb-seg { display:inline-flex; background:var(--paper-dim); border:1px solid var(--mist); border-radius:999px; padding:3px; margin-bottom:18px; }
+  .kb-seg button { border:none; background:transparent; border-radius:999px; padding:5px 16px; font-size:12px; font-weight:700; color:var(--ink-soft); }
+  .kb-seg button.active { background:var(--moss); color:#fff; }
+
+  /* submission grid */
+  .kb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; }
+  .kb-card { background:var(--paper); border:1px solid var(--mist); border-radius:10px; overflow:hidden; transition:box-shadow .14s, transform .14s; }
+  .kb-card.clickable { cursor:pointer; }
+  .kb-card.clickable:hover { box-shadow:0 4px 14px rgba(28,37,48,.1); transform:translateY(-1px); }
+  @media (prefers-reduced-motion: reduce) { .kb-card { transition:none; } .kb-card.clickable:hover { transform:none; } }
+  .kb-thumb { height:150px; background:var(--paper-dim); display:flex; align-items:center; justify-content:center; overflow:hidden; border-bottom:1px solid var(--mist); position:relative; }
+  .kb-thumb img { width:100%; height:100%; object-fit:cover; object-position:top center; }
+  .kb-thumb .kb-empty-note { font-size:12px; color:#9a958a; }
+  .kb-pill { position:absolute; top:8px; left:8px; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; }
+  .kb-cardfoot { padding:11px 13px; display:flex; align-items:center; gap:10px; }
+  .kb-avatar { width:30px; height:30px; flex:0 0 30px; border-radius:50%; background:var(--moss-tint); color:var(--moss-deep); display:flex; align-items:center; justify-content:center; font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:13px; }
+  .kb-cardfoot .body { flex:1; min-width:0; }
+  .kb-name { font-weight:700; font-size:13px; }
+  .kb-subtime { font-size:10.5px; color:var(--ink-soft); }
+  .kb-scorecol { text-align:right; }
+  .kb-score { font-weight:700; font-size:14px; font-variant-numeric:tabular-nums; }
+  .kb-action { font-size:10px; font-weight:700; }
+
+  /* create form */
+  .kb-form { max-width:560px; background:var(--paper); border:1px solid var(--mist); border-radius:10px; padding:22px; }
+  .kb-field { margin-bottom:16px; }
+  .kb-field label { display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:5px; font-weight:600; }
+  .kb-field input[type=text], .kb-field input[type=date], .kb-field textarea {
+    width:100%; padding:9px 11px; border:1px solid var(--mist); border-radius:8px; font-size:13px; background:var(--paper-dim); font-family:inherit; color:var(--ink); }
+  .kb-field textarea { min-height:60px; resize:vertical; }
+  .kb-field-row { display:flex; gap:12px; }
+  .kb-field-row > * { flex:1; }
+  .kb-readonly { padding:9px 11px; border:1px solid var(--mist); border-radius:8px; font-size:13px; background:var(--paper-dim); font-weight:600; }
+  .kb-drop { border:2px dashed var(--mist); border-radius:10px; padding:30px 20px; text-align:center; cursor:pointer; background:var(--paper-dim); transition:border-color .14s; }
+  .kb-drop:hover, .kb-drop.drag { border-color:var(--moss); }
+  .kb-drop .glyph { font-size:26px; color:var(--moss); line-height:1; }
+  .kb-drop .t { font-weight:700; font-size:13px; margin-top:8px; }
+  .kb-drop .h { font-size:11px; color:var(--ink-soft); margin-top:3px; }
+  .kb-filerow { display:flex; gap:12px; align-items:center; border:1px solid var(--mist); border-radius:10px; padding:12px; background:var(--paper-dim); }
+  .kb-filerow img { width:64px; height:86px; object-fit:cover; object-position:top; border:1px solid var(--mist); border-radius:4px; background:#fff; }
+  .kb-filerow .body { flex:1; min-width:0; }
+  .kb-filerow .t { font-weight:700; font-size:13px; }
+  .kb-filerow .m { font-size:11px; color:var(--ink-soft); margin-top:2px; }
+  .kb-filerow .note { font-size:10.5px; color:var(--moss-deep); margin-top:4px; }
+  .kb-remove { background:transparent; border:1px solid var(--mist); border-radius:6px; padding:5px 10px; font-size:11.5px; color:var(--ink-soft); }
+  .kb-attest { display:flex; gap:9px; align-items:flex-start; margin-top:18px; cursor:pointer; padding:12px; background:rgba(201,162,75,.08); border:1px solid rgba(201,162,75,.4); border-radius:8px; }
+  .kb-attest .box { width:18px; height:18px; flex:0 0 18px; border:1.5px solid var(--mist); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; margin-top:1px; background:#fff; color:transparent; }
+  .kb-attest.on .box { background:var(--moss); border-color:var(--moss); color:#fff; }
+  .kb-attest .txt { font-size:12px; line-height:1.5; color:var(--ink); }
+  .kb-attest .txt .muted { color:var(--ink-soft); }
+  .kb-form-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+  .kb-btn-cancel { background:transparent; border:1px solid var(--mist); border-radius:8px; padding:11px 18px; font-size:13px; font-weight:600; color:var(--ink-soft); }
+  .kb-btn-create { border:none; border-radius:8px; padding:11px 22px; font-weight:700; font-size:13px; background:var(--moss); color:#fff; }
+  .kb-btn-create:disabled { background:var(--mist); color:#9a958a; cursor:not-allowed; }
+
+  /* grade view */
+  .kb-back { font-size:12px; color:var(--moss-deep); font-weight:700; margin-bottom:10px; cursor:pointer; display:inline-block; }
+  .kb-grade-grid { display:grid; grid-template-columns:minmax(0,1.5fr) 320px; gap:22px; align-items:start; }
+  @media (max-width:820px) { .kb-grade-grid { grid-template-columns:1fr; } }
+  .kb-grade-left { background:var(--paper); border:1px solid var(--mist); border-radius:10px; padding:14px; }
+  .kb-grade-cap { font-size:11.5px; color:var(--ink-soft); margin-bottom:10px; }
+  .kb-mat { background:#e7e2d4; border-radius:8px; padding:14px; display:flex; justify-content:center; }
+  .kb-mat img { max-width:100%; max-height:640px; border:1px solid var(--mist); border-radius:4px; box-shadow:0 4px 16px rgba(28,37,48,.14); background:#fff; }
+  .kb-grade-side { position:sticky; top:20px; display:flex; flex-direction:column; gap:14px; }
+  .kb-grade-card { background:var(--paper); border:1px solid var(--mist); border-radius:10px; padding:16px; }
+  .kb-grade-card h2 { font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:15px; margin:0 0 12px; }
+  .kb-grade-note { font-size:12px; color:var(--ink-soft); margin-bottom:14px; line-height:1.5; }
+  .kb-score-row { display:flex; align-items:center; gap:8px; }
+  .kb-score-row input { width:70px; padding:9px; border:1px solid var(--mist); border-radius:8px; font-size:16px; text-align:center; font-weight:700; font-family:inherit; }
+  .kb-score-row .slash { font-size:16px; color:var(--ink-soft); }
+  .kb-pct { font-size:12px; color:var(--ink-soft); margin-left:auto; }
+  .kb-pct b { font-size:15px; color:var(--ink); }
+  .kb-grade-save { width:100%; margin-top:14px; background:var(--moss); color:#fff; border:none; border-radius:8px; padding:12px; font-weight:700; font-size:13.5px; }
+  .kb-grade-save:hover { background:var(--moss-deep); }
+  .kb-grade-save:disabled { background:var(--mist); color:#9a958a; cursor:not-allowed; }
+  .kb-grade-fine { font-size:10.5px; color:var(--ink-soft); margin-top:10px; line-height:1.5; }
+
+  /* toast */
+  .kb-toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); z-index:80; background:var(--ink); color:var(--paper); padding:12px 20px; border-radius:999px; box-shadow:0 8px 28px rgba(28,37,48,.28); font-size:13px; display:flex; align-items:center; gap:10px; opacity:0; pointer-events:none; transition:opacity .22s, transform .22s; }
+  .kb-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .kb-toast .chk { color:var(--gold); }
+  @media (prefers-reduced-motion: reduce) { .kb-toast { transition:opacity .1s; } }
+  .kb-hidden-file { display:none; }
+</style>
+</head>
+<body>
+<div class="gb-frame">
+  <aside class="gb-sidebar" id="gb-sidebar"></aside>
+  <main class="gb-main" id="gb-main">
+    <div id="kb-view"><div class="gb-empty">読み込み中…</div></div>
+  </main>
+</div>
+<div class="kb-toast" id="kb-toast"><span class="chk">✓</span><span id="kb-toast-msg"></span></div>
+<input type="file" id="kb-file-input" class="kb-hidden-file" accept="image/png,image/jpeg">
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="../admin/admin-common.js"></script>
+<script src="gradebook-common.js"></script>
+<script src="../kadaiban-draw.js"></script>
+<script>
+(async function () {
+  const GB = window.Gradebook;
+  const H = window.HubCommon;
+  const esc = GB.esc;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const SOURCES = 'kadaiban-sources';
+  const SUBMISSIONS = 'kadaiban-submissions';
+  const SIGNED_TTL = 60 * 60; // 1h signed URLs
+  const MAX_DIM = 1600;       // downscale scans to keep uploads/canvas bounded
+
+  const ctxWrap = await GB.requireContext(sb);
+  if (!ctxWrap) return;
+  const { userId, ctx, profile } = ctxWrap;
+
+  const classes = await GB.loadClasses(sb, ctx);
+  let classId = GB.getCurrentClassId(classes);
+  const snap = await GB.loadSnapshotStatus(sb, classId);
+  GB.renderSidebar(sb, profile, 'kadaiban', ctx, snap);
+
+  const viewEl = document.getElementById('kb-view');
+  if (!classId) {
+    viewEl.innerHTML = `<h1 class="gb-title">課題板</h1><hr class="gb-rule">
+      <div class="gb-empty"><span class="gb-empty-em">担当クラスがありません</span>管理者にクラスの割り当てを依頼してください。</div>`;
+    return;
+  }
+  const klass = classes.find(c => c.id === classId);
+  const schoolId = klass ? klass.school_id : null;
+  const className = klass ? klass.name : '';
+
+  // Catch-all reporting-anchor module (registered by migration; is_active=false).
+  const { data: kbModule } = await sb.from('modules').select('id').eq('key', 'kadaiban').maybeSingle();
+  const kadaibanModuleId = kbModule ? kbModule.id : null;
+
+  // ── state ─────────────────────────────────────────────────────────────
+  let view = 'inbox';           // inbox | create | grade
+  let assignments = [];         // this class's kadaiban assignments
+  let activeAsg = null;         // selected assignment
+  let roster = [];              // [{ userId, name, number }]
+  let rows = [];                // enriched per-student submission rows
+  let filter = 'submitted';     // submitted | graded | all
+  let gradeStudentId = null;
+  const create = { title: '', instructions: '', due: '', file: null, meta: null, attest: false };
+
+  // ── helpers ───────────────────────────────────────────────────────────
+  function toast(msg) {
+    const t = document.getElementById('kb-toast');
+    document.getElementById('kb-toast-msg').textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove('show'), 3600);
+  }
+  const STATUS = {
+    not_started: { label: '未着手',   color: '#8a8f98',       bg: '#efe9db' },
+    in_progress: { label: '下書き中', color: '#8a6d1f',       bg: 'rgba(201,162,75,.16)' },
+    submitted:   { label: '未採点',   color: 'var(--clay)',    bg: 'rgba(181,87,46,.12)' },
+    graded:      { label: '採点済み', color: 'var(--moss-deep)', bg: 'var(--moss-tint)' },
+  };
+  function initial(name) { return (H.givenName(name || '').charAt(0)) || '?'; }
+  function classSwitcherHtml() {
+    return classes.length > 1 ? ' ' + GB.classChipHtml(classes, classId) : '';
+  }
+  function wireClassSwitcher() {
+    const sel = viewEl.querySelector('#gb-class-chip');
+    if (sel) sel.addEventListener('change', () => { GB.setCurrentClassId(sel.value); location.reload(); });
+  }
+  function fmtDue(d) { if (!d) return '期限なし'; const x = new Date(d + 'T00:00:00'); return `${x.getMonth() + 1}月${x.getDate()}日まで`; }
+  function fmtTime(iso) { if (!iso) return ''; const d = new Date(iso); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
+
+  // Normalize an uploaded scan: apply EXIF orientation and downscale to MAX_DIM,
+  // re-encoding as PNG. Addresses spec open items 1 (size) & 2 (EXIF rotation).
+  async function normalizeImage(file) {
+    let bmp;
+    try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+    catch (_) { bmp = await createImageBitmap(file); }
+    let w = bmp.width, h = bmp.height;
+    const scale = Math.min(1, MAX_DIM / Math.max(w, h));
+    w = Math.round(w * scale); h = Math.round(h * scale);
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    c.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+    return { blob, width: w, height: h, dataURL: c.toDataURL('image/png') };
+  }
+
+  async function signedUrl(bucket, path) {
+    if (!path) return null;
+    const { data } = await sb.storage.from(bucket).createSignedUrl(path, SIGNED_TTL);
+    return data ? data.signedUrl : null;
+  }
+
+  // ── data loads ────────────────────────────────────────────────────────
+  async function loadAssignments() {
+    const { data } = await sb.from('kadaiban_assignments')
+      .select('id, title, instructions, due_date, page_count, created_at, class_id')
+      .eq('class_id', classId).order('created_at', { ascending: false });
+    assignments = data || [];
+    if (!activeAsg || !assignments.some(a => a.id === activeAsg.id)) activeAsg = assignments[0] || null;
+  }
+
+  async function loadRoster() {
+    const { data } = await sb.from('enrollments')
+      .select('user_id, profiles(display_name, student_number)')
+      .eq('class_id', classId).eq('role', 'student');
+    roster = (data || []).map(r => ({
+      userId: r.user_id,
+      name: (r.profiles && r.profiles.display_name) || '(未設定)',
+      number: (r.profiles && r.profiles.student_number) || null,
+    })).sort((a, b) => (parseInt(a.number, 10) || 999) - (parseInt(b.number, 10) || 999));
+  }
+
+  // Build one row per rostered student, merged with their submission (if any),
+  // with a signed URL for the flattened PNG so the thumbnail renders.
+  async function loadRows() {
+    rows = [];
+    if (!activeAsg) return;
+    const { data: subs } = await sb.from('kadaiban_submissions')
+      .select('id, student_id, status, submitted_at, score, max_score')
+      .eq('assignment_id', activeAsg.id);
+    const subByStudent = {};
+    (subs || []).forEach(s => { subByStudent[s.student_id] = s; });
+
+    // rendered snapshots for the submitted/graded ones (page 1)
+    const subIds = (subs || []).filter(s => s.status === 'submitted' || s.status === 'graded').map(s => s.id);
+    let renderedBySub = {};
+    if (subIds.length) {
+      const { data: pages } = await sb.from('kadaiban_submission_pages')
+        .select('submission_id, rendered_image_path').in('submission_id', subIds).eq('page_number', 1);
+      const paths = [];
+      (pages || []).forEach(p => { if (p.rendered_image_path) { renderedBySub[p.submission_id] = p.rendered_image_path; paths.push(p.rendered_image_path); } });
+      if (paths.length) {
+        const { data: signed } = await sb.storage.from(SUBMISSIONS).createSignedUrls(paths, SIGNED_TTL);
+        const urlByPath = {};
+        (signed || []).forEach(s => { if (s.path && s.signedUrl) urlByPath[s.path] = s.signedUrl; });
+        Object.keys(renderedBySub).forEach(sid => { renderedBySub[sid] = urlByPath[renderedBySub[sid]] || null; });
+      }
+    }
+
+    rows = roster.map(st => {
+      const sub = subByStudent[st.userId];
+      const status = sub ? sub.status : 'not_started';
+      const hasWork = status === 'submitted' || status === 'graded';
+      return {
+        ...st, subId: sub ? sub.id : null, status,
+        submittedAt: sub ? sub.submitted_at : null,
+        score: sub ? sub.score : null, max: sub ? sub.max_score : null,
+        rendered: sub && hasWork ? renderedBySub[sub.id] || null : null,
+        hasWork,
+      };
+    });
+  }
+
+  async function refresh() {
+    await loadAssignments();
+    await loadRoster();
+    await loadRows();
+  }
+
+  // ── renderers ───────────────────────────────────────────────────────────
+  function renderInbox() {
+    if (!activeAsg) {
+      viewEl.innerHTML = `
+        <div class="kb-breadcrumb">課題板 <span class="sep">›</span> 提出物の確認・採点</div>
+        <div class="kb-headrow">
+          <div><h1 class="gb-title">課題板</h1><div class="kb-sub">${esc(className)}${classSwitcherHtml()} · 紙のプリントを配信して、児童の手書き提出を集めます。</div></div>
+          <span class="kb-spacer"></span>
+          <button class="kb-newbtn" id="kb-new" type="button">＋ 新しい課題</button>
+        </div>
+        <hr class="gb-rule">
+        <div class="gb-empty"><span class="gb-empty-em">まだ課題がありません</span>「＋ 新しい課題」から、スキャンしたプリントを配信できます。</div>`;
+      document.getElementById('kb-new').addEventListener('click', goCreate);
+      wireClassSwitcher();
+      return;
+    }
+    const cSubmitted = rows.filter(r => r.status === 'submitted').length;
+    const cGraded = rows.filter(r => r.status === 'graded').length;
+    let shown = rows;
+    if (filter === 'submitted') shown = rows.filter(r => r.status === 'submitted');
+    else if (filter === 'graded') shown = rows.filter(r => r.status === 'graded');
+
+    const asgSelect = assignments.length > 1
+      ? `<span class="gb-chip kb-asg-select"><select id="kb-asg" aria-label="課題を選ぶ">${
+          assignments.map(a => `<option value="${a.id}"${a.id === activeAsg.id ? ' selected' : ''}>${esc(a.title)}</option>`).join('')
+        }</select></span>`
+      : '';
+
+    viewEl.innerHTML = `
+      <div class="kb-breadcrumb">課題板 <span class="sep">›</span> 提出物の確認・採点</div>
+      <div class="kb-headrow">
+        <div>
+          <h1 class="gb-title">${esc(activeAsg.title)}</h1>
+          <div class="kb-sub">${esc(className)}${classSwitcherHtml()} · ${esc(fmtDue(activeAsg.due_date))} · 手書き提出（${activeAsg.page_count}ページ）</div>
+          ${asgSelect ? `<div style="margin-top:8px;">${asgSelect}</div>` : ''}
+        </div>
+        <span class="kb-spacer"></span>
+        <button class="kb-newbtn" id="kb-new" type="button">＋ 新しい課題</button>
+      </div>
+      <hr class="gb-rule">
+      <div class="kb-seg" role="tablist">
+        <button type="button" data-f="submitted" class="${filter === 'submitted' ? 'active' : ''}">未採点 ${cSubmitted}</button>
+        <button type="button" data-f="graded" class="${filter === 'graded' ? 'active' : ''}">採点済み ${cGraded}</button>
+        <button type="button" data-f="all" class="${filter === 'all' ? 'active' : ''}">すべて ${rows.length}</button>
+      </div>
+      ${shown.length === 0
+        ? `<div class="gb-empty"><span class="gb-empty-em">ここには提出物がありません</span>このタブに該当する児童の提出物はまだありません。</div>`
+        : `<div class="kb-grid">${shown.map(cardHtml).join('')}</div>`}`;
+
+    document.getElementById('kb-new').addEventListener('click', goCreate);
+    wireClassSwitcher();
+    const sel = document.getElementById('kb-asg');
+    if (sel) sel.addEventListener('change', async () => { activeAsg = assignments.find(a => a.id === sel.value); filter = 'submitted'; await loadRows(); renderInbox(); });
+    viewEl.querySelectorAll('.kb-seg button').forEach(b => b.addEventListener('click', () => { filter = b.dataset.f; renderInbox(); }));
+    viewEl.querySelectorAll('.kb-card.clickable').forEach(c => c.addEventListener('click', () => openGrade(c.dataset.student)));
+  }
+
+  function cardHtml(r) {
+    const m = STATUS[r.status];
+    const clickable = r.hasWork;
+    const action = r.status === 'graded' ? '見直す →' : r.status === 'submitted' ? '採点する →' : '';
+    const actionColor = r.status === 'graded' ? 'var(--moss-deep)' : 'var(--clay)';
+    const subtime = r.submittedAt ? fmtTime(r.submittedAt) + ' 提出' : (r.status === 'in_progress' ? '下書き保存あり' : '未提出');
+    return `
+      <div class="kb-card${clickable ? ' clickable' : ''}" data-student="${r.userId}">
+        <div class="kb-thumb">
+          ${r.hasWork && r.rendered ? `<img src="${esc(r.rendered)}" alt="提出物">`
+            : r.hasWork ? `<span class="kb-empty-note">画像を読み込めませんでした</span>`
+            : `<span class="kb-empty-note">まだ提出されていません</span>`}
+          <span class="kb-pill" style="background:${m.bg};color:${m.color};">${m.label}</span>
+        </div>
+        <div class="kb-cardfoot">
+          <div class="kb-avatar">${esc(initial(r.name))}</div>
+          <div class="body">
+            <div class="kb-name">${esc(r.name)}</div>
+            <div class="kb-subtime">${esc(subtime)}</div>
+          </div>
+          <div class="kb-scorecol">
+            <div class="kb-score">${r.score != null ? `${r.score} / ${r.max}` : '—'}</div>
+            <div class="kb-action" style="color:${actionColor};">${action}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderCreate() {
+    const ready = !!(create.title && create.file && create.attest);
+    viewEl.innerHTML = `
+      <div class="kb-breadcrumb">課題板 <span class="sep">›</span> 新しい課題</div>
+      <h1 class="gb-title">紙のプリントを配信する</h1>
+      <div class="kb-sub" style="margin-top:4px;">スキャンした画像をアップロードすると、児童がその上に手書きで解答できます。</div>
+      <hr class="gb-rule">
+      <div class="kb-form">
+        <div class="kb-field">
+          <label for="kb-title">課題名</label>
+          <input type="text" id="kb-title" value="${esc(create.title)}" placeholder="例：分数のたし算 たしかめプリント">
+        </div>
+        <div class="kb-field">
+          <label for="kb-instr">やり方の説明（任意）</label>
+          <textarea id="kb-instr" placeholder="例：計算をして、答えをマスに書きましょう。">${esc(create.instructions)}</textarea>
+        </div>
+        <div class="kb-field-row" style="margin-bottom:18px;">
+          <div><label for="kb-due">提出期限（任意）</label><input type="date" id="kb-due" value="${esc(create.due)}"></div>
+          <div><label>配信するクラス</label><div class="kb-readonly">${esc(className)}</div></div>
+        </div>
+        <label style="display:block;font-size:11.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;">ワークシートの画像</label>
+        <div id="kb-upload-slot"></div>
+        <div class="kb-attest${create.attest ? ' on' : ''}" id="kb-attest">
+          <span class="box">✓</span>
+          <span class="txt">この教材を自分のクラスで使用する権利があります。<span class="muted">（コピー・自作教材など、先生ご自身の利用権にもとづきます）</span></span>
+        </div>
+        <div class="kb-form-actions">
+          <button class="kb-btn-cancel" id="kb-cancel" type="button">キャンセル</button>
+          <button class="kb-btn-create" id="kb-create" type="button"${ready ? '' : ' disabled'}>課題を作成して配信</button>
+        </div>
+      </div>`;
+
+    renderUploadSlot();
+    document.getElementById('kb-title').addEventListener('input', e => { create.title = e.target.value; syncCreateBtn(); });
+    document.getElementById('kb-instr').addEventListener('input', e => { create.instructions = e.target.value; });
+    document.getElementById('kb-due').addEventListener('input', e => { create.due = e.target.value; });
+    document.getElementById('kb-attest').addEventListener('click', () => { create.attest = !create.attest; renderCreate(); });
+    document.getElementById('kb-cancel').addEventListener('click', () => { resetCreate(); view = 'inbox'; renderInbox(); });
+    document.getElementById('kb-create').addEventListener('click', submitCreate);
+  }
+
+  function renderUploadSlot() {
+    const slot = document.getElementById('kb-upload-slot');
+    if (!slot) return;
+    if (!create.file) {
+      slot.innerHTML = `
+        <div class="kb-drop" id="kb-drop">
+          <div class="glyph">⤒</div>
+          <div class="t">画像をアップロード</div>
+          <div class="h">スキャン・写真（PNG / JPEG）をここにドロップ、またはクリックして選択</div>
+        </div>`;
+      const drop = document.getElementById('kb-drop');
+      drop.addEventListener('click', pickFile);
+      drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+      drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+      drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('drag'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+    } else {
+      const m = create.meta;
+      slot.innerHTML = `
+        <div class="kb-filerow">
+          <img src="${create.meta.dataURL}" alt="ページ1">
+          <div class="body">
+            <div class="t">ページ 1</div>
+            <div class="m">${esc(create.file.name)} · ${m.width} × ${m.height} · 画像を正規化しました</div>
+            <div class="note">フェーズ2で複数ページに対応予定</div>
+          </div>
+          <button class="kb-remove" id="kb-remove" type="button">取り消す</button>
+        </div>`;
+      document.getElementById('kb-remove').addEventListener('click', () => { create.file = null; create.meta = null; renderCreate(); });
+    }
+  }
+
+  function syncCreateBtn() {
+    const btn = document.getElementById('kb-create');
+    if (btn) btn.disabled = !(create.title && create.file && create.attest);
+  }
+
+  const fileInput = document.getElementById('kb-file-input');
+  function pickFile() { fileInput.value = ''; fileInput.click(); }
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+  async function handleFile(file) {
+    if (!/^image\/(png|jpeg)$/.test(file.type)) { alert('PNG または JPEG の画像を選んでください。'); return; }
+    try {
+      const meta = await normalizeImage(file);
+      create.file = file; create.meta = meta;
+      renderCreate();
+    } catch (e) { alert('画像を読み込めませんでした。別の画像でお試しください。'); }
+  }
+
+  async function submitCreate() {
+    if (!(create.title && create.file && create.attest)) return;
+    const btn = document.getElementById('kb-create');
+    btn.disabled = true; btn.textContent = '配信しています…';
+    try {
+      // 1. assignment row
+      const { data: asg, error: asgErr } = await sb.from('kadaiban_assignments').insert({
+        class_id: classId, created_by: userId, title: create.title.trim(),
+        instructions: create.instructions.trim() || null, due_date: create.due || null, page_count: 1,
+      }).select('id').single();
+      if (asgErr || !asg) throw asgErr || new Error('assignment insert failed');
+
+      // 2. upload normalized page 1 to kadaiban-sources
+      const path = `${asg.id}/1.png`;
+      const { error: upErr } = await sb.storage.from(SOURCES).upload(path, create.meta.blob, { contentType: 'image/png', upsert: true });
+      if (upErr) throw upErr;
+
+      // 3. page row
+      const { error: pgErr } = await sb.from('kadaiban_assignment_pages').insert({
+        assignment_id: asg.id, page_number: 1, source_image_path: path,
+      });
+      if (pgErr) throw pgErr;
+
+      resetCreate();
+      await refresh();
+      activeAsg = assignments.find(a => a.id === asg.id) || assignments[0];
+      filter = 'all';
+      view = 'inbox';
+      renderInbox();
+      toast('課題を作成しました。クラスに配信されました。');
+    } catch (e) {
+      btn.disabled = false; btn.textContent = '課題を作成して配信';
+      alert('配信できませんでした。' + (e && e.message ? '（' + e.message + '）' : ''));
+    }
+  }
+
+  function resetCreate() { create.title = ''; create.instructions = ''; create.due = ''; create.file = null; create.meta = null; create.attest = false; }
+
+  async function openGrade(studentId) {
+    const r = rows.find(x => x.userId === studentId);
+    if (!r || !r.hasWork) return;
+    gradeStudentId = studentId;
+    view = 'grade';
+    await renderGrade(r);
+  }
+
+  async function renderGrade(r) {
+    viewEl.innerHTML = `<div class="kb-back" id="kb-back">← 提出物一覧へもどる</div><div class="gb-empty">読み込み中…</div>`;
+    document.getElementById('kb-back').addEventListener('click', () => { view = 'inbox'; renderInbox(); });
+
+    // full-resolution rendered PNG (fresh signed URL)
+    let url = r.rendered;
+    if (r.subId) {
+      const { data: pg } = await sb.from('kadaiban_submission_pages')
+        .select('rendered_image_path').eq('submission_id', r.subId).eq('page_number', 1).maybeSingle();
+      if (pg && pg.rendered_image_path) url = await signedUrl(SUBMISSIONS, pg.rendered_image_path);
+    }
+
+    const wasGraded = r.status === 'graded';
+    const scoreVal = r.score != null ? r.score : '';
+    const maxVal = r.max != null ? r.max : 6;
+    const numStr = r.number != null ? `${r.number}番` : '';
+
+    viewEl.innerHTML = `
+      <div class="kb-back" id="kb-back">← 提出物一覧へもどる</div>
+      <div class="kb-grade-grid">
+        <div class="kb-grade-left">
+          <div class="kb-grade-cap">${esc(r.name)} さん${numStr ? `（${esc(className)} ${esc(numStr)}）` : ''}の提出物</div>
+          <div class="kb-mat">${url ? `<img src="${esc(url)}" alt="提出された解答">` : `<div class="gb-empty">画像を読み込めませんでした</div>`}</div>
+        </div>
+        <div class="kb-grade-side">
+          <div class="kb-grade-card">
+            <h2>手で採点する</h2>
+            <div class="kb-grade-note">紙のときと同じように、児童の手書きを見て点数をつけます。自動採点はしません。</div>
+            <div class="kb-score-row">
+              <input type="number" id="kb-score" value="${scoreVal}" placeholder="点" min="0">
+              <span class="slash">/</span>
+              <input type="number" id="kb-max" value="${maxVal}" min="1">
+              <span class="kb-pct">正答率 <b id="kb-pct">—</b></span>
+            </div>
+            <button class="kb-grade-save" id="kb-save" type="button">${wasGraded ? '成績を更新する' : '成績を記録する'}</button>
+            <div class="kb-grade-fine">保存すると成績が <b>activity_results</b> に記録され、成績分析・個人カルテのトレンドに反映されます。</div>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('kb-back').addEventListener('click', () => { view = 'inbox'; renderInbox(); });
+    const scoreEl = document.getElementById('kb-score');
+    const maxEl = document.getElementById('kb-max');
+    const pctEl = document.getElementById('kb-pct');
+    function syncPct() {
+      const s = parseFloat(scoreEl.value), mx = parseFloat(maxEl.value);
+      pctEl.textContent = (!isNaN(s) && !isNaN(mx) && mx > 0) ? Math.round((s / mx) * 100) + '%' : '—';
+    }
+    scoreEl.addEventListener('input', syncPct); maxEl.addEventListener('input', syncPct); syncPct();
+    document.getElementById('kb-save').addEventListener('click', () => saveGrade(r, scoreEl, maxEl));
+  }
+
+  async function saveGrade(r, scoreEl, maxEl) {
+    const score = scoreEl.value === '' ? null : Number(scoreEl.value);
+    const max = maxEl.value === '' ? null : Number(maxEl.value);
+    if (score == null || max == null || isNaN(score) || isNaN(max)) { alert('点数と満点を入力してください。'); return; }
+    const btn = document.getElementById('kb-save');
+    btn.disabled = true; btn.textContent = '保存しています…';
+    try {
+      const gradedTs = Date.now();
+      // 1. mark the submission graded (teacher grade path — guard trigger allows)
+      const { error: subErr } = await sb.from('kadaiban_submissions')
+        .update({ status: 'graded', score, max_score: max, graded_by: userId, graded_at: new Date(gradedTs).toISOString() })
+        .eq('id', r.subId);
+      if (subErr) throw subErr;
+
+      // 2. summary row into activity_results (no items — holistic grade). The
+      //    ar_insert policy already lets an educator insert for another user_id.
+      if (kadaibanModuleId) {
+        const res = await H.reportActivityWithItems(sb, {
+          schoolId, classId, moduleId: kadaibanModuleId, userId: r.userId,
+          activityRef: `kadaiban/${activeAsg.id}/${gradedTs}`,
+          score, maxScore: max, payload: { title: activeAsg.title, kind: 'kadaiban' },
+        });
+        if (!res.ok) console.error('[kadaiban] activity_results write failed', res.error);
+      }
+
+      await loadRows();
+      view = 'inbox';
+      renderInbox();
+      toast('成績を記録しました。個人カルテ・成績分析に反映されます。');
+    } catch (e) {
+      btn.disabled = false; btn.textContent = '成績を記録する';
+      alert('保存できませんでした。' + (e && e.message ? '（' + e.message + '）' : ''));
+    }
+  }
+
+  function goCreate() { resetCreate(); view = 'create'; renderCreate(); }
+
+  // ── boot ──────────────────────────────────────────────────────────────
+  // A class switcher (rendered inline in the header when the teacher has >1
+  // class) persists the choice and reloads; consistent with other gradebook
+  // pages, which key everything off GB.getCurrentClassId.
+  await refresh();
+  renderInbox();
+})();
+</script>
+</body>
+</html>

@@ -129,6 +129,7 @@ window.Gradebook = (function () {
     { key: 'roster',       label: '名簿',           href: 'roster.html' },
     { key: 'observations', label: '観察記録',       href: 'observations.html' },
     { key: 'analysis',     label: '成績分析',       href: 'analysis.html' },
+    { key: 'kadaiban',     label: '課題板',         href: 'kadaiban.html' },
     { key: 'karte',        label: '個人カルテ',     href: 'karte.html' },
     { key: 'print',        label: 'プリント作成',   href: 'print.html' },
   ];

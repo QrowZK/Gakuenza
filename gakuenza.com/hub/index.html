@@ -8,6 +8,23 @@
 <link rel="stylesheet" href="hub-shell.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Kadaiban worksheet cards on the hub home (surfaced alongside modules). */
+  .kbh-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+  .kbh-card { background:var(--paper); border:1px solid var(--mist); border-radius:10px; overflow:hidden; cursor:pointer; transition:transform 140ms ease, box-shadow 140ms ease; }
+  .kbh-card:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(28,37,48,.1); }
+  @media (prefers-reduced-motion: reduce) { .kbh-card { transition:none; } .kbh-card:hover { transform:none; } }
+  .kbh-thumb { height:120px; background:var(--paper-dim); border-bottom:1px solid var(--mist); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+  .kbh-thumb img { width:100%; height:100%; object-fit:cover; object-position:top center; opacity:.96; }
+  .kbh-pill { position:absolute; top:8px; left:8px; font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:999px; }
+  .kbh-body { padding:14px 16px 16px; }
+  .kbh-cat { font-size:11.5px; font-weight:600; color:var(--ink-soft); display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .kbh-dot { width:10px; height:10px; border-radius:50%; background:var(--moss); }
+  .kbh-title { font-family:'Zen Maru Gothic',sans-serif; font-weight:700; font-size:15px; color:var(--ink); margin-bottom:6px; }
+  .kbh-foot { display:flex; align-items:center; justify-content:space-between; }
+  .kbh-due { font-size:11.5px; color:var(--clay); font-weight:700; white-space:nowrap; }
+  .kbh-cta { background:var(--moss); color:#fff; border-radius:999px; padding:6px 14px; font-size:12px; font-weight:700; }
+</style>
 </head>
 <body>
 
@@ -18,6 +35,11 @@
     <div class="hub-section">
       <h1 class="greeting-title" id="greeting">…</h1>
       <p class="greeting-date" id="greeting-date"></p>
+    </div>
+
+    <div class="hub-section" id="kadaiban-section" style="display:none;">
+      <div class="section-header"><h2 class="section-title">手書きプリント</h2></div>
+      <div id="kadaiban-list"></div>
     </div>
 
     <div class="hub-section" id="recent-section">
@@ -211,6 +233,55 @@
       else alert('このモジュールは近日公開予定です。');
     });
   });
+
+  // ── Kadaiban (手書きプリント) — surfaced alongside modules for students ────
+  // Its own tables/buckets live behind RLS; a signed URL renders the thumbnail.
+  // §8: Phase 2 will merge these into one due-date-aware list with modules; for
+  // now they get their own prominent section (student classes only).
+  if (classIds.length) {
+    try {
+      const { data: kAsgs } = await sb.from('kadaiban_assignments')
+        .select('id, title, instructions, due_date, class_id')
+        .in('class_id', classIds).order('due_date', { ascending: true, nullsFirst: false });
+      if (kAsgs && kAsgs.length) {
+        const ids = kAsgs.map(a => a.id);
+        const [{ data: kPages }, { data: kSubs }] = await Promise.all([
+          sb.from('kadaiban_assignment_pages').select('assignment_id, source_image_path').in('assignment_id', ids).eq('page_number', 1),
+          sb.from('kadaiban_submissions').select('assignment_id, status').eq('student_id', userId).in('assignment_id', ids),
+        ]);
+        const pathBy = {}; (kPages || []).forEach(p => { pathBy[p.assignment_id] = p.source_image_path; });
+        const statusBy = {}; (kSubs || []).forEach(s => { statusBy[s.assignment_id] = s.status; });
+        const paths = ids.map(id => pathBy[id]).filter(Boolean);
+        const urlBy = {};
+        if (paths.length) {
+          const { data: signed } = await sb.storage.from('kadaiban-sources').createSignedUrls(paths, 3600);
+          (signed || []).forEach(s => { if (s.path && s.signedUrl) urlBy[s.path] = s.signedUrl; });
+        }
+        const KST = {
+          not_started: { label: '未着手',   color: '#8a8f98',        bg: '#efe9db' },
+          in_progress: { label: '下書き中', color: '#8a6d1f',        bg: 'rgba(201,162,75,.16)' },
+          submitted:   { label: '提出ずみ', color: 'var(--clay)',     bg: 'rgba(181,87,46,.12)' },
+          graded:      { label: '採点ずみ', color: 'var(--moss-deep)', bg: 'var(--moss-tint)' },
+        };
+        const WK = ['日','月','火','水','木','金','土'];
+        const fmtDue = (d) => { if (!d) return '期限なし'; const x = new Date(d + 'T00:00:00'); return `${x.getMonth() + 1}月${x.getDate()}日まで`; };
+        const cta = (s) => (s === 'submitted' || s === 'graded') ? '提出ずみ（見る）' : s === 'in_progress' ? 'つづきを書く' : 'はじめる';
+        document.getElementById('kadaiban-list').innerHTML = `<div class="kbh-grid">${kAsgs.map(a => {
+          const st = statusBy[a.id] || 'not_started'; const m = KST[st]; const url = pathBy[a.id] ? urlBy[pathBy[a.id]] : null;
+          return `<div class="kbh-card" data-a="${a.id}">
+            <div class="kbh-thumb">${url ? `<img src="${H.escapeHtml(url)}" alt="プリント">` : ''}<span class="kbh-pill" style="background:${m.bg};color:${m.color};">${m.label}</span></div>
+            <div class="kbh-body">
+              <div class="kbh-cat"><span class="kbh-dot"></span>手書きプリント</div>
+              <div class="kbh-title">${H.escapeHtml(a.title)}</div>
+              <div class="kbh-foot"><span class="kbh-due">${H.escapeHtml(fmtDue(a.due_date))}</span><span class="kbh-cta">${cta(st)}</span></div>
+            </div>
+          </div>`;
+        }).join('')}</div>`;
+        document.getElementById('kadaiban-section').style.display = '';
+        document.querySelectorAll('.kbh-card').forEach(c => c.addEventListener('click', () => { window.location.href = 'kadaiban.html?a=' + encodeURIComponent(c.dataset.a); }));
+      }
+    } catch (e) { console.error('[hub] kadaiban surfacing failed', e); }
+  }
 })();
 </script>
 </body>
