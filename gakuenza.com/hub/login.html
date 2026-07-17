@@ -169,6 +169,14 @@
   const cfg = window.GAKUENZA_CONFIG;
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
+  // Escape DB strings before they go into innerHTML. This page is
+  // UNAUTHENTICATED and does not load hub-common.js, so it carries its own
+  // copy — school/class names come from public_schools/public_classes and a
+  // crafted name (e.g. `</option><script>…`) must not execute for every
+  // visitor to the login page.
+  const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
   const viewStudent = document.getElementById('view-student');
   const viewStaff = document.getElementById('view-staff');
   const switchBtn = document.getElementById('switch-view');
@@ -266,7 +274,7 @@
     let opts = '<option value="">—</option>' + years.map(y => `<option value="y${y}">${y}年</option>`).join('');
     if (specials.length) {
       opts += '<optgroup label="特別支援学級など">' +
-        specials.map(c => `<option value="s${c.id}">${c.name}</option>`).join('') +
+        specials.map(c => `<option value="s${c.id}">${escapeHtml(c.name)}</option>`).join('') +
         '</optgroup>';
     }
     yearSelect.innerHTML = opts;
@@ -304,7 +312,7 @@
     if (error || !schools || !schools.length) {
       schoolSelect.innerHTML = '<option value="">学校が見つかりません</option>';
     } else {
-      schoolSelect.innerHTML = schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      schoolSelect.innerHTML = schools.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
       await loadClassesForSchool(schools[0].id);
     }
   } catch (e) {

@@ -393,7 +393,7 @@
     const specialWrap = document.getElementById('picker-special-wrap');
     if (specials.length) {
       specialWrap.style.display = '';
-      pickerSpecial.innerHTML = '<option value="">—</option>' + specials.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      pickerSpecial.innerHTML = '<option value="">—</option>' + specials.map(c => `<option value="${c.id}">${H.escapeHtml(c.name)}</option>`).join('');
     } else {
       specialWrap.style.display = 'none';
       pickerSpecial.innerHTML = '<option value="">—</option>';
@@ -407,7 +407,7 @@
 
   async function initPicker() {
     const schools = await AC.getAccessibleSchools(sb, admin);
-    pickerSchool.innerHTML = schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    pickerSchool.innerHTML = schools.map(s => `<option value="${s.id}">${H.escapeHtml(s.name)}</option>`).join('');
     if (!schools.length) return;
 
     const initialSchoolId = schoolId || schools[0].id;
@@ -573,7 +573,7 @@
     listEl.innerHTML = (staff || []).map(s => `
       <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;">
         <input type="checkbox" value="${s.user_id}" ${assignedIds.has(s.user_id) ? 'checked' : ''}>
-        ${s.profiles?.display_name || '(表示名未設定)'}
+        ${H.escapeHtml(s.profiles?.display_name || '(表示名未設定)')}
       </label>`).join('') || '<p class="ac-calm-msg">この学校に教員が登録されていません。</p>';
   }
   document.getElementById('btn-cancel-teachers').addEventListener('click', () => {
@@ -833,10 +833,10 @@
       const pct = studentPct(r.user_id);
       return `
         <div class="ac-card ac-roster-row" data-user-id="${r.user_id}">
-          <div class="ac-avatar-sm">${given.slice(0, 2) || '?'}</div>
+          <div class="ac-avatar-sm">${H.escapeHtml(given.slice(0, 2) || '?')}</div>
           <div style="flex:1;min-width:0;">
-            <div class="ac-roster-name">${p.display_name || '(表示名未設定)'}</div>
-            <div class="ac-roster-number">出席番号 ${p.student_number || '—'}</div>
+            <div class="ac-roster-name">${H.escapeHtml(p.display_name || '(表示名未設定)')}</div>
+            <div class="ac-roster-number">出席番号 ${H.escapeHtml(p.student_number || '—')}</div>
           </div>
           <div class="ac-roster-progress"><div class="ac-prog-track"><div class="ac-prog-fill" style="width:${pct ?? 0}%;"></div></div></div>
           <button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-student" data-user-id="${r.user_id}" data-name="${(p.display_name || '').replace(/"/g, '')}" data-number="${(p.student_number || '').replace(/"/g, '')}" type="button">編集</button>
@@ -879,7 +879,7 @@
       el.innerHTML = assigned.map(a => `
         <div class="ac-card ac-assigned-card" data-module-id="${a.module_id}">
           <div>
-            <div class="ac-assigned-title">${a.modules?.name || '(不明なモジュール)'}</div>
+            <div class="ac-assigned-title">${H.escapeHtml(a.modules?.name || '(不明なモジュール)')}</div>
             <div class="ac-assigned-meta" id="assigned-meta-${a.module_id}">${fmtAssignedMeta(a)}</div>
           </div>
           <button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-due" data-module-id="${a.module_id}" type="button">変更</button>
@@ -1013,7 +1013,7 @@
     // student's *current* class is simply this page's class, since the
     // roster this button lives on is already scoped to classRow.id.
     const sel = document.getElementById('edit-class-select');
-    sel.innerHTML = classesForSchool.map(c => `<option value="${c.id}"${c.id === classRow.id ? ' selected' : ''}>${c.name}</option>`).join('');
+    sel.innerHTML = classesForSchool.map(c => `<option value="${c.id}"${c.id === classRow.id ? ' selected' : ''}>${H.escapeHtml(c.name)}</option>`).join('');
 
     document.getElementById('modal-edit-student').style.display = 'flex';
     document.getElementById('edit-student-number').focus();

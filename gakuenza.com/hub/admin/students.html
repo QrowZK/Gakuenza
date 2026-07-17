@@ -154,14 +154,14 @@
         (a.profiles?.student_number || '').localeCompare(b.profiles?.student_number || ''));
       return `
         <div class="ac-subject-group">
-          <div class="ac-subject-label"><span>${c.name}</span><span style="color:var(--ink-soft);font-weight:400;">（${rows.length}名）</span></div>
+          <div class="ac-subject-label"><span>${H.escapeHtml(c.name)}</span><span style="color:var(--ink-soft);font-weight:400;">（${rows.length}名）</span></div>
           <div style="display:flex;flex-direction:column;gap:6px;">
             ${rows.map(s => `
               <div class="ac-card ac-person-card" style="padding:10px 14px;">
-                <div class="ac-avatar-sm">${H.givenName(s.profiles?.display_name || '').slice(0, 2) || '?'}</div>
+                <div class="ac-avatar-sm">${H.escapeHtml(H.givenName(s.profiles?.display_name || '').slice(0, 2) || '?')}</div>
                 <div style="flex:1;min-width:0;">
-                  <div class="ac-roster-name">${s.profiles?.display_name || '(表示名未設定)'}</div>
-                  <div style="font-size:0.72rem;color:var(--ink-soft);">出席番号 ${s.profiles?.student_number || '—'}</div>
+                  <div class="ac-roster-name">${H.escapeHtml(s.profiles?.display_name || '(表示名未設定)')}</div>
+                  <div style="font-size:0.72rem;color:var(--ink-soft);">出席番号 ${H.escapeHtml(s.profiles?.student_number || '—')}</div>
                 </div>
               </div>`).join('')}
           </div>
@@ -176,7 +176,7 @@
       listEl.innerHTML = '<p class="ac-calm-msg">学校が見つかりません。</p>';
       return;
     }
-    pickerSchool.innerHTML = schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    pickerSchool.innerHTML = schools.map(s => `<option value="${s.id}">${H.escapeHtml(s.name)}</option>`).join('');
     btnImport.disabled = false;
     await loadStudents(pickerSchool.value);
   }
@@ -332,10 +332,10 @@
       `${results.length}件中 ${successCount}件成功${errorCount > 0 ? `、${errorCount}件失敗` : ''}。`;
     document.getElementById('import-results-body').innerHTML = results.map(r => `
       <tr style="border-top:1px solid var(--border);">
-        <td style="padding:6px 10px;">${r.studentNumber}</td>
-        <td style="padding:6px 10px;">${r.displayName}</td>
-        <td style="padding:6px 10px;">${r.className}</td>
-        <td style="padding:6px 10px;${r.error ? 'color:var(--error);' : 'font-family:monospace;'}">${r.error || r.password}</td>
+        <td style="padding:6px 10px;">${H.escapeHtml(r.studentNumber)}</td>
+        <td style="padding:6px 10px;">${H.escapeHtml(r.displayName)}</td>
+        <td style="padding:6px 10px;">${H.escapeHtml(r.className)}</td>
+        <td style="padding:6px 10px;${r.error ? 'color:var(--error);' : 'font-family:monospace;'}">${H.escapeHtml(r.error || r.password)}</td>
       </tr>`).join('');
 
     await loadStudents(pickerSchool.value);

@@ -195,9 +195,9 @@
         : '';
       return `
         <div class="ac-card ac-person-card">
-          <div class="ac-avatar-sm">${given.slice(0, 2) || '?'}</div>
+          <div class="ac-avatar-sm">${H.escapeHtml(given.slice(0, 2) || '?')}</div>
           <div style="flex:1;min-width:0;">
-            <div class="ac-roster-name" title="${name.replace(/"/g, '&quot;')}">${name}</div>
+            <div class="ac-roster-name" title="${H.escapeHtml(name)}">${H.escapeHtml(name)}</div>
           </div>
           <span class="ac-badge ${isAdmin ? 'ac-badge-gold' : 'ac-badge-moss'}">${roleLabel}</span>
           ${editBtn}
@@ -218,7 +218,7 @@
       btnAddTeacher.disabled = true;
       return;
     }
-    pickerSchool.innerHTML = schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    pickerSchool.innerHTML = schools.map(s => `<option value="${s.id}">${H.escapeHtml(s.name)}</option>`).join('');
     const target = schools.find(s => s.id === selectId) || schools[0];
     pickerSchool.value = target.id;
     currentSchoolName = target.name;
