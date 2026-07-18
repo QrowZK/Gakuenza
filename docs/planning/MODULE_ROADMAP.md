@@ -3,14 +3,19 @@
 _Scoping doc, 2026-07-16. Design/planning only — no code, no migrations._
 
 > **Update 2026-07-17:** sansu1, sansu2, kokugo1, and kokugo2 (Priority tier A
-> item 1–2 and tier B items 4–5 below) all **shipped today** — see
+> item 1–2 and tier B items 4–5 below) all shipped — see
 > `docs/specs/completed/`. Coverage matrix and gap table below updated
-> accordingly. Only kokugo4 and eigo5 remain from the original six-item gap
-> list. **Before either ships, build
-> `docs/specs/SPEC_decentralize_module_units.md` first** — the shared
-> `hub/module-units.js` registry has now corrupted twice under parallel
-> module PRs (see `../ROADMAP.md` Near-term debt #5); a third parallel batch
-> without that fix risks a third corruption.
+> accordingly.
+>
+> **Update 2026-07-18:** the last two core-grid gaps **shipped** — **kokugo4**
+> (#101) and **eigo5** (#100), built in parallel by subagents from
+> `docs/specs/completed/SPEC_kokugo4_new_module.md` / `SPEC_eigo5_new_module.md`.
+> **The grades-1–6 core grid is now complete.** Both used the post-#99 per-module
+> `modules/<key>/units.js` convention (the shared `hub/module-units.js` registry
+> that had corrupted twice under parallel PRs was deleted in #99). The §3.3/§3.6
+> sketches below are the historical build specs, now superseded by the completed
+> spec docs; where a sketch still says "add a block to `module-units.js`," that
+> shared file no longer exists — the built modules ship their own `units.js`.
 
 The top sketches below are written to be droppable into
 `docs/specs/pending/` later, matching the `docs/specs/completed/` format.
@@ -42,10 +47,10 @@ curriculum.
 | Subject (constraint value)        | G1 | G2 | G3 | G4 | G5 | G6 |
 |-----------------------------------|----|----|----|----|----|----|
 | 算数 math (`math`)                | ✅ sansu1 | ✅ sansu2 | ✅ sansu3 | ✅ sansu4 | ✅ sansu5 | ✅ sansu6 |
-| 国語 japanese (`japanese`)        | ✅ kokugo1 | ✅ kokugo2 | ✅ kokugo3 | ❌ | ✅ kokugo5 | ✅ kokugo6 |
+| 国語 japanese (`japanese`)        | ✅ kokugo1 | ✅ kokugo2 | ✅ kokugo3 | ✅ kokugo4 | ✅ kokugo5 | ✅ kokugo6 |
 | 理科 science (`science`)          | — | — | ✅ rika3 | ✅ rika4 | ✅ rika5 | ✅ rika6 |
 | 社会 social (`social`)            | — | — | ✅ shakai3 | ✅ shakai4 | ✅ shakai5 | ✅ shakai6 |
-| 外国語 english (`english`)        | — | — | ✅ letstry1* | ✅ letstry2* | ❌ | ✅ nh6 |
+| 外国語 english (`english`)        | — | — | ✅ letstry1* | ✅ letstry2* | ✅ eigo5 | ✅ nh6 |
 
 \* Let's Try! 1 & 2 are the MEXT 外国語活動 materials for grades 3–4.
 Mapping them strictly to a single grade is approximate (schools split them
@@ -72,13 +77,14 @@ sit at the bottom of the priority list.
 |---|----------------|---------|-------|-------|
 | 1 | ~~sansu1~~ ✅ shipped 2026-07-17 | math | 1 | grade-1 math |
 | 2 | ~~sansu2~~ ✅ shipped 2026-07-17 | math | 2 | grade-2 math |
-| 3 | **kokugo4** | japanese | 4 | hole in the middle of the built japanese line |
+| 3 | ~~kokugo4~~ ✅ shipped 2026-07-18 (#101) | japanese | 4 | hole in the middle of the built japanese line |
 | 4 | ~~kokugo1~~ ✅ shipped 2026-07-17 | japanese | 1 | grade-1 japanese |
 | 5 | ~~kokugo2~~ ✅ shipped 2026-07-17 | japanese | 2 | grade-2 japanese |
-| 6 | **eigo5 / nh5** | english | 5 | only remaining 外国語 grade gap |
+| 6 | ~~eigo5 / nh5~~ ✅ shipped 2026-07-18 (#100) | english | 5 | only remaining 外国語 grade gap |
 
-Everything else (理科 3–6, 社会 3–6) is **complete**. **kokugo4** and
-**eigo5** are the only two items left in the core grid.
+**The core grades-1–6 grid is now complete** — kokugo4 (#101) and eigo5 (#100)
+shipped 2026-07-18, closing the last two holes. 算数/国語 cover grades 1–6,
+理科/社会 cover 3–6, and 外国語 covers 3/4 (Let's Try) + 5/6.
 
 ---
 
@@ -98,15 +104,16 @@ Everything else (理科 3–6, 社会 3–6) is **complete**. **kokugo4** and
      highest-value, most drillable objects in the entire elementary
      curriculum. Reason enough to prioritize sansu2 even alone.
 
-3. **kokugo4 (国語 4年) — kanji + grammar only** — next up (see spec §3.3)
+3. **kokugo4 (国語 4年) — kanji + grammar only** — ✅ shipped 2026-07-18 (#101)
    - _Why:_ fills the conspicuous hole between kokugo3 and kokugo5/6, and the
      safe half (grade-4 kanji list is a closed MEXT set; grammar is closed
      rule systems) is exactly the kokugo5/6 pattern already shipped twice.
      Reading-comprehension units deferred, same as kokugo5/6.
    - _Risk:_ low for the kanji+grammar scope; the deferred reading units are
-     where the copyright care lives (see §4). **Build order note:** land
-     `SPEC_decentralize_module_units.md` before this if eigo5 is being built
-     in parallel — see the 2026-07-17 update note at the top of this doc.
+     where the copyright care lives (see §4). Registry decentralization
+     (formerly a build-order blocker for building this alongside eigo5 in
+     parallel) shipped 2026-07-18 — see the update note at the top of this
+     doc; no longer a constraint.
 
 ### Priority tier B — completes lines, moderate effort
 
@@ -123,7 +130,7 @@ Everything else (理科 3–6, 社会 3–6) is **complete**. **kokugo4** and
 
 ### Priority tier C — completes english line, higher effort
 
-6. **eigo5 / nh5 (外国語 5年)** — next up alongside kokugo4
+6. **eigo5 / nh5 (外国語 5年)** — ✅ shipped 2026-07-18 (#100)
    - _Why last of the core set:_ the only remaining English grade gap, but
      English modules are the "ported app" family (nh6, nhvocab, eiken,
      letstry1/2) — heavier to stand up than a native generator, and grade-5
@@ -215,7 +222,8 @@ internal `UNITS` keys exactly):
 `name='算数 1年'`, `recommended_grades='{1}'`, `is_active=true` set
 explicitly. Commit the matching `supabase/migrations/<ts>_register_sansu1.sql`
 AND apply via MCP `apply_migration` (writes the ledger) — never
-`execute_sql`/dashboard. Also add the `sansu1` block to `module-units.js`.
+`execute_sql`/dashboard. (sansu1 shipped 2026-07-17; its unit keys now live in
+`modules/sansu1/units.js`, migrated off the old shared registry by #99.)
 
 **Copyright.** No passage risk. Original problems from the verified unit list;
 never reproduce the textbook's specific example problems or illustrations.
@@ -330,18 +338,18 @@ generator shipped TWICE:
 Stress-test 500–5000 generated instances per generator; these bugs only
 surface at scale.
 
-**module-units.js keys** (`kokugo4`): `kanji` + one key per GRAMMAR_UNIT,
-matching kokugo5/6's convention (they register `kanji` + grammar keys, no
-reading keys). Suggested: `kanji`, `bushu` (部首・漢字の組み立て),
-`setsuzoku` (つなぎ言葉), `kanyouku` (慣用句), `shugo_jutsugo`
-(主語・述語・修飾語), `jukugo` (熟語の意味). Final keys MUST equal the module's
-internal GRAMMAR_UNITS keys exactly.
+**units.js keys** (`kokugo4`): ship `modules/kokugo4/units.js` self-registering
+`window.MODULE_UNITS.kokugo4` — `kanji` + one key per GRAMMAR_UNIT, matching
+kokugo5/6's convention (they register `kanji` + grammar keys, no reading keys).
+Suggested: `kanji`, `bushu` (部首・漢字の組み立て), `setsuzoku` (つなぎ言葉),
+`kanyouku` (慣用句), `shugo_jutsugo` (主語・述語・修飾語), `jukugo` (熟語の意味).
+Final keys MUST equal the module's internal GRAMMAR_UNITS keys exactly. There is
+NO shared registry — never edit a common file (#94, deleted in #99).
 
 **Registration migration.** Idempotent; `key='kokugo4'`,
 `subject='japanese'`, `launch_url='/modules/kokugo4/index.html'`,
 `name='国語 4年'`, `recommended_grades='{4}'`, `is_active=true` explicit.
-Commit `supabase/migrations/` file + apply via MCP. Add `kokugo4` block to
-`module-units.js`.
+Commit `supabase/migrations/` file + apply via MCP.
 
 **Copyright.** Kanji/grammar are closed rule systems / official lists — zero
 passage-reproduction risk. When reading units are eventually built, the
@@ -456,9 +464,10 @@ e.g. "行く" for both *go* and a near-synonym). Sentence-pattern fill-ins:
 ensure only one option is grammatical/correct in context. Standard scale
 stress-test.
 
-**module-units.js keys.** Optional (English modules aren't unit-scoped today).
-If added, key per New Horizon 5 unit (`u01_hello`…`u08_hero`), matching
-internal keys; otherwise register no block (focus_units stays null = all).
+**units.js keys.** Optional (English modules aren't unit-scoped today). If
+added, ship `modules/eigo5/units.js` with a key per New Horizon 5 unit
+(`u01_hello`…`u08_hero`), matching internal keys; otherwise ship no `units.js`
+at all (focus_units stays null = all). No shared registry (#94).
 
 **Registration migration.** `key='eigo5'`, `subject='english'`,
 `launch_url='/modules/eigo5/index.html'`, `recommended_grades='{5}'`,

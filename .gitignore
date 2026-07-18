@@ -1,0 +1,3 @@
+# Transient git worktrees created by isolated subagent runs (auto-cleaned).
+# These are scratch checkouts, never project changes — never commit them.
+.claude/worktrees/
