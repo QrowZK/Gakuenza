@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1c2530" />
+  <title>外国語 5年 | がくえん座</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="module-topbar">
+    <a class="back-link" href="../../hub/index.html">← ハブへもどる</a>
+    <span class="module-name">外国語 5年</span>
+    <span class="spacer"></span>
+    <div class="account-bubble" id="accountBubble" hidden>
+      <button class="bubble-btn" id="bubbleBtn" type="button">
+        <span class="avatar" id="bubbleAvatar"></span>
+        <span id="bubbleName"></span>
+      </button>
+      <div class="dropdown">
+        <button type="button" id="signoutBtn">サインアウト</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- menu: pick a unit -->
+    <section class="screen active" id="screen-menu">
+      <h1 class="page-title">外国語 5年　メニュー</h1>
+      <p class="page-note">Unitをえらんで、たんごや文をれんしゅうしよう。問題は毎回あたらしく作られます。</p>
+      <div class="unit-list" id="unitList"></div>
+    </section>
+
+    <!-- mode: pick a practice type -->
+    <section class="screen" id="screen-mode">
+      <div class="sub-head">
+        <button class="btn ghost" id="modeBack" type="button">← Unit一覧</button>
+        <h1 class="page-title" id="modeTitle"></h1>
+      </div>
+      <div class="mode-grid" id="modeGrid"></div>
+    </section>
+
+    <!-- quiz -->
+    <section class="screen" id="screen-quiz">
+      <div class="quiz-progress">
+        <button class="btn ghost quiz-quit" id="quizBack" type="button">✕</button>
+        <div class="progress-track"><div class="progress-fill" id="quizFill"></div></div>
+        <span class="quiz-counter" id="quizCounter"></span>
+        <span class="quiz-score" id="quizScore">⭐ 0</span>
+      </div>
+      <div class="question-card">
+        <div class="q-emoji" id="qEmoji"></div>
+        <div class="q-label" id="qLabel"></div>
+        <div class="q-prompt" id="qPrompt"></div>
+        <div class="q-hint" id="qHint"></div>
+      </div>
+      <div class="choices-grid" id="choicesGrid"></div>
+      <div class="result-overlay hidden" id="resultOverlay">
+        <div class="result-icon" id="resultIcon"></div>
+        <div class="result-msg" id="resultMsg"></div>
+      </div>
+    </section>
+
+    <!-- results -->
+    <section class="screen" id="screen-results">
+      <div class="results-body">
+        <div class="results-emoji" id="resultsEmoji">🎉</div>
+        <h1 class="page-title">結果</h1>
+        <div class="results-score" id="resultsScore"></div>
+        <div class="results-bar-wrap"><div class="results-bar" id="resultsBar"></div></div>
+        <div class="results-msg" id="resultsMsg"></div>
+        <div class="sync-status" id="syncStatus"></div>
+        <div class="results-actions">
+          <button class="btn primary" id="resultsRetry" type="button">もう一度</button>
+          <button class="btn" id="resultsMenu" type="button">メニューへ</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="../../hub/supabase.js"></script>
+  <script src="../../hub/config.js"></script>
+  <script src="../../hub/hub-common.js"></script>
+  <script src="data.js"></script>
+  <script src="generators.js"></script>
+  <script src="tts.js"></script>
+  <script src="eigo5-report.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

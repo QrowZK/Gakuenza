@@ -1,0 +1,160 @@
+// eigo5-report.js — backend wiring for the 外国語5年 module.
+//
+// Same context-resolution contract as sansu3/kokugo3 (session -> profile ->
+// module by key -> class/school via ENROLLMENT), and the write goes through
+// HubCommon.reportActivityWithItems so the summary row + per-item detail
+// insert lives in exactly one shared place (hub-common.js). We deliberately do
+// NOT hand-roll the activity_results insert (CLAUDE.md hard rule 2 — the ported
+// nh6/nhvocab apps did, and never populated activity_result_items).
+//
+// If any resolution step fails, reporting silently skips — a practice attempt
+// must never error out of the child's flow.
+(function () {
+  'use strict';
+
+  const MODULE_KEY = 'eigo5';
+  let client = null;
+  let ctxPromise = null;
+
+  function getClient() {
+    if (client) return client;
+    try {
+      if (window.supabase && window.GAKUENZA_CONFIG &&
+          window.GAKUENZA_CONFIG.supabaseUrl && window.GAKUENZA_CONFIG.supabaseAnonKey) {
+        client = window.supabase.createClient(
+          window.GAKUENZA_CONFIG.supabaseUrl,
+          window.GAKUENZA_CONFIG.supabaseAnonKey
+        );
+      }
+    } catch (e) {
+      console.log('[Eigo5Report] supabase client unavailable:', e && e.message);
+    }
+    return client;
+  }
+
+  async function resolveContext() {
+    const sb = getClient();
+    if (!sb) return null;
+
+    const { data: sessionData } = await sb.auth.getSession();
+    const session = sessionData && sessionData.session;
+    if (!session || !session.user) {
+      console.log('[Eigo5Report] no session — skipping reporting.');
+      return null;
+    }
+    const userId = session.user.id;
+
+    const { data: profile } = await sb
+      .from('profiles').select('*').eq('id', userId).maybeSingle();
+
+    const { data: mod } = await sb
+      .from('modules').select('id').eq('key', MODULE_KEY).maybeSingle();
+
+    // Context via enrollments -> classes.school_id (NEVER profiles.home_school_id).
+    let classId = null, schoolId = null;
+    const { data: enr } = await sb
+      .from('enrollments')
+      .select('class_id, classes ( id, school_id )')
+      .eq('user_id', userId)
+      .limit(1);
+    if (enr && enr.length) {
+      classId = enr[0].class_id;
+      schoolId = enr[0].classes ? enr[0].classes.school_id : null;
+    }
+
+    if (!mod || !schoolId) {
+      console.log('[Eigo5Report] no module/school context — skipping reporting.');
+      return { userId, profile, moduleId: null, classId: null, schoolId: null };
+    }
+    return { userId, profile, moduleId: mod.id, classId, schoolId };
+  }
+
+  function getContext() {
+    if (!ctxPromise) ctxPromise = resolveContext().catch(function (e) {
+      console.log('[Eigo5Report] context resolution failed:', e && e.message);
+      return null;
+    });
+    return ctxPromise;
+  }
+
+  // result: { sectionId, sectionTitle, unit, score, total, items }
+  // items: [{ itemRef, category, prompt, correct, selectedAnswer, correctAnswer }]
+  async function report(result) {
+    try {
+      const ctx = await getContext();
+      if (!ctx || !ctx.moduleId) return false;
+      const sb = getClient();
+      if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) {
+        console.log('[Eigo5Report] HubCommon.reportActivityWithItems unavailable — skipping.');
+        return false;
+      }
+      // Timestamp suffix per project convention: the gradebook derives its
+      // per-assignment key by stripping the trailing timestamp from
+      // activity_ref, so 'eigo5/<sectionId>/<ts>' groups attempts of the same
+      // section into one gradebook column.
+      const out = await window.HubCommon.reportActivityWithItems(sb, {
+        schoolId: ctx.schoolId,
+        classId: ctx.classId,
+        moduleId: ctx.moduleId,
+        userId: ctx.userId,
+        activityRef: MODULE_KEY + '/' + result.sectionId + '/' + Date.now(),
+        score: result.score,
+        maxScore: result.total,
+        payload: { section: result.sectionTitle, unit: result.unit },
+        items: result.items || [],
+      });
+      if (!out.ok) {
+        console.log('[Eigo5Report] insert failed:', out.error && out.error.message);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.log('[Eigo5Report] report failed:', e && e.message);
+      return false;
+    }
+  }
+
+  async function getProfile() {
+    const ctx = await getContext();
+    return ctx ? ctx.profile : null;
+  }
+
+  // Unit-scoped pacing (focus_units) — same contract as sansu3: union of the
+  // focus-unit key lists set on this module across every class the student is
+  // enrolled in, or null meaning "all units" (fails soft to null on any error
+  // or any unscoped class).
+  async function getFocusUnits() {
+    try {
+      const ctx = await getContext();
+      if (!ctx || !ctx.moduleId) return null;
+      const sb = getClient();
+      if (!sb) return null;
+      const { data: enr } = await sb
+        .from('enrollments').select('class_id').eq('user_id', ctx.userId);
+      const classIds = (enr || []).map(function (r) { return r.class_id; });
+      if (!classIds.length) return null;
+      const { data, error } = await sb
+        .from('class_modules')
+        .select('focus_units, class_id')
+        .eq('module_id', ctx.moduleId)
+        .in('class_id', classIds);
+      if (error || !data || !data.length) return null;
+      const keys = new Set();
+      for (const row of data) {
+        if (row.focus_units == null) return null; // "all units" wins the union
+        if (Array.isArray(row.focus_units)) row.focus_units.forEach(function (k) { keys.add(k); });
+      }
+      return keys.size ? Array.from(keys) : null;
+    } catch (e) {
+      console.log('[Eigo5Report] focus-units resolution failed:', e && e.message);
+      return null;
+    }
+  }
+
+  async function signOut() {
+    const sb = getClient();
+    if (sb) await sb.auth.signOut();
+  }
+
+  window.Eigo5Report = { report, getProfile, getFocusUnits, signOut, MODULE_KEY };
+})();
