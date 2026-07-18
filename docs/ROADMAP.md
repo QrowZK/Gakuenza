@@ -83,7 +83,8 @@ incident closed same-day, three more autofixes, and a second module wave:
   `sansu1`/`kokugo1`, hand-consolidated in #93). A scoped, build-ready fix
   (`docs/specs/SPEC_decentralize_module_units.md`: each module owns a lazy-
   loaded `modules/<key>/units.js`, the shared file goes away entirely) was
-  written today but **not yet built** — see Near-term debt #5.
+  written today and **built + merged the same day (#99)** — the shared file is
+  gone; parallel module PRs can no longer collide on it.
 - **`こくご③` support added to the print worksheet generator** (#71).
 - `CLAUDE.md` updated twice today to record the new DB surface (Kadaiban,
   `publisher`, grades 1–2) and the security hardening.
@@ -103,23 +104,22 @@ Debt items, not new ideas:
    swap.
 2. **Wire `rika3` into `focus_units`.** It exposes a unit-key list "for
    focus_units alignment" in `rika3-data.js` but never queries `class_modules`
-   and is absent from `module-units.js` — the assignment UI can't scope it.
-   Same shape as the `sansu3` reference; a small follow-up. (Note: once
-   Near-term debt #5 lands, "absent from `module-units.js`" becomes "no
-   `modules/rika3/units.js`" — same fix, new location.)
+   and ships no `modules/rika3/units.js` — the assignment UI can't scope it.
+   Same shape as the `sansu3` reference; a small follow-up. (Since #5 landed,
+   the fix is now: add `modules/rika3/units.js` self-registering
+   `window.MODULE_UNITS.rika3`, plus wire the runner to read `focus_units`.)
 3. **SECURITY DEFINER EXECUTE pass** (advisor finding #6, open): revoke EXECUTE
    on `app_*` helpers only ever called from inside RLS (e.g. `app_class_school`,
    the `app_user_*_ids` family), to shrink the anonymous attack surface.
 4. **Leaked-password protection is still off.** Dashboard-only toggle
    (Authentication → Policies) — someone with console access should flip it.
-5. **Build `SPEC_decentralize_module_units.md` — now the top engineering
-   priority, not just debt.** This is the second time the shared
-   `module-units.js` registry has silently corrupted under parallel module
-   PRs (first: the grade-5/6 wave's migration-version drift; today: the same
-   root cause, now correctly diagnosed). A third parallel batch — `kokugo4`
-   and `eigo5` are both queued next — will hit it again if this isn't built
-   first. The spec is scoped and build-ready; this should be the very next
-   PR before any more curriculum modules ship in parallel.
+5. **~~Build `SPEC_decentralize_module_units.md`.~~ ✅ Done (#99, 2026-07-18).**
+   The shared `module-units.js` registry had silently corrupted twice under
+   parallel module PRs (first: the grade-5/6 wave's migration-version drift;
+   then the same root cause, correctly diagnosed). #99 deleted the shared file
+   and gave each module its own lazy-loaded `modules/<key>/units.js`, so the
+   whole conflict class is gone. `kokugo4` and `eigo5` can now ship in parallel
+   safely. Spec moved to `docs/specs/completed/`.
 6. **Test coverage is inconsistent and un-enforced.** Only 12 of 27 modules
    have a `tests/<key>/` directory (`kokugo1/2/3/5/6`, `rika5/6`,
    `sansu1/2/5/6`) — the rest (`rika3/4`, `shakai3–6`, `sansu3/4`, all five
@@ -141,12 +141,11 @@ today) — the empty-hub problem for the youngest grades is closed. The core
 grid's only remaining holes are **kokugo4** (the one missing rung in
 算数/理科/社会/国語 × grades 3–6) and **eigo5** (the last 外国語 grade gap),
 plus the still-deferred **reading comprehension for kokugo4/5/6** (all three
-ship kanji+grammar only). **Build `SPEC_decentralize_module_units.md` first**
-(Near-term debt #5) — both remaining modules would otherwise be the third
-parallel batch to risk corrupting the shared registry. The detail doc has the
-full coverage matrix (needs a pass to mark sansu1/2, kokugo1/2 ✅) and
-drop-in spec sketches for kokugo4/eigo5 — ready to move into
-`docs/specs/pending/` once the registry fix lands.
+ship kanji+grammar only). The registry-corruption blocker is **resolved** (#99,
+Near-term debt #5) — kokugo4 and eigo5 can now ship **in parallel** safely, each
+adding its own `modules/<key>/units.js`. The detail doc has the full coverage
+matrix (needs a pass to mark sansu1/2, kokugo1/2 ✅) and drop-in spec sketches
+for kokugo4/eigo5 — ready to move into `docs/specs/pending/`.
 
 ### Product features → [`planning/FEATURE_BACKLOG.md`](planning/FEATURE_BACKLOG.md)
 

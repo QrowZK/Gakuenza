@@ -6,11 +6,13 @@ _Scoping doc, 2026-07-16. Design/planning only — no code, no migrations._
 > item 1–2 and tier B items 4–5 below) all **shipped today** — see
 > `docs/specs/completed/`. Coverage matrix and gap table below updated
 > accordingly. Only kokugo4 and eigo5 remain from the original six-item gap
-> list. **Before either ships, build
-> `docs/specs/SPEC_decentralize_module_units.md` first** — the shared
-> `hub/module-units.js` registry has now corrupted twice under parallel
-> module PRs (see `../ROADMAP.md` Near-term debt #5); a third parallel batch
-> without that fix risks a third corruption.
+> list.
+>
+> **Update 2026-07-18:** the registry-corruption blocker is **resolved** (#99).
+> The shared `hub/module-units.js` is deleted; each module now owns a lazy-
+> loaded `modules/<key>/units.js`. kokugo4 and eigo5 are therefore safe to build
+> **in parallel** — each just adds its own `units.js`, with no shared file to
+> collide on.
 
 The top sketches below are written to be droppable into
 `docs/specs/pending/` later, matching the `docs/specs/completed/` format.
@@ -215,7 +217,8 @@ internal `UNITS` keys exactly):
 `name='算数 1年'`, `recommended_grades='{1}'`, `is_active=true` set
 explicitly. Commit the matching `supabase/migrations/<ts>_register_sansu1.sql`
 AND apply via MCP `apply_migration` (writes the ledger) — never
-`execute_sql`/dashboard. Also add the `sansu1` block to `module-units.js`.
+`execute_sql`/dashboard. (sansu1 shipped 2026-07-17; its unit keys now live in
+`modules/sansu1/units.js`, migrated off the old shared registry by #99.)
 
 **Copyright.** No passage risk. Original problems from the verified unit list;
 never reproduce the textbook's specific example problems or illustrations.
@@ -330,18 +333,18 @@ generator shipped TWICE:
 Stress-test 500–5000 generated instances per generator; these bugs only
 surface at scale.
 
-**module-units.js keys** (`kokugo4`): `kanji` + one key per GRAMMAR_UNIT,
-matching kokugo5/6's convention (they register `kanji` + grammar keys, no
-reading keys). Suggested: `kanji`, `bushu` (部首・漢字の組み立て),
-`setsuzoku` (つなぎ言葉), `kanyouku` (慣用句), `shugo_jutsugo`
-(主語・述語・修飾語), `jukugo` (熟語の意味). Final keys MUST equal the module's
-internal GRAMMAR_UNITS keys exactly.
+**units.js keys** (`kokugo4`): ship `modules/kokugo4/units.js` self-registering
+`window.MODULE_UNITS.kokugo4` — `kanji` + one key per GRAMMAR_UNIT, matching
+kokugo5/6's convention (they register `kanji` + grammar keys, no reading keys).
+Suggested: `kanji`, `bushu` (部首・漢字の組み立て), `setsuzoku` (つなぎ言葉),
+`kanyouku` (慣用句), `shugo_jutsugo` (主語・述語・修飾語), `jukugo` (熟語の意味).
+Final keys MUST equal the module's internal GRAMMAR_UNITS keys exactly. There is
+NO shared registry — never edit a common file (#94, done in #99).
 
 **Registration migration.** Idempotent; `key='kokugo4'`,
 `subject='japanese'`, `launch_url='/modules/kokugo4/index.html'`,
 `name='国語 4年'`, `recommended_grades='{4}'`, `is_active=true` explicit.
-Commit `supabase/migrations/` file + apply via MCP. Add `kokugo4` block to
-`module-units.js`.
+Commit `supabase/migrations/` file + apply via MCP.
 
 **Copyright.** Kanji/grammar are closed rule systems / official lists — zero
 passage-reproduction risk. When reading units are eventually built, the
@@ -456,9 +459,10 @@ e.g. "行く" for both *go* and a near-synonym). Sentence-pattern fill-ins:
 ensure only one option is grammatical/correct in context. Standard scale
 stress-test.
 
-**module-units.js keys.** Optional (English modules aren't unit-scoped today).
-If added, key per New Horizon 5 unit (`u01_hello`…`u08_hero`), matching
-internal keys; otherwise register no block (focus_units stays null = all).
+**units.js keys.** Optional (English modules aren't unit-scoped today). If
+added, ship `modules/eigo5/units.js` with a key per New Horizon 5 unit
+(`u01_hello`…`u08_hero`), matching internal keys; otherwise ship no `units.js`
+at all (focus_units stays null = all). No shared registry (#94).
 
 **Registration migration.** `key='eigo5'`, `subject='english'`,
 `launch_url='/modules/eigo5/index.html'`, `recommended_grades='{5}'`,
