@@ -3,14 +3,18 @@
 _Scoping doc, 2026-07-16. Design/planning only — no code, no migrations._
 
 > **Update 2026-07-17:** sansu1, sansu2, kokugo1, and kokugo2 (Priority tier A
-> item 1–2 and tier B items 4–5 below) all **shipped today** — see
+> item 1–2 and tier B items 4–5 below) all shipped — see
 > `docs/specs/completed/`. Coverage matrix and gap table below updated
 > accordingly. Only kokugo4 and eigo5 remain from the original six-item gap
-> list. **Before either ships, build
-> `docs/specs/SPEC_decentralize_module_units.md` first** — the shared
-> `hub/module-units.js` registry has now corrupted twice under parallel
-> module PRs (see `../ROADMAP.md` Near-term debt #5); a third parallel batch
-> without that fix risks a third corruption.
+> list.
+>
+> **Update 2026-07-18:** `SPEC_decentralize_module_units.md` shipped (#99,
+> see `../ROADMAP.md` Near-term debt #5) — the shared `hub/module-units.js`
+> registry that had corrupted twice under parallel module PRs is deleted;
+> every module now owns its own `modules/<key>/units.js`. **kokugo4 and
+> eigo5 are no longer blocked from building in parallel** — the concrete
+> next step is moving their spec sketches (§3.3, §3.6 below) into
+> `docs/specs/pending/`.
 
 The top sketches below are written to be droppable into
 `docs/specs/pending/` later, matching the `docs/specs/completed/` format.
@@ -104,9 +108,10 @@ Everything else (理科 3–6, 社会 3–6) is **complete**. **kokugo4** and
      rule systems) is exactly the kokugo5/6 pattern already shipped twice.
      Reading-comprehension units deferred, same as kokugo5/6.
    - _Risk:_ low for the kanji+grammar scope; the deferred reading units are
-     where the copyright care lives (see §4). **Build order note:** land
-     `SPEC_decentralize_module_units.md` before this if eigo5 is being built
-     in parallel — see the 2026-07-17 update note at the top of this doc.
+     where the copyright care lives (see §4). Registry decentralization
+     (formerly a build-order blocker for building this alongside eigo5 in
+     parallel) shipped 2026-07-18 — see the update note at the top of this
+     doc; no longer a constraint.
 
 ### Priority tier B — completes lines, moderate effort
 
