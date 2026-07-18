@@ -3,16 +3,22 @@
 _Scoping doc, 2026-07-16. Design/planning only — no code, no migrations._
 
 > **Update 2026-07-17:** sansu1, sansu2, kokugo1, and kokugo2 (Priority tier A
-> item 1–2 and tier B items 4–5 below) all **shipped today** — see
+> item 1–2 and tier B items 4–5 below) all shipped — see
 > `docs/specs/completed/`. Coverage matrix and gap table below updated
 > accordingly. Only kokugo4 and eigo5 remain from the original six-item gap
 > list.
 >
-> **Update 2026-07-18:** the registry-corruption blocker is **resolved** (#99).
-> The shared `hub/module-units.js` is deleted; each module now owns a lazy-
-> loaded `modules/<key>/units.js`. kokugo4 and eigo5 are therefore safe to build
-> **in parallel** — each just adds its own `units.js`, with no shared file to
-> collide on.
+> **Update 2026-07-18:** `SPEC_decentralize_module_units.md` shipped (#99,
+> see `../ROADMAP.md` Near-term debt #5) — the shared `hub/module-units.js`
+> registry that had corrupted twice under parallel module PRs is deleted;
+> every module now owns its own `modules/<key>/units.js`. **kokugo4 and
+> eigo5 are no longer blocked from building in parallel.** Build-ready
+> standalone specs now exist at `docs/specs/SPEC_kokugo4_new_module.md` and
+> `docs/specs/SPEC_eigo5_new_module.md` (repo root, hand-assigned to subagents —
+> **not** `pending/`, which fires the unattended builder). The §3.3/§3.6
+> sketches below are superseded by those spec docs; where a sketch still says
+> "add a block to `module-units.js`," follow the spec doc instead — that shared
+> file was deleted in #99.
 
 The top sketches below are written to be droppable into
 `docs/specs/pending/` later, matching the `docs/specs/completed/` format.
@@ -106,9 +112,10 @@ Everything else (理科 3–6, 社会 3–6) is **complete**. **kokugo4** and
      rule systems) is exactly the kokugo5/6 pattern already shipped twice.
      Reading-comprehension units deferred, same as kokugo5/6.
    - _Risk:_ low for the kanji+grammar scope; the deferred reading units are
-     where the copyright care lives (see §4). **Build order note:** land
-     `SPEC_decentralize_module_units.md` before this if eigo5 is being built
-     in parallel — see the 2026-07-17 update note at the top of this doc.
+     where the copyright care lives (see §4). Registry decentralization
+     (formerly a build-order blocker for building this alongside eigo5 in
+     parallel) shipped 2026-07-18 — see the update note at the top of this
+     doc; no longer a constraint.
 
 ### Priority tier B — completes lines, moderate effort
 
@@ -339,7 +346,7 @@ kokugo5/6's convention (they register `kanji` + grammar keys, no reading keys).
 Suggested: `kanji`, `bushu` (部首・漢字の組み立て), `setsuzoku` (つなぎ言葉),
 `kanyouku` (慣用句), `shugo_jutsugo` (主語・述語・修飾語), `jukugo` (熟語の意味).
 Final keys MUST equal the module's internal GRAMMAR_UNITS keys exactly. There is
-NO shared registry — never edit a common file (#94, done in #99).
+NO shared registry — never edit a common file (#94, deleted in #99).
 
 **Registration migration.** Idempotent; `key='kokugo4'`,
 `subject='japanese'`, `launch_url='/modules/kokugo4/index.html'`,
