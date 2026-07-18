@@ -8,10 +8,59 @@
 // operations are identical and RLS is the real boundary (class_modules writes
 // admit staff school-wide OR the taught-class educator; see cmod_write policy).
 //
-// Depends on: hub/module-units.js (window.MODULE_UNITS) for the focus-unit
-// checkbox source of truth. Load module-units.js before this file.
+// Focus-unit source of truth: each module ships its own
+// modules/<key>/units.js that self-registers window.MODULE_UNITS[<key>].
+// There is NO shared registry file — moduleUnitsFor() lazy-loads a module's
+// own units.js on demand and caches it. A module with no units.js simply
+// offers no unit picker (its file 404s → []), which is harmless
+// (focus_units stays null = all units).
 (function () {
   'use strict';
+
+  // ---- per-module unit registry (lazy-loaded) -------------------------------
+
+  // Cache of resolved unit lists, keyed by module key ([] for "no units").
+  var _unitCache = {};
+  // In-flight/settled <script> injections, keyed by src (one per key).
+  var _scriptPromises = {};
+
+  // Inject a <script> exactly once per src and resolve when it settles.
+  // Resolves on BOTH load and error: a module with no units.js (404) is a
+  // valid "no unit picker" state, not a failure to surface.
+  function loadScriptOnce(src) {
+    if (_scriptPromises[src]) return _scriptPromises[src];
+    _scriptPromises[src] = new Promise(function (resolve) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { resolve(); };
+      document.head.appendChild(s);
+    });
+    return _scriptPromises[src];
+  }
+
+  // Async: the unit list for a module key, or [] if it has none. Lazy-loads
+  // the module's own /modules/<key>/units.js (self-registers MODULE_UNITS[key])
+  // the first time it's asked for, then caches.
+  async function moduleUnitsFor(moduleKey) {
+    if (!moduleKey) return [];
+    if (_unitCache[moduleKey]) return _unitCache[moduleKey];
+    if (!(window.MODULE_UNITS && window.MODULE_UNITS[moduleKey])) {
+      await loadScriptOnce('/modules/' + moduleKey + '/units.js');
+    }
+    _unitCache[moduleKey] = (window.MODULE_UNITS && window.MODULE_UNITS[moduleKey]) || [];
+    return _unitCache[moduleKey];
+  }
+
+  // Sync: the ALREADY-loaded unit list for a key, or [] if not yet loaded /
+  // no units. Use only after moduleUnitsFor(key) has resolved for that key
+  // (e.g. when building an HTML string that can't await per item).
+  function moduleUnitsCached(moduleKey) {
+    if (!moduleKey) return [];
+    if (_unitCache[moduleKey]) return _unitCache[moduleKey];
+    return (window.MODULE_UNITS && window.MODULE_UNITS[moduleKey]) || [];
+  }
 
   // ---- data operations on class_modules -------------------------------------
 
@@ -84,10 +133,11 @@
   // ---- focus-unit checkbox field --------------------------------------------
 
   // Returns HTML for a set of unit checkboxes for a module, or '' if the module
-  // has no unit structure (window.MODULE_UNITS has no entry). selected = array
-  // of currently-focused keys (checks those boxes).
-  function focusUnitsFieldHtml(moduleKey, selected) {
-    var units = (window.moduleUnitsFor ? window.moduleUnitsFor(moduleKey) : []) || [];
+  // has no unit structure (no modules/<key>/units.js). selected = array of
+  // currently-focused keys (checks those boxes). Async: lazy-loads the module's
+  // units.js on first use — callers must await it.
+  async function focusUnitsFieldHtml(moduleKey, selected) {
+    var units = await moduleUnitsFor(moduleKey);
     if (!units.length) return '';
     var sel = new Set(selected || []);
     var boxes = units.map(function (u) {
@@ -163,7 +213,12 @@
       failures.slice(0, 3).join('、') + (failures.length > 3 ? ' 他' : '') + '）。';
   }
 
+  // Async unit lookup, kept on window for back-compat with existing callers.
+  window.moduleUnitsFor = moduleUnitsFor;
+
   window.ModuleAssign = {
+    moduleUnitsFor: moduleUnitsFor,
+    moduleUnitsCached: moduleUnitsCached,
     loadAssigned: loadAssigned,
     loadSchoolEnabledIds: loadSchoolEnabledIds,
     assignModule: assignModule,

@@ -8,8 +8,9 @@
 //     class this project has re-shipped (rika3's stroke generator, twice).
 //  2. Authored data: every unit's choice questions have their `answer` present
 //     exactly once among `options`; order questions have >=2 distinct items;
-//     unit keys are unique and match RIKA6_DATA.UNIT_KEYS and the hub
-//     module-units.js registry (which the assignment UIs read for focus_units).
+//     unit keys are unique and match RIKA6_DATA.UNIT_KEYS and the module's own
+//     modules/rika6/units.js registry (which the assignment UIs read for
+//     focus_units).
 
 const fs = require('fs');
 const path = require('path');
@@ -25,7 +26,7 @@ const load = (rel) => vm.runInContext(
   fs.readFileSync(path.resolve(__dirname, rel), 'utf8'), sandbox, { filename: rel });
 load('../../gakuenza.com/modules/rika6/rika6-data.js');
 load('../../gakuenza.com/modules/rika6/rika6-gen.js');
-load('../../gakuenza.com/hub/module-units.js');
+load('../../gakuenza.com/modules/rika6/units.js');
 
 const DATA = sandbox.window.RIKA6_DATA;
 const GEN = sandbox.window.RIKA6_GEN;
@@ -74,7 +75,7 @@ if (JSON.stringify(dataKeys) !== JSON.stringify(exportedKeys))
 
 const registryKeys = (MODULE_UNITS.rika6 || []).map((e) => e.key).sort();
 if (JSON.stringify(dataKeys) !== JSON.stringify(registryKeys))
-  fail(`hub/module-units.js rika6 keys mismatch vs module\n  module:  ${dataKeys}\n  registry:${registryKeys}`);
+  fail(`modules/rika6/units.js keys mismatch vs module\n  module:  ${dataKeys}\n  registry:${registryKeys}`);
 
 console.log(`data: ${allUnits.length} units, ${dataKeys.length} unique keys; registry entries=${registryKeys.length}`);
 

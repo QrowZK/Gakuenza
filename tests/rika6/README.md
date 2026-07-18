@@ -8,7 +8,7 @@ production host — the deploy workflow's rsync source is `./gakuenza.com/`.
 ```sh
 # Generator stress test (structural + distractor-collision, 100k instances)
 # plus authored-data integrity and unit-key registry alignment
-# (RIKA6_DATA.UNIT_KEYS <-> hub/module-units.js rika6).
+# (RIKA6_DATA.UNIT_KEYS <-> modules/rika6/units.js rika6).
 node tests/rika6/rika6.test.js
 
 # End-to-end quiz flow through the real UI (choice + order questions),

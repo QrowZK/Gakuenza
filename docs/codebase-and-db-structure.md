@@ -32,8 +32,8 @@ items are.
         ├── config.js               Supabase URL + anon key (public by design)
         ├── supabase.js             vendored minified supabase-js (library, not app code)
         ├── hub-common.js           window.HubCommon — shared student-side helpers
-        ├── module-units.js         window.MODULE_UNITS — canonical unit-key registry
         ├── module-assign-common.js window.ModuleAssign — class_modules writes + bulk pw
+        │                           (moduleUnitsFor lazy-loads modules/<key>/units.js)
         ├── login.html · index.html · dashboard.html(legacy) · modules.html
         ├── grades.html · settings.html
         ├── admin/                  admin console (school_admin / coordinator / platform)
@@ -255,8 +255,11 @@ in a fixed order: `supabase.js` → `config.js` → `hub-common.js` → data/gen
 canonical unit keys, or null = all) lets a class foreground specific units without
 hiding the rest. `sansu3` is the reference implementation: it reads the union of
 focus keys across the student's classes but fails soft to null if any class is
-unscoped. Unit keys must match `hub/module-units.js` exactly (`sansu3: u01–u17`,
-`kokugo3: kanji/daizu`).
+unscoped. Unit keys live in each module's own `modules/<key>/units.js` (which
+self-registers `window.MODULE_UNITS.<key>`; the assignment UIs lazy-load it via
+`ModuleAssign.moduleUnitsFor`) and must match the module's internal keys exactly
+(`sansu3: u01–u17`, `kokugo3: kanji/daizu`). There is no shared registry file
+(the old `hub/module-units.js` was retired in #94).
 
 ---
 
@@ -358,7 +361,7 @@ with **RLS as the load-bearing security layer** and four Edge Functions for the
 privileged edges. The domain model is clean and multi-tenant (school → class →
 enrollment/assignment → result), the role system is coherent across five tiers,
 and the client is well-factored into shared modules (`HubCommon`, `AdminCommon`,
-`ModuleAssign`, `Gradebook`, `MODULE_UNITS`) with a single standardized
+`ModuleAssign`, `Gradebook`, per-module `MODULE_UNITS`) with a single standardized
 result-reporting contract for the drills.
 
 The main structural gaps are operational rather than architectural: **no
