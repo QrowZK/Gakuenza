@@ -603,15 +603,36 @@
         .eq('id', r.subId);
       if (subErr) throw subErr;
 
-      // 2. summary row into activity_results (no items — holistic grade). The
-      //    ar_insert policy already lets an educator insert for another user_id.
+      // 2. summary row into activity_results (no items — holistic grade).
+      //    STABLE activity_ref per (assignment, student) — a kadaiban submission
+      //    is 1:1 with its grade, so a re-grade must UPDATE the existing row, not
+      //    insert a new one. The old code stamped Date.now() into the ref, so
+      //    every save (incl. corrections) inserted a duplicate — inflating the
+      //    karte 取組回数/average and letting grades.html "higher score wins"
+      //    hide a corrected-down grade (issue #83). The teacher already holds
+      //    RLS INSERT (ar_insert) and UPDATE (results_admin_write) on their
+      //    class's rows, so this update-or-insert runs client-side.
       if (kadaibanModuleId) {
-        const res = await H.reportActivityWithItems(sb, {
-          schoolId, classId, moduleId: kadaibanModuleId, userId: r.userId,
-          activityRef: `kadaiban/${activeAsg.id}/${gradedTs}`,
-          score, maxScore: max, payload: { title: activeAsg.title, kind: 'kadaiban' },
-        });
-        if (!res.ok) console.error('[kadaiban] activity_results write failed', res.error);
+        const activityRef = `kadaiban/${activeAsg.id}/${r.userId}`;
+        const payload = { title: activeAsg.title, kind: 'kadaiban' };
+        const { data: existingRows, error: findErr } = await sb.from('activity_results')
+          .select('id')
+          .eq('module_id', kadaibanModuleId).eq('user_id', r.userId).eq('activity_ref', activityRef)
+          .order('created_at', { ascending: false }).limit(1);
+        if (findErr) console.error('[kadaiban] activity_results lookup failed', findErr);
+        const existing = existingRows && existingRows[0];
+        if (existing) {
+          const { error: upErr } = await sb.from('activity_results')
+            .update({ score, max_score: max, payload, created_at: new Date(gradedTs).toISOString() })
+            .eq('id', existing.id);
+          if (upErr) console.error('[kadaiban] activity_results update failed', upErr);
+        } else {
+          const res = await H.reportActivityWithItems(sb, {
+            schoolId, classId, moduleId: kadaibanModuleId, userId: r.userId,
+            activityRef, score, maxScore: max, payload,
+          });
+          if (!res.ok) console.error('[kadaiban] activity_results write failed', res.error);
+        }
       }
 
       await loadRows();
