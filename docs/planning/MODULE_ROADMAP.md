@@ -527,10 +527,12 @@ problems, diagrams, or exact wording. Risk is not uniform across subjects:
   `apply_migration` (writes the prod ledger) AND commit the matching
   `supabase/migrations/<ts>_<name>.sql` in the same PR. Never
   `execute_sql`/dashboard.
-- **module-units.js:** add the module's block with keys that exactly match its
+- **units.js:** if the module is unit-scoped, ship `modules/<key>/units.js`
+  self-registering `window.MODULE_UNITS.<key>` with keys that exactly match its
   internal unit keys (the assignment UIs cannot load a module's generators, so
-  the registry is the contract). A module with no block simply offers no unit
-  picker (harmless; focus_units = null = all units).
+  this is the contract). There is NO shared registry — never edit a common file
+  (#94). A module with no `units.js` simply offers no unit picker (harmless;
+  focus_units = null = all units).
 - **Testing bar:** stress-test generators at hundreds–thousands of instances
   for structural bugs AND distractor collisions; run a real headless flow test
   asserting `reportActivityWithItems` was called and `activity_result_items`

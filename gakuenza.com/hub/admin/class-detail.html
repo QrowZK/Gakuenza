@@ -328,7 +328,6 @@
 <script src="../supabase.js"></script>
 <script src="../config.js"></script>
 <script src="../hub-common.js"></script>
-<script src="../module-units.js"></script>
 <script src="../module-assign-common.js"></script>
 <script src="admin-common.js"></script>
 <script>
@@ -1124,11 +1123,11 @@
     document.getElementById('modal-assign').style.display = 'flex';
   }
   // Focus-unit checkboxes follow the currently-selected module in the picker.
-  function renderAssignFocus() {
+  async function renderAssignFocus() {
     const sel = document.getElementById('select-assign-module');
     const mod = catalog.find(m => m.id === sel.value);
     document.getElementById('assign-focus-slot').innerHTML =
-      (mod ? MA.focusUnitsFieldHtml(mod.key, []) : '') || '';
+      (mod ? await MA.focusUnitsFieldHtml(mod.key, []) : '') || '';
   }
   document.getElementById('select-assign-module').addEventListener('change', renderAssignFocus);
   document.getElementById('btn-assign-module').addEventListener('click', openAssignModal);

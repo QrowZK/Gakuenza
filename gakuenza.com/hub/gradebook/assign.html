@@ -71,7 +71,6 @@
 <script src="../config.js"></script>
 <script src="../hub-common.js"></script>
 <script src="../admin/admin-common.js"></script>
-<script src="../module-units.js"></script>
 <script src="../module-assign-common.js"></script>
 <script src="gradebook-common.js"></script>
 <script>
@@ -116,13 +115,16 @@
     catalog = catRes.data || [];
     assigned = assignedRes.error ? [] : (assignedRes.data || []);
     enabledIds = enabled || new Set();
+    // Pre-load unit lists for every assigned module so the (synchronous)
+    // focusSummary() below can read them from cache while building innerHTML.
+    await Promise.all(assigned.map(a => MA.moduleUnitsFor(a.modules ? a.modules.key : null)));
   }
 
   const moduleById = {};
   function focusSummary(a) {
     const key = a.modules ? a.modules.key : null;
     if (!a.focus_units || !a.focus_units.length) return '全単元';
-    const units = (window.moduleUnitsFor ? window.moduleUnitsFor(key) : []);
+    const units = MA.moduleUnitsCached(key);
     const labelOf = {}; units.forEach(u => labelOf[u.key] = u.label);
     const names = a.focus_units.map(k => labelOf[k] || k);
     return '今週: ' + (names.length <= 2 ? names.join('、') : names.length + '単元');
@@ -174,7 +176,7 @@
   // ── modal ───────────────────────────────────────────────────────────
   const backdrop = document.getElementById('ma-backdrop');
   let modalModuleId = null, modalIsEdit = false;
-  function openModal(moduleId, isEdit) {
+  async function openModal(moduleId, isEdit) {
     modalModuleId = moduleId; modalIsEdit = isEdit;
     const existing = assigned.find(a => a.module_id === moduleId);
     // Fall back to the assigned row's joined module info when the module isn't
@@ -187,7 +189,7 @@
     document.getElementById('ma-total').value = existing && existing.total_items != null ? existing.total_items : '';
     const selected = existing && existing.focus_units ? existing.focus_units : [];
     document.getElementById('ma-focus-slot').innerHTML =
-      MA.focusUnitsFieldHtml(mod ? mod.key : null, selected) || '<div class="ma-focus-hint">この教材には単元の指定はありません。</div>';
+      (await MA.focusUnitsFieldHtml(mod ? mod.key : null, selected)) || '<div class="ma-focus-hint">この教材には単元の指定はありません。</div>';
     backdrop.style.display = 'flex';
   }
   function closeModal() { backdrop.style.display = 'none'; modalModuleId = null; }

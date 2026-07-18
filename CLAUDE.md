@@ -28,8 +28,15 @@ gakuenza.com/modules/<key>/
 ├── index.html
 ├── <content/generator files>.js
 ├── <key>-report.js
+├── units.js    — self-registers this module's focus-unit keys (see below)
 └── style.css   — fully self-contained, see rule below
 ```
+
+A unit-scoped module declares its focus-unit keys in its own
+`modules/<key>/units.js` (self-registers `window.MODULE_UNITS.<key>`).
+**There is NO shared registry file — never reintroduce one** (see the
+schema note below). A module with no `units.js` simply offers no unit
+picker, which is harmless.
 
 ## Hard rules — each backed by a real shipped bug, not a style preference
 
@@ -97,10 +104,10 @@ gakuenza.com/modules/<key>/
   is the reference (reads the union of focus keys across the student's
   classes, fails soft to null = all units if any class is unscoped),
   with `kokugo3`, `rika4`, `sansu4`, and `shakai4` following the same
-  pattern (5 total, matching the `module-units.js` registry exactly).
+  pattern (5 modules whose runners read `focus_units`).
   **`rika3` is NOT wired** despite `rika3-data.js` exposing a
   unit-key list "for focus_units alignment" — it never queries
-  `class_modules` and is absent from `module-units.js`, so the
+  `class_modules` and ships no `modules/rika3/units.js`, so the
   assignment UI can't offer it a unit picker. (Don't let the comment
   in `rika3-data.js` fool you, as this file's own note once did.) It
   is written by the assignment UIs (`hub/admin/class-detail.html`,
@@ -110,14 +117,23 @@ gakuenza.com/modules/<key>/
   `class_modules` row actually has `focus_units` populated yet
   (`cm_with_focus = 0`) — the plumbing exists end-to-end but no teacher
   has scoped an assignment, so test the null/"all units" path for real.
-- **`module-units.js` now exists** at `gakuenza.com/hub/module-units.js`
-  (`window.MODULE_UNITS`) — it is the canonical unit-key registry the
-  assignment UIs use to render the focus-unit picker, and the keys
-  **must** match each module's internal unit keys exactly (`sansu3`:
-  `u01`–`u17`; `kokugo3`: `kanji` + `READING_UNITS` keys). When a
-  module gains or renames units, update both the module and this
-  registry — the assignment pages cannot load a module's generators.
-  (The old note that this file "does not exist" is retired.)
+- **Unit keys are decentralized — a module declares its units in its own
+  `modules/<key>/units.js`; there is NO shared registry, never reintroduce
+  one** (#94, done 2026-07-18). Each `units.js` self-registers
+  `window.MODULE_UNITS.<key> = [{key,label}, …]`; the assignment UIs
+  (`hub/admin/class-detail.html`, `hub/gradebook/assign.html`, both via
+  `hub/module-assign-common.js`) lazy-load `/modules/<key>/units.js` on demand
+  through `moduleUnitsFor(key)` (now **async + cached**) and render the
+  focus-unit picker. The keys **must** match each module's internal unit keys
+  exactly (`sansu3`: `u01`–`u17`; `kokugo3`: `kanji` + `READING_UNITS` keys) —
+  the assignment pages cannot load a module's generators. When a module gains
+  or renames units, edit only that module's `units.js`. A module with no
+  `units.js` offers no picker (its file 404s → `[]`, focus_units stays null =
+  all units). **The old shared `hub/module-units.js` is deleted** — it was a
+  single hand-edited file every module PR appended to, and the `.gitattributes`
+  `merge=union` stopgap kept corrupting it into invalid JS on parallel batches.
+  That whole conflict class is gone; do not recreate a shared append-only
+  registry (in JS or as a `modules` column).
 - `modules.is_active` genuinely defaults to `true` at the column
   level — the earlier fear that an unset module is invisible by
   default was wrong — but set it explicitly anyway, it's convention.
