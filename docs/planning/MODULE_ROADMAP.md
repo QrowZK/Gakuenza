@@ -5,20 +5,17 @@ _Scoping doc, 2026-07-16. Design/planning only — no code, no migrations._
 > **Update 2026-07-17:** sansu1, sansu2, kokugo1, and kokugo2 (Priority tier A
 > item 1–2 and tier B items 4–5 below) all shipped — see
 > `docs/specs/completed/`. Coverage matrix and gap table below updated
-> accordingly. Only kokugo4 and eigo5 remain from the original six-item gap
-> list.
+> accordingly.
 >
-> **Update 2026-07-18:** `SPEC_decentralize_module_units.md` shipped (#99,
-> see `../ROADMAP.md` Near-term debt #5) — the shared `hub/module-units.js`
-> registry that had corrupted twice under parallel module PRs is deleted;
-> every module now owns its own `modules/<key>/units.js`. **kokugo4 and
-> eigo5 are no longer blocked from building in parallel.** Build-ready
-> standalone specs now exist at `docs/specs/SPEC_kokugo4_new_module.md` and
-> `docs/specs/SPEC_eigo5_new_module.md` (repo root, hand-assigned to subagents —
-> **not** `pending/`, which fires the unattended builder). The §3.3/§3.6
-> sketches below are superseded by those spec docs; where a sketch still says
-> "add a block to `module-units.js`," follow the spec doc instead — that shared
-> file was deleted in #99.
+> **Update 2026-07-18:** the last two core-grid gaps **shipped** — **kokugo4**
+> (#101) and **eigo5** (#100), built in parallel by subagents from
+> `docs/specs/completed/SPEC_kokugo4_new_module.md` / `SPEC_eigo5_new_module.md`.
+> **The grades-1–6 core grid is now complete.** Both used the post-#99 per-module
+> `modules/<key>/units.js` convention (the shared `hub/module-units.js` registry
+> that had corrupted twice under parallel PRs was deleted in #99). The §3.3/§3.6
+> sketches below are the historical build specs, now superseded by the completed
+> spec docs; where a sketch still says "add a block to `module-units.js`," that
+> shared file no longer exists — the built modules ship their own `units.js`.
 
 The top sketches below are written to be droppable into
 `docs/specs/pending/` later, matching the `docs/specs/completed/` format.
@@ -50,10 +47,10 @@ curriculum.
 | Subject (constraint value)        | G1 | G2 | G3 | G4 | G5 | G6 |
 |-----------------------------------|----|----|----|----|----|----|
 | 算数 math (`math`)                | ✅ sansu1 | ✅ sansu2 | ✅ sansu3 | ✅ sansu4 | ✅ sansu5 | ✅ sansu6 |
-| 国語 japanese (`japanese`)        | ✅ kokugo1 | ✅ kokugo2 | ✅ kokugo3 | ❌ | ✅ kokugo5 | ✅ kokugo6 |
+| 国語 japanese (`japanese`)        | ✅ kokugo1 | ✅ kokugo2 | ✅ kokugo3 | ✅ kokugo4 | ✅ kokugo5 | ✅ kokugo6 |
 | 理科 science (`science`)          | — | — | ✅ rika3 | ✅ rika4 | ✅ rika5 | ✅ rika6 |
 | 社会 social (`social`)            | — | — | ✅ shakai3 | ✅ shakai4 | ✅ shakai5 | ✅ shakai6 |
-| 外国語 english (`english`)        | — | — | ✅ letstry1* | ✅ letstry2* | ❌ | ✅ nh6 |
+| 外国語 english (`english`)        | — | — | ✅ letstry1* | ✅ letstry2* | ✅ eigo5 | ✅ nh6 |
 
 \* Let's Try! 1 & 2 are the MEXT 外国語活動 materials for grades 3–4.
 Mapping them strictly to a single grade is approximate (schools split them
@@ -80,13 +77,14 @@ sit at the bottom of the priority list.
 |---|----------------|---------|-------|-------|
 | 1 | ~~sansu1~~ ✅ shipped 2026-07-17 | math | 1 | grade-1 math |
 | 2 | ~~sansu2~~ ✅ shipped 2026-07-17 | math | 2 | grade-2 math |
-| 3 | **kokugo4** | japanese | 4 | hole in the middle of the built japanese line |
+| 3 | ~~kokugo4~~ ✅ shipped 2026-07-18 (#101) | japanese | 4 | hole in the middle of the built japanese line |
 | 4 | ~~kokugo1~~ ✅ shipped 2026-07-17 | japanese | 1 | grade-1 japanese |
 | 5 | ~~kokugo2~~ ✅ shipped 2026-07-17 | japanese | 2 | grade-2 japanese |
-| 6 | **eigo5 / nh5** | english | 5 | only remaining 外国語 grade gap |
+| 6 | ~~eigo5 / nh5~~ ✅ shipped 2026-07-18 (#100) | english | 5 | only remaining 外国語 grade gap |
 
-Everything else (理科 3–6, 社会 3–6) is **complete**. **kokugo4** and
-**eigo5** are the only two items left in the core grid.
+**The core grades-1–6 grid is now complete** — kokugo4 (#101) and eigo5 (#100)
+shipped 2026-07-18, closing the last two holes. 算数/国語 cover grades 1–6,
+理科/社会 cover 3–6, and 外国語 covers 3/4 (Let's Try) + 5/6.
 
 ---
 
@@ -106,7 +104,7 @@ Everything else (理科 3–6, 社会 3–6) is **complete**. **kokugo4** and
      highest-value, most drillable objects in the entire elementary
      curriculum. Reason enough to prioritize sansu2 even alone.
 
-3. **kokugo4 (国語 4年) — kanji + grammar only** — next up (see spec §3.3)
+3. **kokugo4 (国語 4年) — kanji + grammar only** — ✅ shipped 2026-07-18 (#101)
    - _Why:_ fills the conspicuous hole between kokugo3 and kokugo5/6, and the
      safe half (grade-4 kanji list is a closed MEXT set; grammar is closed
      rule systems) is exactly the kokugo5/6 pattern already shipped twice.
@@ -132,7 +130,7 @@ Everything else (理科 3–6, 社会 3–6) is **complete**. **kokugo4** and
 
 ### Priority tier C — completes english line, higher effort
 
-6. **eigo5 / nh5 (外国語 5年)** — next up alongside kokugo4
+6. **eigo5 / nh5 (外国語 5年)** — ✅ shipped 2026-07-18 (#100)
    - _Why last of the core set:_ the only remaining English grade gap, but
      English modules are the "ported app" family (nh6, nhvocab, eiken,
      letstry1/2) — heavier to stand up than a native generator, and grade-5

@@ -17,18 +17,13 @@
 -- modules_subject_check CHECK constraint; is_active set explicitly though it
 -- defaults true; recommended_grades {4}.
 --
--- ── PROVISIONAL VERSION — NOT YET APPLIED TO PROD ──────────────────────────
--- The filename version (20260718000000) is a PLACEHOLDER. Per supabase/README.md
--- and the deploy-ordering rule, a kokugo4 row must NOT exist in production until
--- the frontend files under gakuenza.com/modules/kokugo4/ have rsync-deployed —
--- otherwise the hub lists a module card whose launch_url 404s. So this migration
--- is intentionally NOT applied during the PR build.
---
--- AFTER this PR merges and the frontend deploy completes, apply it with the MCP
--- apply_migration (which stamps the real ledger version) and rename this file to
--- that stamped version so supabase/migrations/ and the prod ledger stay in
--- lockstep — exactly the placeholder→rename step documented for the grade-5/6
--- registrations in supabase/README.md.
+-- ── APPLIED TO PROD 2026-07-18 (ledger version 20260718140258) ─────────────
+-- Applied via MCP apply_migration AFTER PR #101 merged and the frontend
+-- rsync-deploy completed (so the hub card's launch_url resolves, not 404s).
+-- The file was created under a placeholder version during the PR build and
+-- renamed to the stamped ledger version 20260718140258 on apply, per the
+-- placeholder→rename step in supabase/README.md — supabase/migrations/ and the
+-- prod ledger are in lockstep.
 
 insert into public.modules (key, name, name_en, subject, launch_url, is_active, recommended_grades, publisher)
 values ('kokugo4', '国語 4年', 'Japanese 4', 'japanese', '/modules/kokugo4/index.html', true, '{4}', '光村図書')
