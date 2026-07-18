@@ -1,0 +1,271 @@
+// data.js — 外国語 5年 (eigo5) native content.
+//
+// ORIGINAL content built against the grade-5 外国語 curriculum arc
+// (New Horizon Elementary 5, 東京書籍). This file deliberately contains
+// NONE of the textbook's dialogues, story text, character names, or example
+// sentences — only independently-common English target vocabulary and
+// original sentence-pattern items testing the same skills each unit builds.
+//
+// Unit keys u01..u08 MUST match modules/eigo5/units.js exactly.
+'use strict';
+
+// Unit metadata. Labels are our own descriptive Japanese, NOT the textbook's
+// unit titles (which are copyrighted expression).
+const EIGO5_UNITS = [
+  { key: 'u01', num: 1, ja: '自己しょうかい・アルファベット', en: 'Hello, I am…',        emoji: '👋' },
+  { key: 'u02', num: 2, ja: 'たんじょう日と月',              en: 'Months & Birthdays',    emoji: '🎂' },
+  { key: 'u03', num: 3, ja: '教科と時間わり',                en: 'Subjects & Timetable',  emoji: '📚' },
+  { key: 'u04', num: 4, ja: '一日の生活と時こく',            en: 'Daily Schedule & Time', emoji: '⏰' },
+  { key: 'u05', num: 5, ja: 'できること (can)',              en: 'Abilities',             emoji: '💪' },
+  { key: 'u06', num: 6, ja: '道あんないと場所',              en: 'Places & Directions',   emoji: '🗺️' },
+  { key: 'u07', num: 7, ja: 'レストランとねだん',            en: 'Food & Prices',         emoji: '🍽️' },
+  { key: 'u08', num: 8, ja: 'あの人はだれ？',                en: 'Describing People',     emoji: '🦸' },
+];
+
+// Vocabulary. Each: { id, unit, en, ja, emoji }.
+// ja is the display gloss; note the collision-safety contract in generators.js
+// relies on comparing normalized en AND ja so a distractor gloss is never
+// also a correct translation of the prompt.
+const EIGO5_VOCAB = [
+  // ── u01 自己しょうかい ────────────────────────────────────────────────
+  { id:'v0101', unit:'u01', en:'name',        ja:'名前',            emoji:'🪪' },
+  { id:'v0102', unit:'u01', en:'friend',      ja:'友だち',          emoji:'🧑‍🤝‍🧑' },
+  { id:'v0103', unit:'u01', en:'nice',        ja:'すてきな',        emoji:'✨' },
+  { id:'v0104', unit:'u01', en:'hello',       ja:'こんにちは',      emoji:'👋' },
+  { id:'v0105', unit:'u01', en:'like',        ja:'好きだ',          emoji:'❤️' },
+  { id:'v0106', unit:'u01', en:'spell',       ja:'つづりを言う',    emoji:'🔤' },
+  { id:'v0107', unit:'u01', en:'call',        ja:'よぶ',            emoji:'📣' },
+  { id:'v0108', unit:'u01', en:'color',       ja:'色',              emoji:'🎨' },
+  { id:'v0109', unit:'u01', en:'animal',      ja:'動物',            emoji:'🐾' },
+  { id:'v0110', unit:'u01', en:'sport',       ja:'スポーツ',        emoji:'⚽' },
+  { id:'v0111', unit:'u01', en:'letter',      ja:'文字',            emoji:'🔡' },
+  { id:'v0112', unit:'u01', en:'birthday',    ja:'たんじょう日',    emoji:'🎂' },
+
+  // ── u02 月・たんじょう日 ─────────────────────────────────────────────
+  { id:'v0201', unit:'u02', en:'January',     ja:'1月',   emoji:'❄️' },
+  { id:'v0202', unit:'u02', en:'February',    ja:'2月',   emoji:'💝' },
+  { id:'v0203', unit:'u02', en:'March',       ja:'3月',   emoji:'🌸' },
+  { id:'v0204', unit:'u02', en:'April',       ja:'4月',   emoji:'🌷' },
+  { id:'v0205', unit:'u02', en:'May',         ja:'5月',   emoji:'🌿' },
+  { id:'v0206', unit:'u02', en:'June',        ja:'6月',   emoji:'☔' },
+  { id:'v0207', unit:'u02', en:'July',        ja:'7月',   emoji:'🌻' },
+  { id:'v0208', unit:'u02', en:'August',      ja:'8月',   emoji:'🏖️' },
+  { id:'v0209', unit:'u02', en:'September',   ja:'9月',   emoji:'🍂' },
+  { id:'v0210', unit:'u02', en:'October',     ja:'10月',  emoji:'🎃' },
+  { id:'v0211', unit:'u02', en:'November',    ja:'11月',  emoji:'🍁' },
+  { id:'v0212', unit:'u02', en:'December',    ja:'12月',  emoji:'🎄' },
+  { id:'v0213', unit:'u02', en:'present',     ja:'プレゼント',  emoji:'🎁' },
+  { id:'v0214', unit:'u02', en:'card',        ja:'カード',      emoji:'💌' },
+  { id:'v0215', unit:'u02', en:'party',       ja:'パーティー',  emoji:'🎉' },
+
+  // ── u03 教科・時間わり ───────────────────────────────────────────────
+  { id:'v0301', unit:'u03', en:'Japanese',        ja:'国語',      emoji:'🇯🇵' },
+  { id:'v0302', unit:'u03', en:'math',            ja:'算数',      emoji:'➗' },
+  { id:'v0303', unit:'u03', en:'science',         ja:'理科',      emoji:'🔬' },
+  { id:'v0304', unit:'u03', en:'social studies',  ja:'社会',      emoji:'🌏' },
+  { id:'v0305', unit:'u03', en:'English',         ja:'英語',      emoji:'🔤' },
+  { id:'v0306', unit:'u03', en:'music',           ja:'音楽',      emoji:'🎵' },
+  { id:'v0307', unit:'u03', en:'P.E.',            ja:'体育',      emoji:'🏃' },
+  { id:'v0308', unit:'u03', en:'arts and crafts', ja:'図工',      emoji:'🎨' },
+  { id:'v0309', unit:'u03', en:'calligraphy',     ja:'書写・習字',emoji:'🖌️' },
+  { id:'v0310', unit:'u03', en:'home economics',  ja:'家庭科',    emoji:'🍳' },
+  { id:'v0311', unit:'u03', en:'moral education', ja:'道徳',      emoji:'💗' },
+  { id:'v0312', unit:'u03', en:'Monday',          ja:'月曜日',    emoji:'📅' },
+  { id:'v0313', unit:'u03', en:'Tuesday',         ja:'火曜日',    emoji:'📅' },
+  { id:'v0314', unit:'u03', en:'Wednesday',       ja:'水曜日',    emoji:'📅' },
+  { id:'v0315', unit:'u03', en:'Thursday',        ja:'木曜日',    emoji:'📅' },
+  { id:'v0316', unit:'u03', en:'Friday',          ja:'金曜日',    emoji:'📅' },
+
+  // ── u04 一日の生活・時こく ──────────────────────────────────────────
+  { id:'v0401', unit:'u04', en:'get up',          ja:'起きる',            emoji:'⏰' },
+  { id:'v0402', unit:'u04', en:'wash my face',    ja:'顔をあらう',        emoji:'🚰' },
+  { id:'v0403', unit:'u04', en:'eat breakfast',   ja:'朝ごはんを食べる',  emoji:'🍳' },
+  { id:'v0404', unit:'u04', en:'go to school',    ja:'学校へ行く',        emoji:'🏫' },
+  { id:'v0405', unit:'u04', en:'study',           ja:'勉強する',          emoji:'📖' },
+  { id:'v0406', unit:'u04', en:'eat lunch',       ja:'昼ごはんを食べる',  emoji:'🍱' },
+  { id:'v0407', unit:'u04', en:'go home',         ja:'家に帰る',          emoji:'🏠' },
+  { id:'v0408', unit:'u04', en:'do my homework',  ja:'宿題をする',        emoji:'✏️' },
+  { id:'v0409', unit:'u04', en:'take a bath',     ja:'おふろに入る',      emoji:'🛁' },
+  { id:'v0410', unit:'u04', en:'go to bed',       ja:'ねる',              emoji:'🛏️' },
+  { id:'v0411', unit:'u04', en:'clean my room',   ja:'部屋をそうじする',  emoji:'🧹' },
+  { id:'v0412', unit:'u04', en:'walk the dog',    ja:'犬の散歩をする',    emoji:'🐕' },
+  { id:'v0413', unit:'u04', en:'morning',         ja:'朝',                emoji:'🌅' },
+  { id:'v0414', unit:'u04', en:'afternoon',       ja:'午後',              emoji:'🌇' },
+  { id:'v0415', unit:'u04', en:'night',           ja:'夜',                emoji:'🌙' },
+
+  // ── u05 できること can ──────────────────────────────────────────────
+  { id:'v0501', unit:'u05', en:'swim',        ja:'泳ぐ',          emoji:'🏊' },
+  { id:'v0502', unit:'u05', en:'run fast',    ja:'速く走る',      emoji:'🏃' },
+  { id:'v0503', unit:'u05', en:'cook',        ja:'料理する',      emoji:'🍳' },
+  { id:'v0504', unit:'u05', en:'dance',       ja:'おどる',        emoji:'💃' },
+  { id:'v0505', unit:'u05', en:'sing well',   ja:'じょうずに歌う',emoji:'🎤' },
+  { id:'v0506', unit:'u05', en:'jump high',   ja:'高くとぶ',      emoji:'🦘' },
+  { id:'v0507', unit:'u05', en:'ride a bike', ja:'自転車に乗る',  emoji:'🚲' },
+  { id:'v0508', unit:'u05', en:'play the piano', ja:'ピアノをひく', emoji:'🎹' },
+  { id:'v0509', unit:'u05', en:'skate',       ja:'スケートをする',emoji:'⛸️' },
+  { id:'v0510', unit:'u05', en:'draw well',   ja:'じょうずに絵をかく', emoji:'🖍️' },
+  { id:'v0511', unit:'u05', en:'read English',ja:'英語を読む',    emoji:'📕' },
+  { id:'v0512', unit:'u05', en:'help',        ja:'手伝う',        emoji:'🤝' },
+
+  // ── u06 場所・道あんない ────────────────────────────────────────────
+  { id:'v0601', unit:'u06', en:'station',        ja:'駅',          emoji:'🚉' },
+  { id:'v0602', unit:'u06', en:'post office',    ja:'ゆうびん局',  emoji:'🏤' },
+  { id:'v0603', unit:'u06', en:'hospital',       ja:'病院',        emoji:'🏥' },
+  { id:'v0604', unit:'u06', en:'library',        ja:'図書館',      emoji:'📚' },
+  { id:'v0605', unit:'u06', en:'park',           ja:'公園',        emoji:'🏞️' },
+  { id:'v0606', unit:'u06', en:'school',         ja:'学校',        emoji:'🏫' },
+  { id:'v0607', unit:'u06', en:'supermarket',    ja:'スーパー',    emoji:'🛒' },
+  { id:'v0608', unit:'u06', en:'restaurant',     ja:'レストラン',  emoji:'🍽️' },
+  { id:'v0609', unit:'u06', en:'bookstore',      ja:'本屋',        emoji:'📖' },
+  { id:'v0610', unit:'u06', en:'convenience store', ja:'コンビニ', emoji:'🏪' },
+  { id:'v0611', unit:'u06', en:'zoo',            ja:'動物園',      emoji:'🦁' },
+  { id:'v0612', unit:'u06', en:'go straight',    ja:'まっすぐ行く',emoji:'⬆️' },
+  { id:'v0613', unit:'u06', en:'turn right',     ja:'右に曲がる',  emoji:'➡️' },
+  { id:'v0614', unit:'u06', en:'turn left',      ja:'左に曲がる',  emoji:'⬅️' },
+  { id:'v0615', unit:'u06', en:'stop',           ja:'止まる',      emoji:'✋' },
+
+  // ── u07 レストラン・ねだん ──────────────────────────────────────────
+  { id:'v0701', unit:'u07', en:'pizza',        ja:'ピザ',        emoji:'🍕' },
+  { id:'v0702', unit:'u07', en:'hamburger',    ja:'ハンバーガー',emoji:'🍔' },
+  { id:'v0703', unit:'u07', en:'spaghetti',    ja:'スパゲッティ',emoji:'🍝' },
+  { id:'v0704', unit:'u07', en:'salad',        ja:'サラダ',      emoji:'🥗' },
+  { id:'v0705', unit:'u07', en:'soup',         ja:'スープ',      emoji:'🍲' },
+  { id:'v0706', unit:'u07', en:'steak',        ja:'ステーキ',    emoji:'🥩' },
+  { id:'v0707', unit:'u07', en:'curry',        ja:'カレー',      emoji:'🍛' },
+  { id:'v0708', unit:'u07', en:'ice cream',    ja:'アイスクリーム',emoji:'🍦' },
+  { id:'v0709', unit:'u07', en:'cake',         ja:'ケーキ',      emoji:'🍰' },
+  { id:'v0710', unit:'u07', en:'juice',        ja:'ジュース',    emoji:'🧃' },
+  { id:'v0711', unit:'u07', en:'yen',          ja:'円 (お金)',   emoji:'💴' },
+  { id:'v0712', unit:'u07', en:'menu',         ja:'メニュー',    emoji:'📋' },
+  { id:'v0713', unit:'u07', en:'dessert',      ja:'デザート',    emoji:'🍨' },
+  { id:'v0714', unit:'u07', en:'drink',        ja:'飲み物',      emoji:'🥤' },
+
+  // ── u08 人をしょうかい ──────────────────────────────────────────────
+  { id:'v0801', unit:'u08', en:'hero',         ja:'ヒーロー',    emoji:'🦸' },
+  { id:'v0802', unit:'u08', en:'kind',         ja:'やさしい',    emoji:'🥰' },
+  { id:'v0803', unit:'u08', en:'brave',        ja:'ゆうかんな',  emoji:'🦁' },
+  { id:'v0804', unit:'u08', en:'strong',       ja:'強い',        emoji:'💪' },
+  { id:'v0805', unit:'u08', en:'funny',        ja:'おもしろい',  emoji:'😂' },
+  { id:'v0806', unit:'u08', en:'smart',        ja:'かしこい',    emoji:'🧠' },
+  { id:'v0807', unit:'u08', en:'cool',         ja:'かっこいい',  emoji:'😎' },
+  { id:'v0808', unit:'u08', en:'friendly',     ja:'親しみやすい',emoji:'😊' },
+  { id:'v0809', unit:'u08', en:'active',       ja:'活動的な',    emoji:'🤸' },
+  { id:'v0810', unit:'u08', en:'gentle',       ja:'おだやかな',  emoji:'🕊️' },
+  { id:'v0811', unit:'u08', en:'teacher',      ja:'先生',        emoji:'🧑‍🏫' },
+  { id:'v0812', unit:'u08', en:'singer',       ja:'歌手',        emoji:'🎙️' },
+  { id:'v0813', unit:'u08', en:'doctor',       ja:'医者',        emoji:'🩺' },
+  { id:'v0814', unit:'u08', en:'player',       ja:'選手',        emoji:'🏅' },
+];
+
+// Sentence-pattern fill-in items. Each item is self-contained: the `answer`
+// is the ONLY correct fill for the blank (shown as ⬜), and `distractors` is a
+// hand-authored pool of fills that are all ungrammatical or wrong IN THIS
+// CONTEXT — so exactly-one-correct holds by construction (verified by the
+// stress test). `hint` is the Japanese meaning of the full sentence.
+// The blank marker is the literal string '____'.
+const EIGO5_SENTENCES = [
+  // ── u01 self-introduction ──────────────────────────────────────────
+  { id:'s0101', unit:'u01', text:'____ is Ken.',            answer:'My name',
+    distractors:['I am name','Name my','Me name'], hint:'わたしの名前はケンです。' },
+  { id:'s0102', unit:'u01', text:'I ____ blue.',            answer:'like',
+    distractors:['likes','am','do'], hint:'わたしは青が好きです。' },
+  { id:'s0103', unit:'u01', text:'____ do you spell it?',   answer:'How',
+    distractors:['What','When','Who'], hint:'それはどうつづりますか。' },
+  { id:'s0104', unit:'u01', text:'Nice to ____ you.',       answer:'meet',
+    distractors:['met','meeting','meets'], hint:'はじめまして。' },
+  { id:'s0105', unit:'u01', text:'____ you like dogs?',     answer:'Do',
+    distractors:['Are','Is','Does'], hint:'あなたは犬が好きですか。' },
+
+  // ── u02 months & birthdays ─────────────────────────────────────────
+  { id:'s0201', unit:'u02', text:'____ is your birthday?',  answer:'When',
+    distractors:['Where','How','Who'], hint:'あなたのたんじょう日はいつですか。' },
+  { id:'s0202', unit:'u02', text:'My birthday is ____ May.',answer:'in',
+    distractors:['on','at','to'], hint:'わたしのたんじょう日は5月です。' },
+  { id:'s0203', unit:'u02', text:'What do you ____ for your birthday?', answer:'want',
+    distractors:['wants','wanting','to want'], hint:'たんじょう日に何がほしいですか。' },
+  { id:'s0204', unit:'u02', text:'I want ____ new bag.',    answer:'a',
+    distractors:['an','the','to'], hint:'新しいかばんがほしいです。' },
+  { id:'s0205', unit:'u02', text:'Happy ____ to you!',      answer:'birthday',
+    distractors:['birth','birthdays','born'], hint:'たんじょう日おめでとう。' },
+
+  // ── u03 subjects & timetable ───────────────────────────────────────
+  { id:'s0301', unit:'u03', text:'What subject do you ____?', answer:'like',
+    distractors:['likes','liking','are'], hint:'あなたは何の教科が好きですか。' },
+  { id:'s0302', unit:'u03', text:'I ____ music on Monday.', answer:'have',
+    distractors:['has','having','am'], hint:'月曜日に音楽があります。' },
+  { id:'s0303', unit:'u03', text:'What do you ____ to study?', answer:'want',
+    distractors:['wants','wanted','wanting'], hint:'あなたは何を勉強したいですか。' },
+  { id:'s0304', unit:'u03', text:'I study English ____ Wednesday.', answer:'on',
+    distractors:['in','at','of'], hint:'わたしは水曜日に英語を勉強します。' },
+  { id:'s0305', unit:'u03', text:'Math is ____ favorite subject.', answer:'my',
+    distractors:['I','me','mine'], hint:'算数はわたしの好きな教科です。' },
+
+  // ── u04 daily schedule & time ──────────────────────────────────────
+  { id:'s0401', unit:'u04', text:'What time do you ____ up?', answer:'get',
+    distractors:['gets','got','getting'], hint:'あなたは何時に起きますか。' },
+  { id:'s0402', unit:'u04', text:'I get up ____ six.',      answer:'at',
+    distractors:['in','on','to'], hint:'わたしは6時に起きます。' },
+  { id:'s0403', unit:'u04', text:'____ time is it?',        answer:'What',
+    distractors:['When','How','Which'], hint:'今何時ですか。' },
+  { id:'s0404', unit:'u04', text:'I ____ to bed at nine.',  answer:'go',
+    distractors:['goes','going','went'], hint:'わたしは9時にねます。' },
+  { id:'s0405', unit:'u04', text:'I eat breakfast ____ the morning.', answer:'in',
+    distractors:['on','at','to'], hint:'わたしは朝に朝ごはんを食べます。' },
+
+  // ── u05 can / can't ────────────────────────────────────────────────
+  { id:'s0501', unit:'u05', text:'I ____ swim fast.',       answer:'can',
+    distractors:['am','do','is'], hint:'わたしは速く泳げます。' },
+  { id:'s0502', unit:'u05', text:'____ you play the piano?',answer:'Can',
+    distractors:['Do','Are','Is'], hint:'あなたはピアノをひけますか。' },
+  { id:'s0503', unit:'u05', text:'She can ____ well.',      answer:'sing',
+    distractors:['sings','sang','singing'], hint:'彼女はじょうずに歌えます。' },
+  { id:'s0504', unit:'u05', text:'I ____ ride a unicycle.', answer:"can't",
+    distractors:['not','am not','do not can'], hint:'わたしは一輪車に乗れません。' },
+  { id:'s0505', unit:'u05', text:'He can run ____.',        answer:'fast',
+    distractors:['fastly','faster than','a fast'], hint:'彼は速く走れます。' },
+
+  // ── u06 places & directions ────────────────────────────────────────
+  { id:'s0601', unit:'u06', text:'____ is the station?',    answer:'Where',
+    distractors:['When','What','Who'], hint:'駅はどこですか。' },
+  { id:'s0602', unit:'u06', text:'Go ____ for two blocks.', answer:'straight',
+    distractors:['strait','straightly','a straight'], hint:'2ブロックまっすぐ行ってください。' },
+  { id:'s0603', unit:'u06', text:'____ right at the corner.', answer:'Turn',
+    distractors:['Turns','Turning','Turned'], hint:'かどを右に曲がってください。' },
+  { id:'s0604', unit:'u06', text:'The park is ____ the library.', answer:'near',
+    distractors:['to','of','at the'], hint:'公園は図書館の近くです。' },
+  { id:'s0605', unit:'u06', text:'You can ____ it on your right.', answer:'see',
+    distractors:['sees','seeing','saw'], hint:'右手に見えます。' },
+
+  // ── u07 food & prices ──────────────────────────────────────────────
+  { id:'s0701', unit:'u07', text:'What ____ you like?',     answer:'would',
+    distractors:['are','do you','is'], hint:'何になさいますか。' },
+  { id:'s0702', unit:'u07', text:"I'd like a ____, please.",answer:'pizza',
+    distractors:['pizzas','pizza a','to pizza'], hint:'ピザをお願いします。' },
+  { id:'s0703', unit:'u07', text:'How ____ is it?',         answer:'much',
+    distractors:['many','long','old'], hint:'それはいくらですか。' },
+  { id:'s0704', unit:'u07', text:'It ____ 500 yen.',        answer:'is',
+    distractors:['are','am','be'], hint:'それは500円です。' },
+  { id:'s0705', unit:'u07', text:'Would you like a ____?',  answer:'dessert',
+    distractors:['desserts','desert','to dessert'], hint:'デザートはいかがですか。' },
+
+  // ── u08 describing people ──────────────────────────────────────────
+  { id:'s0801', unit:'u08', text:'____ is your hero?',      answer:'Who',
+    distractors:['Where','When','How'], hint:'あなたのヒーローはだれですか。' },
+  { id:'s0802', unit:'u08', text:'She ____ kind and brave.',answer:'is',
+    distractors:['are','am','be'], hint:'彼女はやさしくてゆうかんです。' },
+  { id:'s0803', unit:'u08', text:'My hero ____ a great singer.', answer:'is',
+    distractors:['are','do','have'], hint:'わたしのヒーローはすばらしい歌手です。' },
+  { id:'s0804', unit:'u08', text:'He is good ____ soccer.', answer:'at',
+    distractors:['in','on','to'], hint:'彼はサッカーがじょうずです。' },
+  { id:'s0805', unit:'u08', text:'She is ____ funny.',      answer:'very',
+    distractors:['much','many','a lot'], hint:'彼女はとてもおもしろいです。' },
+];
+
+if (typeof window !== 'undefined') {
+  window.EIGO5_UNITS = EIGO5_UNITS;
+  window.EIGO5_VOCAB = EIGO5_VOCAB;
+  window.EIGO5_SENTENCES = EIGO5_SENTENCES;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { EIGO5_UNITS, EIGO5_VOCAB, EIGO5_SENTENCES };
+}
