@@ -233,7 +233,7 @@ window.RIKA3_GEN = (function () {
     const keys = genKeys.slice();
     while (out.length < n && guard++ < n * 40) {
       const q = GENERATORS[pick(keys)]();
-      const sig = q.q + ' ' + q.answer;
+      const sig = q.q + '\u0000' + q.answer;
       if (seen.has(sig)) continue;
       seen.add(sig);
       out.push(q);
