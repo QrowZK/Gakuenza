@@ -56,6 +56,7 @@
     <div class="ac-card" style="margin-bottom:22px;">
       <h2 class="ac-card-head" style="margin:0 0 4px;">カタログ・学校での有効化</h2>
       <p class="md-note" style="margin:0 0 12px;">「学校で有効」にしたモジュールだけ、下のマトリクスでクラスに割り当てられます。</p>
+      <div id="md-bulk-toolbar" class="md-toolbar" style="margin:0 0 16px;"></div>
       <div id="md-catalog"><div class="ac-card ac-skel" style="height:80px;"></div></div>
     </div>
 
@@ -130,8 +131,74 @@
       const { data: cms } = await sb.from('class_modules').select('class_id, module_id').in('class_id', classIds);
       (cms || []).forEach(r => assignedSet.add(r.class_id + '|' + r.module_id));
     }
+    renderBulkToolbar();
     renderCatalog();
     renderMatrix();
+  }
+
+  // ── bulk enable ──────────────────────────────────────────────────────
+  // Additive-only helpers shared by both bulk actions: compute the target
+  // module_id set, diff against enabledSet, batch-insert what's missing.
+  // Never deletes/disables anything already enabled (see task rationale:
+  // a destructive sync would be a surprising way to lose a hand-picked
+  // module list).
+  async function insertMissing(targetIds) {
+    const missing = targetIds.filter(id => !enabledSet.has(id));
+    if (!missing.length) return { inserted: 0, error: null };
+    const rows = missing.map(module_id => ({ school_id: schoolId, module_id }));
+    const { error } = await sb.from('school_modules').insert(rows);
+    if (error) return { inserted: 0, error };
+    missing.forEach(id => enabledSet.add(id));
+    return { inserted: missing.length, error: null };
+  }
+
+  async function bulkEnableAll() {
+    const targetIds = modules.filter(m => m.is_active !== false).map(m => m.id);
+    const missingCount = targetIds.filter(id => !enabledSet.has(id)).length;
+    if (!missingCount) { alert('すべての稼働中モジュールは既にこの学校で有効です。'); return; }
+    const ok = window.confirm(`${missingCount}件のモジュールをこの学校で有効化します。よろしいですか？`);
+    if (!ok) return;
+    const { error } = await insertMissing(targetIds);
+    if (error) { alert('有効化できませんでした。' + (error.message ? '（' + error.message + '）' : '')); return; }
+    renderCatalog();
+    renderMatrix();
+  }
+
+  async function bulkCopyFrom(sourceSchoolId) {
+    if (!sourceSchoolId) return;
+    const { data, error: fetchErr } = await sb.from('school_modules').select('module_id').eq('school_id', sourceSchoolId);
+    if (fetchErr) { alert('コピー元の学校の設定を読み込めませんでした。'); return; }
+    const targetIds = (data || []).map(r => r.module_id);
+    const missingCount = targetIds.filter(id => !enabledSet.has(id)).length;
+    const sourceName = (schools.find(s => s.id === sourceSchoolId) || {}).name || 'コピー元';
+    if (!missingCount) { alert(`${sourceName}で有効なモジュールは、すでにこの学校でもすべて有効です。`); return; }
+    const ok = window.confirm(`${sourceName}の有効モジュール設定から、この学校にまだ無い ${missingCount}件を追加で有効化します。よろしいですか？`);
+    if (!ok) return;
+    const { error } = await insertMissing(targetIds);
+    if (error) { alert('有効化できませんでした。' + (error.message ? '（' + error.message + '）' : '')); return; }
+    renderCatalog();
+    renderMatrix();
+  }
+
+  function renderBulkToolbar() {
+    const el = document.getElementById('md-bulk-toolbar');
+    if (!canEnable) { el.innerHTML = ''; return; }
+    const otherSchools = schools.filter(s => s.id !== schoolId);
+    el.innerHTML = `
+      <button class="ac-btn ac-btn-ghost-light ac-btn-sm" type="button" id="md-bulk-all">全モジュールを有効化</button>
+      ${otherSchools.length ? `
+        <select id="md-bulk-copy-src">
+          <option value="">他校からコピー…</option>
+          ${otherSchools.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}
+        </select>` : ''}
+    `;
+    document.getElementById('md-bulk-all').addEventListener('click', bulkEnableAll);
+    const copySel = document.getElementById('md-bulk-copy-src');
+    if (copySel) copySel.addEventListener('change', () => {
+      const src = copySel.value;
+      copySel.value = '';
+      if (src) bulkCopyFrom(src);
+    });
   }
 
   // ── catalog + enable toggles ─────────────────────────────────────────
