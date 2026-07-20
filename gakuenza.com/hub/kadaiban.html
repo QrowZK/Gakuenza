@@ -4,12 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>手書きプリント — がくえん座</title>
-<link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="hub-shell.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  /* Kadaiban student surfaces. Tokens come from style.css; hub-shell.css owns
+  /* ---- self-contained base (added for #106) --------------------------------
+     This page used to <link> the shared root ../style.css purely for its
+     :root tokens — but that sheet also carries the generic
+     `button { width: 100% }` rule (module-convention hard rule 1), which
+     combined with .kb-topback's `flex: 0 0 auto` made the 戻る button's
+     rendered width track the flex container's available space, visibly
+     resizing every time the sibling autosave label text changed during
+     drawing (#106). Token values below are copied verbatim from ../style.css
+     (keep in sync) so the root sheet is no longer linked at all. Only the
+     tokens this page actually uses are included; --mist/--moss-tint are also
+     defined in root style.css and were relied on transitively, so they're
+     copied here too rather than assumed from hub-shell.css. */
+  :root {
+    --ink: #1c2530; --ink-soft: #3a4555; --paper: #f7f3ea; --paper-dim: #efe9db;
+    --moss: #4a6b4f; --moss-deep: #34503a; --clay: #b5572e; --gold: #c9a24b;
+    --mist: #e4e0d4; --moss-tint: #e8ede6;
+  }
+  * { box-sizing: border-box; }
+
+  /* Kadaiban student surfaces. Tokens are copied above; hub-shell.css owns
      the page frame. These are the worksheet-card + full-screen draw surface
      the hub home doesn't otherwise have. All hairlines use var(--mist). */
   .kb-worklist { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
@@ -36,7 +54,7 @@
   /* draw surface */
   .kb-draw { display:flex; flex-direction:column; height:100vh; background:#3a4453; }
   .kb-topbar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--ink); color:var(--paper); flex:0 0 auto; }
-  .kb-topback { background:rgba(247,243,234,.14); color:var(--paper); border:none; border-radius:7px; padding:8px 14px; font-size:12.5px; font-weight:600; white-space:nowrap; flex:0 0 auto; }
+  .kb-topback { background:rgba(247,243,234,.14); color:var(--paper); border:none; border-radius:7px; padding:8px 14px; font-size:12.5px; font-weight:600; white-space:nowrap; flex:0 0 auto; width:auto; }
   .kb-topmeta { min-width:0; }
   .kb-toptitle { font-family:'Zen Maru Gothic',sans-serif; font-weight:700; font-size:14px; }
   .kb-topinstr { font-size:11px; opacity:.7; }
@@ -51,7 +69,6 @@
   .kb-toolgroup { display:inline-flex; gap:6px; align-items:center; background:var(--paper-dim); border:1px solid var(--mist); border-radius:10px; padding:6px; }
   .kb-tool { background:transparent; color:var(--ink-soft); border:none; border-radius:7px; padding:8px 13px; font-size:12.5px; font-weight:700; white-space:nowrap; }
   .kb-tool.active { background:var(--moss); color:#fff; }
-  .kb-p2tag { font-size:9.5px; color:var(--moss-deep); font-weight:700; align-self:center; padding:0 2px; white-space:nowrap; }
   .kb-swatch { width:24px; height:24px; border-radius:50%; border:2px solid rgba(0,0,0,.12); cursor:pointer; padding:0; }
   .kb-swatch.active { border:3px solid var(--ink); }
   .kb-undo { background:var(--paper); border:1px solid var(--mist); border-radius:8px; padding:9px 14px; font-size:12.5px; font-weight:600; }
@@ -256,7 +273,6 @@
           <div class="kb-toolgroup">
             <button class="kb-tool active" id="kb-pen" type="button">✎ ペン</button>
             <button class="kb-tool" id="kb-eraser" type="button">◪ けしゴム</button>
-            <span class="kb-p2tag">フェーズ2</span>
           </div>
           <div class="kb-toolgroup" id="kb-swatches"></div>
           <div style="display:inline-flex;gap:6px;">
