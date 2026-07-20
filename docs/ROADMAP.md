@@ -1,6 +1,6 @@
 # Gakuenza — Roadmap (single source of truth)
 
-_Last updated: 2026-07-18. Living planning doc, not a spec._
+_Last updated: 2026-07-20. Living planning doc, not a spec._
 
 > ### How this roadmap is organized — read before editing
 >
@@ -23,13 +23,17 @@ _Last updated: 2026-07-18. Living planning doc, not a spec._
 
 ## Where things stand
 
-Gakuenza has grown from a handful of grade-3 drills into a fairly complete
-elementary curriculum platform for the Mizuho pilot: **27 module directories**
+Gakuenza has grown from a handful of grade-3 drills into a genuinely complete
+elementary curriculum platform for the Mizuho pilot: **29 module directories**
 (all registered and active, except the intentionally-inactive `kadaiban`
 catch-all reporting anchor), a five-tier role model, a real gradebook with
 weekly trend snapshots, a working automated bug-fix pipeline (5 real fixes
 shipped through it so far), and **Kadaiban (課題板)**, the platform's first
-non-drill feature and first use of Supabase Storage, shipped 2026-07-17. The
+non-drill feature and first use of Supabase Storage, shipped 2026-07-17. As of
+2026-07-18 (see below) **the grades 1–6 core curriculum grid is complete**:
+算数/国語/理科/社会 all run grades 1–6 (国語/算数 grades 1–2 shipped
+2026-07-17; 国語4 and 外国語5 — the last two holes — shipped 2026-07-18) and
+外国語 covers grades 3–6 via `letstry1`/`letstry2`/`eigo5`/`nh6`. The
 architecture (static frontend + Supabase RLS, no app server) has held up well
 across all of this; nothing this week required bending that model. Mizuho
 (瑞穂小学校) remains the only populated school.
@@ -39,48 +43,40 @@ turned out to matter within 24 hours: the shared `module-units.js` registry
 that had already corrupted twice under parallel PRs is now permanently
 decentralized (each module owns its own `units.js`), and Kadaiban's
 holistic single-grade reporting had a real double-grading bug that had
-already corrupted a production row before it was caught and fixed. Both are
-closed as of today — see below.
+already corrupted a production row before it was caught and fixed. Both
+closed 2026-07-18 — see the completed items in Near-term debt below.
 
-## Today's progress (2026-07-18)
+## Progress since last update (2026-07-18 → 2026-07-19)
 
-A quiet, consolidation-only day after 07-17's spike — no new modules, no new
-features, just two PRs, both paying down exactly the two risks flagged
-yesterday. Zero open PRs and zero open issues as of end of day:
+The previous roadmap pass was written mid-day on 07-18, before that day's
+biggest news landed a few hours later. Folding in everything since:
 
-- **The `module-units.js` registry corruption risk is permanently closed**
-  (#99, implementing `SPEC_decentralize_module_units.md`). Every unit-scoped
-  module now owns its own `modules/<key>/units.js` (17 created, each
-  self-registering `window.MODULE_UNITS.<key>`, content byte-identical to the
-  old shared registry's entries), `moduleUnitsFor` was rewritten async +
-  cached with a `loadScriptOnce` helper, `assign.html`/`class-detail.html`
-  updated to await it, and the old shared `hub/module-units.js` (the file that
-  had corrupted twice under parallel module PRs, most recently yesterday) is
-  **deleted outright** — this was Near-term debt #5, promoted yesterday to
-  "top engineering priority," and it shipped the very next day. Minor process
-  note, not a real issue: the clean PR (#99) supersedes an earlier attempt
-  (#98) that accidentally carried an unrelated commit from a shared-worktree
-  slip — caught and re-pushed cleanly rather than merged as-is.
-- **A real kadaiban data-integrity bug was found and fixed** (#97, reopening
-  #83). `saveGrade()` stamped a fresh `Date.now()` into `activityRef` on
-  *every* save and called the insert-only `reportActivityWithItems` — since a
-  kadaiban submission is 1:1 with its grade, re-grading a submission inserted
-  a **duplicate** `activity_results` row instead of updating the existing one.
-  Real impact: `karte.html` sums all rows with no dedup (inflated semester
-  average + 取組回数), and `grades.html`'s "higher score wins" logic silently
-  hides a corrected-**down** grade. Fixed with a stable ref
-  (`kadaiban/<assignment>/<submission>`, timestamp dropped) plus
-  update-or-insert client-side logic (the teacher already holds the needed
-  RLS INSERT + UPDATE grants, so no new policy). One duplicate group already
-  existed in production — cleaned up directly via MCP (older row deleted,
-  survivor's ref rewritten to the stable form). **Notable:** issue #83 had
-  previously been closed as "completed" with no actual fix landed, so the bug
-  was live in production for roughly a day — from Kadaiban's ship on
-  2026-07-17 until this fix. Neither the rolled-back-transaction test at
-  launch nor the "completed" close caught it; a re-grade-the-same-submission
-  scenario would have. See Near-term debt #6 and New ideas below.
-- `CLAUDE.md` unchanged today — no new DB surface, no new hard-rule violation
-  to record.
+- **The grades 1–6 core curriculum grid shipped complete** (#101 `kokugo4`,
+  #100 `eigo5`, both 2026-07-18 afternoon, built in parallel by separate
+  subagents — the first real parallel-module batch since the
+  `module-units.js` decentralization (#99) closed the shared-registry risk
+  that morning, and it held up: no registry conflict). #102 followed same day
+  reconciling the docs/migrations against what actually landed live. This
+  closes the milestone flagged in the prior roadmap's "New ideas" section as
+  "one clear action away" — reading comprehension for kokugo4/5/6 and the
+  supplementary kanken/eiken tiers are the only curriculum gaps left; see
+  Curriculum modules below.
+- **A real (if narrow) code-quality bug from 07-18 was caught and fixed the
+  next morning** (#103, 2026-07-19). Five generator files — `sansu1/2/4/6`
+  `app.js` and `rika3-gen.js` — built their dedup signature as
+  `q.q + ' ' + q.answer` using a **literal raw NUL byte** typed into the
+  source instead of the `'\u0000'` escape sequence (rika3 used the escape;
+  the sansu files had the raw byte baked into a compiled/minified string).
+  The raw byte made `git diff`/`grep` treat those files as binary, silently
+  hiding real changes from diff-based review — a review-tooling blind spot,
+  not a runtime bug (`'\u0000'` and the literal byte are the same one-character
+  string, so dedup keys were already correct). Fixed by normalizing all five
+  to the `sansu3`-reference `'\u0000'` escape convention. Verified today: a
+  repo-wide scan (`git grep` + `file` over every module `.js`) turns up no
+  remaining binary-flagged JS files — the fix was complete, not partial.
+- **07-20 is quiet as of this check:** zero open PRs, zero open issues,
+  nothing merged yet today. `CLAUDE.md` needed no changes across this window
+  — no new DB surface, no new hard-rule violation to record.
 
 ## Near-term debt (known, not yet done)
 
@@ -90,7 +86,7 @@ Debt items, not new ideas:
    `letstry2`, and `shakai3` insert into `activity_results` directly instead of
    calling `HubCommon.reportActivityWithItems`, so none populate
    `activity_result_items` — the gradebook's per-question analysis has nothing
-   to show for five of 27 modules. Flagged in `CLAUDE.md` as a repeat mistake;
+   to show for five of 29 modules. Flagged in `CLAUDE.md` as a repeat mistake;
    the largest remaining hole in gradebook data quality. Kadaiban shipped
    2026-07-17 using the correct helper from the start — proof the pattern is
    easy to follow when a module is built fresh; these five just need the same
@@ -105,19 +101,37 @@ Debt items, not new ideas:
 4. **Leaked-password protection is still off.** Dashboard-only toggle
    (Authentication → Policies) — someone with console access should flip it.
 5. ~~Build `SPEC_decentralize_module_units.md`~~ **done 2026-07-18** (#99) —
-   see today's progress above. The shared-registry corruption class is
-   closed; `kokugo4`/`eigo5` are no longer blocked from building in parallel.
-6. **Test coverage is inconsistent and un-enforced — and today's kadaiban bug
-   is a concrete case, not a hypothetical one.** Only 12 of 27 modules have a
-   `tests/<key>/` directory — the rest (`rika3/4`, `shakai3–6`, `sansu3/4`,
-   all five English-family modules, `kanken*`, and `kadaiban`) have none.
-   There is still no CI workflow enforcing `CLAUDE.md`'s stated testing bar
-   (stress test + flow test + migration idempotency). Today's double-grading
-   bug (#83/#97) shipped past a manual rolled-back-transaction test that only
-   covered a single grade, not a re-grade — exactly the kind of scenario a
-   real flow test would encode once and run on every future kadaiban PR. Use
-   it as the motivating case when the "real CI test suite" engineering item
-   below finally gets built.
+   the shared-registry corruption class is closed; `kokugo4`/`eigo5` built
+   in parallel the same day with zero registry conflict, proving the fix.
+6. **Test coverage is inconsistent and un-enforced — and the 07-18 kadaiban
+   bug is a concrete case, not a hypothetical one.** Only 13 of 29 modules
+   have a `tests/<key>/` directory — the rest (`rika3/4`, `shakai3–6`,
+   `sansu3/4`, all five English-family modules, `kanken*`, and `kadaiban`)
+   have none. There is still no CI workflow enforcing `CLAUDE.md`'s stated
+   testing bar (stress test + flow test + migration idempotency). The
+   double-grading bug (#83/#97) shipped past a manual rolled-back-transaction
+   test that only covered a single grade, not a re-grade — exactly the kind
+   of scenario a real flow test would encode once and run on every future
+   kadaiban PR. Use it as the motivating case when the "real CI test suite"
+   engineering item below finally gets built.
+7. **First-ever performance advisor pass surfaced real findings — nobody has
+   looked at this axis before.** `get_advisors(type=performance)` (run for
+   this update, 2026-07-20) returns 106 lints across the live schema: **78
+   `multiple_permissive_policies` WARNs** across 12 tables (`profiles`,
+   `schools`, `enrollments`, `classes`, `school_members`, `class_teachers`,
+   `class_modules`, `school_modules`, and all four `kadaiban_*` tables each
+   have overlapping permissive policies for the same role/action — e.g.
+   `class_modules` has both `cmod_read` and `cmod_write` as separate
+   permissive `SELECT` policies for `anon`, which Postgres must OR-evaluate
+   per row), **13 `auth_rls_initplan` WARNs** (RLS policies re-evaluating
+   `auth.<function>()` per-row instead of `(select auth.<function>())`,
+   `profiles_read` is one), and **14 `unindexed_foreign_keys` INFOs** (e.g.
+   `activity_results.module_id` has no covering index). None of this is a
+   security issue — the existing security-advisor debt (items 3–4 above) is
+   unrelated and still separately open — but at Mizuho's current single-school
+   scale it's cheap to defer and expensive to accumulate silently. Worth a
+   dedicated pass before a second school multiplies the row counts these
+   policies scan.
 
 ## What's next — by domain
 
@@ -125,17 +139,17 @@ Each item below is a pointer; the linked doc holds the detail.
 
 ### Curriculum modules → [`planning/MODULE_ROADMAP.md`](planning/MODULE_ROADMAP.md)
 
-Grades 1–2 are **done** (`sansu1`, `sansu2`, `kokugo1`, `kokugo2`, shipped
-2026-07-17) — the empty-hub problem for the youngest grades is closed. The
-core grid's only remaining holes are **kokugo4** (the one missing rung in
-算数/理科/社会/国語 × grades 3–6) and **eigo5** (the last 外国語 grade gap),
-plus the still-deferred **reading comprehension for kokugo4/5/6** (all three
-ship kanji+grammar only). The registry-corruption blocker that held both back
-is now resolved (Near-term debt #5, done today) — **the concrete next action
-is moving the two ready spec sketches (`MODULE_ROADMAP.md` §3.3 kokugo4, §3.6
-eigo5) into `docs/specs/pending/`** so the automated builder can pick them up,
-in parallel this time without registry risk. Landing both closes a genuinely
-marketable milestone — see New ideas below.
+**The grades 1–6 core grid is now complete** — 算数/国語/理科/社会 all run
+grades 1–6, 外国語 covers grades 3–6 (`letstry1/2`, `eigo5`, `nh6`). The last
+two rungs, **kokugo4** and **eigo5**, shipped 2026-07-18 (#101, #100) the same
+day the registry-corruption blocker closed, built in parallel with zero
+conflict. With the empty-cell grid closed, remaining curriculum gaps are all
+depth, not coverage: the still-deferred **reading comprehension for
+kokugo4/5/6** (all three ship kanji+grammar only), and the kanken/eiken
+supplementary tier gaps (漢検 grades 1/2/6 have no drill, largely duplicative
+of kokugo kanji so still low priority — see `MODULE_ROADMAP.md`). Worth
+flagging to whoever owns the Mizuho relationship: this is a real,
+marketable "full elementary curriculum" milestone, not an internal-only one.
 
 ### Product features → [`planning/FEATURE_BACKLOG.md`](planning/FEATURE_BACKLOG.md)
 
@@ -162,8 +176,8 @@ phased, per-module plan with a worked `kokugo3` before/after.
 **Phase 1 shipped 2026-07-17**: digital-ink annotation + **manual** grading of
 teacher-uploaded worksheets is live (no OCR/auto-grade), proving Storage +
 Storage RLS in isolation as planned. **A real bug already surfaced one day
-in** — the double-grading fix (#97, today) — which is itself evidence for the
-gate below: the launch-day rolled-back-transaction test didn't cover
+in** — the double-grading fix (#97, 2026-07-18) — which is itself evidence
+for the gate below: the launch-day rolled-back-transaction test didn't cover
 re-grading, only a single grade. **Nothing has used it in a real classroom
 yet** — before investing in Phase 2 (multi-page, eraser/colour, offline —
 detail doc §10), get at least one real Mizuho teacher through a full
@@ -176,13 +190,13 @@ practice). Treat that as the gate before scoping Phase 2 work.
 
 - **A real CI test suite.** There is currently no `test.yml` — no lint, no
   generator stress tests, no flow tests running in CI — despite `CLAUDE.md`
-  prescribing exactly that testing bar per module, and despite 12 of 27
+  prescribing exactly that testing bar per module, and despite 13 of 29
   modules now having hand-run tests sitting in `tests/<key>/` unused by any
-  workflow. This is now the cheapest engineering win on the roadmap: the tests
-  mostly already exist, they just aren't wired to run automatically. Stand up
-  a lightweight `test.yml` (headless-browser flow test + generator stress
-  test) on every PR touching `gakuenza.com/modules/**`, independent of the
-  bug-report automation.
+  workflow. This is still the cheapest engineering win on the roadmap: the
+  tests mostly already exist, they just aren't wired to run automatically.
+  Stand up a lightweight `test.yml` (headless-browser flow test + generator
+  stress test) on every PR touching `gakuenza.com/modules/**`, independent of
+  the bug-report automation.
 - **Extend the bug pipeline past UI bugs.** The autofix loop is now proven at
   5/5 real fixes across two days (#57, #58, #75, #77, #79) — solidly past
   "promising prototype." Natural next step: a scheduled (cron) sweep that runs
@@ -191,14 +205,14 @@ practice). Treat that as the gate before scoping Phase 2 work.
   CI, and giving the pipeline a source of issues that doesn't depend on a
   human clicking the bug-report button first.
 - **Audit other shared append-only files for the `module-units.js` failure
-  mode.** `module-units.js` itself is fixed as of today (#99), but the root
-  cause — a single hand-edited file every parallel module PR touches,
-  "protected" by a `merge=union` stopgap that actually corrupts structured JS
-  — is a pattern, not a one-off, and hasn't been checked anywhere else yet.
-  With `kokugo4`/`eigo5` now clear to build in parallel (see Curriculum
-  modules above), this is worth doing *before* that batch lands, not after:
-  check the nav/menu registrations each hub page hand-edits, and any other
-  `window.SOMETHING = {...}` registry a module PR is expected to append to.
+  mode.** `module-units.js` itself was fixed 2026-07-18 (#99), and the
+  `kokugo4`/`eigo5` parallel batch that followed the same day confirms the
+  fix holds. The root cause — a single hand-edited file every parallel module
+  PR touches, "protected" by a `merge=union` stopgap that actually corrupts
+  structured JS — is a pattern, not a one-off, and still hasn't been checked
+  anywhere else in the repo: the nav/menu registrations each hub page
+  hand-edits, and any other `window.SOMETHING = {...}` registry a module PR
+  is expected to append to. Still open — no batch has forced it since.
 - **Snapshot trend UI.** Confirm `karte.html`/`analysis.html` actually surface
   week-over-week trend now that `gradebook_snapshots` is populated via `pg_cron`
   (since 2026-07-15). **Caveat:** only a handful of snapshot rows exist after
@@ -210,67 +224,93 @@ practice). Treat that as the gate before scoping Phase 2 work.
   against Mizuho — and the seed schools are empty, so there's no longer even
   synthetic multi-school data. Before onboarding a second real school: a
   deliberate multi-school admin-UX pass and an onboarding runbook (it still
-  requires hand SQL via `provision-account`).
-- **A recurring Supabase advisor sweep.** Two real P0s have now surfaced from
-  manual review this week (the profiles self-escalation grant on 2026-07-17,
-  the earlier advisor-flagged issues on 2026-07-15) — plus the kadaiban
-  double-grading bug (2026-07-18), a data-integrity issue an advisor sweep
-  wouldn't have caught but that strengthens the same underlying point: nothing
-  currently runs a periodic health check, everything so far has depended on a
-  human choosing to look. `get_advisors` is cheap to run — worth a periodic
-  (weekly?) scheduled check rather than relying on the next contributor to
+  requires hand SQL via `provision-account`). **This is now the more urgent
+  half of the "worth doing" set** — with the curriculum grid complete
+  (2026-07-18) and the recent bug queue quiet, second-school readiness is the
+  most concrete way to grow the platform's actual reach rather than deepen
+  Mizuho's coverage further.
+- **A recurring Supabase advisor sweep — now run once, still not scheduled.**
+  A security-advisor pass was run for the 2026-07-18 update (no new findings
+  beyond the already-tracked debt items 3–4); a **performance**-advisor pass
+  was run for the first time for this 2026-07-20 update and surfaced real,
+  previously-unrecorded findings — see Near-term debt #7. Two real P0s
+  surfaced from manual review in the prior week (the profiles
+  self-escalation grant on 2026-07-17, earlier advisor-flagged issues on
+  2026-07-15) plus the kadaiban double-grading bug (2026-07-18, a
+  data-integrity issue an advisor sweep wouldn't have caught, but which
+  strengthens the same underlying point). Nothing currently runs this
+  automatically — every pass so far, including today's, has depended on a
+  human/session choosing to look. `get_advisors` is cheap to run for both
+  `security` and `performance` types — worth a periodic (weekly?) scheduled
+  check, covering both types, rather than relying on the next contributor to
   think to run it during unrelated work.
 
-## New ideas & frontiers (2026-07-18)
+## New ideas & frontiers (2026-07-20)
 
-Fresh proposals prompted by today's (quiet) work — not yet scoped as specs,
+Fresh proposals prompted by this update's review — not yet scoped as specs,
 offered as directions worth a deliberate look rather than decisions:
 
-- **Audit closed-without-a-fix issues before this recurs a third time.**
-  Issue #83 was previously closed as "completed" with no actual fix landed,
-  and the bug it described was live in production, corrupting gradebook data,
-  for roughly a day before today's re-fix. That's a process gap, not just a
-  code bug — worth a cheap one-time pass cross-referencing other closed
-  issues against whether a merged PR/commit actually references them, rather
-  than trusting "closed" to mean "fixed." Cheap because the full history is
-  already in GitHub; the autofix pipeline's own `approved-for-autofix` →
-  merged-PR discipline is a plausible reason this hasn't happened elsewhere,
-  but #83 shows it *can* happen and is worth ruling out rather than assuming.
+- **The curriculum-coverage milestone is done — the platform's growth axis
+  should shift from "build more modules" to "reach more schools / go
+  deeper on data quality."** With 算数/国語/理科/社会 complete grades 1–6 and
+  外国語 complete grades 3–6, the marginal next module (more kanken tiers,
+  reading comprehension) has real but visibly smaller impact than the P0
+  product features (F1 assignment dashboard, F16 offline resilience) or
+  second-school rollout readiness. Worth a deliberate conversation about
+  which of those three — feature depth, reach, or reliability — is the next
+  quarter's actual priority, rather than defaulting back into module-building
+  momentum out of habit.
+- **Performance-advisor findings (Near-term debt #7) are cheap to fix now and
+  expensive to leave for a second school.** All three finding classes —
+  `multiple_permissive_policies`, `auth_rls_initplan`, `unindexed_foreign_keys`
+  — get *worse*, not just *unaddressed*, as row counts grow: RLS policies
+  that OR-evaluate two permissive policies per row, or re-run
+  `auth.uid()` per row instead of once per query, scale linearly with
+  table size. Fixing them now, against Mizuho's single-school data volume,
+  is a low-stakes place to learn the pattern (consolidate `cmod_read`/
+  `cmod_write`-style pairs into one policy with an OR'd `USING` clause; wrap
+  `auth.<fn>()` calls in `(select …)`) before doing it under the pressure of
+  a second school's traffic.
+- **Audit closed-without-a-fix issues before this recurs a third time —
+  still open, not yet done.** Issue #83 was closed as "completed" with no
+  actual fix landed on 2026-07-17, and the bug it described corrupted
+  production gradebook data for roughly a day before #97 (2026-07-18)
+  actually fixed it. That's a process gap, not just a code bug — worth a
+  cheap one-time pass cross-referencing other closed issues against whether
+  a merged PR/commit actually references them, rather than trusting "closed"
+  to mean "fixed." Still worth doing; nothing has forced it since it was
+  first flagged.
 - **Document the single-grade "update-in-place" reporting pattern before the
-  next holistic-grading feature reinvents it wrong.** Today's fix established
-  that kadaiban's reporting shape (1 submission : 1 grade, re-gradable, must
-  update not insert) is a real, distinct variant of
+  next holistic-grading feature reinvents it wrong — still open.** The
+  07-18 kadaiban fix established that its reporting shape (1 submission : 1
+  grade, re-gradable, must update not insert) is a real, distinct variant of
   `reportActivityWithItems` usage from the standard per-attempt-insert
   pattern every drill module uses. Nothing currently documents *which shape a
   new feature should pick* — a future holistic-grading feature (an essay
-  review tool, a portfolio-style assessment) could easily make the same
-  `Date.now()`-in-the-ref mistake kadaiban just did. A short note in
-  `docs/codebase-and-db-structure.md` or a "reporting patterns" section next
-  to `HubCommon` itself would be enough; folds naturally into the "Kadaiban
-  RLS + Storage design write-up" idea already on this roadmap (2026-07-17) —
-  broaden that write-up to cover this too rather than starting a second doc.
-- **Run the shared-append-only-file audit now, while the queue is empty.**
-  Zero open PRs/issues today is a rare quiet window. `kokugo4` and `eigo5`
-  are both cleared to build next and would be the first real parallel-module
-  batch since the registry fix — a good forcing function to actually do the
-  "audit other shared files for the same failure mode" item (Engineering
-  initiatives above) *before* that batch, not after a third file corrupts.
-- **The completeness milestone from yesterday is now one clear action away.**
-  With the registry blocker gone, moving the two ready spec sketches
-  (kokugo4, eigo5 — both already written in `MODULE_ROADMAP.md` §3.3/§3.6)
-  into `docs/specs/pending/` is a same-day-sized task that reaches "complete
-  算数/理科/社会/国語 coverage, grades 1–6, plus English 3–6" — still worth
-  flagging to whoever owns the Mizuho relationship once it lands, as noted
-  yesterday.
-- **Two-day pattern worth watching, not yet acting on:** both real bugs found
-  this week (the profiles P0 on 07-17, the kadaiban double-grade on 07-18)
-  were caught by a human/session reviewing shipped work within a day of
-  ship, not by any automated check — there is still no CI, and the autofix
-  pipeline only reacts to a human clicking the in-app bug button. That's a
-  reasonable interim safety net for a single-teacher pilot, but it will not
-  scale past one school; the "real CI test suite" and "recurring Supabase
-  advisor sweep" engineering items above are the two concrete steps that
-  would turn this from a lucky habit into a system property.
+  review tool, a portfolio-style assessment) could make the same
+  `Date.now()`-in-the-ref mistake kadaiban did. A short note in
+  `docs/codebase-and-db-structure.md` next to `HubCommon` would be enough.
+- **The review-tooling blind spot behind #103 is worth a one-line style-guide
+  addition, not just a one-time fix.** The raw-NUL-byte incident (five files
+  silently binary-flagged, hiding real diffs from review for at least a day)
+  happened because nothing in `CLAUDE.md` says "generator dedup separators
+  use the `'\u0000'` escape, never a literal control character." The fix
+  itself is verified complete (repo-wide scan today found no remaining
+  binary-flagged `.js` files under `modules/`), but the convention that would
+  have prevented it isn't written down anywhere a future module PR would see
+  it — small enough to add as a one-line note near hard rule 2 in
+  `CLAUDE.md` (or a "generator conventions" aside) next time that file is
+  touched.
+- **Three-day pattern worth watching, not yet acting on:** every real bug
+  found this week (the profiles P0 on 07-17, the kadaiban double-grade on
+  07-18, the binary-file blind spot on 07-19) was caught by a human/session
+  reviewing shipped work after the fact, not by any automated check — there
+  is still no CI, and the autofix pipeline only reacts to a human clicking
+  the in-app bug button. That's a reasonable interim safety net for a
+  single-teacher pilot, but it will not scale past one school; the "real CI
+  test suite" and "recurring Supabase advisor sweep" engineering items above
+  are the two concrete steps that would turn this from a lucky habit into a
+  system property.
 
 ## Explicitly not proposing
 
