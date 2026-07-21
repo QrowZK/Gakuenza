@@ -105,6 +105,28 @@
 </div>
 
 <!-- ============================================================ -->
+<!-- Coordinator scope modal (#114, platform-admin only) — cross-school
+     checklist of which schools a coordinator has authority over. Mirrors
+     class-detail.html's teacher-assignment checklist (checked = has a
+     school_members row), just keyed on (school, this coordinator,
+     role='coordinator') instead of (this class, staff member). -->
+<!-- ============================================================ -->
+<div class="ac-modal-backdrop" id="modal-scope" style="display:none;">
+  <div class="ac-modal" style="width:400px;">
+    <div class="ac-modal-eyebrow" id="scope-modal-name">…</div>
+    <h2 class="ac-modal-title">担当する学校を編集</h2>
+    <div id="scope-checklist" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <div class="ac-skel" style="height:20px;"></div>
+    </div>
+    <p class="ac-modal-err" id="scope-modal-err" style="display:none;"></p>
+    <div class="ac-modal-actions">
+      <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-scope">キャンセル</button>
+      <button class="ac-btn ac-btn-accent ac-btn-md" type="button" id="btn-submit-scope">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
 <!-- One-time password reveal — same gold-bordered, no-backdrop-close
      pattern as class-detail.html's student version. Kept as its own
      copy on this page rather than shared markup across pages, same as
@@ -190,9 +212,17 @@
       const name = m.profiles?.display_name || '(表示名未設定)';
       const given = H.givenName(name);
       const isAdmin = m.role === 'school_admin';
-      const roleLabel = isAdmin ? '管理者' : m.role === 'coordinator' ? 'コーディネーター' : '教員';
+      const isCoordinatorRow = m.role === 'coordinator';
+      const roleLabel = isAdmin ? '管理者' : isCoordinatorRow ? 'コーディネーター' : '教員';
       const editBtn = admin.canManageStaff
         ? `<button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-teacher" data-user-id="${m.user_id}" data-name="${name.replace(/"/g, '')}" type="button">編集</button>`
+        : '';
+      // Scope-granting is platform-admin-only and only meaningful for
+      // coordinator rows (#114) — a school_admin/educator's schools are
+      // fixed to whichever school they were created under, only a
+      // coordinator can be scoped to more than one.
+      const scopeBtn = admin.isPlatformAdmin && isCoordinatorRow
+        ? `<button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-scope" data-user-id="${m.user_id}" data-name="${name.replace(/"/g, '')}" type="button">担当校を編集</button>`
         : '';
       return `
         <div class="ac-card ac-person-card">
@@ -201,12 +231,18 @@
             <div class="ac-roster-name" title="${H.escapeHtml(name)}">${H.escapeHtml(name)}</div>
           </div>
           <span class="ac-badge ${isAdmin ? 'ac-badge-gold' : 'ac-badge-moss'}">${roleLabel}</span>
+          ${scopeBtn}
           ${editBtn}
         </div>`;
     }).join('');
     if (admin.canManageStaff) {
       listEl.querySelectorAll('[data-action="edit-teacher"]').forEach(btn => {
         btn.addEventListener('click', () => openEditTeacherModal(btn.dataset.userId, btn.dataset.name));
+      });
+    }
+    if (admin.isPlatformAdmin) {
+      listEl.querySelectorAll('[data-action="edit-scope"]').forEach(btn => {
+        btn.addEventListener('click', () => openScopeModal(btn.dataset.userId, btn.dataset.name));
       });
     }
   }
@@ -348,6 +384,95 @@
       await loadTeachers(pickerSchool.value);
     } catch (err) {
       errEl.textContent = 'ネットワークエラーが発生しました。もう一度お試しください。';
+      errEl.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '保存する';
+    }
+  });
+
+  // ── coordinator scope (#114, platform-admin only) ───────────────────
+  // Which schools a coordinator has authority over is just the set of
+  // (school, this user, role='coordinator') rows in school_members —
+  // no new edge function needed, the RLS policy members_admin_write
+  // already lets a platform admin insert/delete any school's rows via
+  // the anon-key client. Mirrors class-detail.html's teacher-assignment
+  // checklist (openTeacherAssignModal / btn-submit-teachers) — same
+  // checked-set diff, same insert-toAdd/delete-toRemove shape, same
+  // optimistic-disable-button-while-saving convention.
+  let scopingUserId = null;
+  async function openScopeModal(targetUserId, name) {
+    scopingUserId = targetUserId;
+    document.getElementById('scope-modal-err').style.display = 'none';
+    document.getElementById('scope-modal-name').textContent = name || '';
+    const listEl2 = document.getElementById('scope-checklist');
+    listEl2.innerHTML = '<div class="ac-skel" style="height:20px;"></div>';
+    document.getElementById('modal-scope').style.display = 'flex';
+
+    const [schoolsRes, currentRes] = await Promise.all([
+      sb.from('schools').select('id, name').order('name'),
+      sb.from('school_members').select('school_id').eq('user_id', targetUserId).eq('role', 'coordinator'),
+    ]);
+    if (schoolsRes.error || currentRes.error) {
+      listEl2.innerHTML = '<p class="ac-calm-msg">読み込めませんでした</p>';
+      return;
+    }
+    const allSchools = schoolsRes.data || [];
+    const assignedIds = new Set((currentRes.data || []).map(r => r.school_id));
+    listEl2.innerHTML = allSchools.map(s => `
+      <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;">
+        <input type="checkbox" value="${s.id}" ${assignedIds.has(s.id) ? 'checked' : ''}>
+        ${H.escapeHtml(s.name)}
+      </label>`).join('') || '<p class="ac-calm-msg">学校が見つかりません。</p>';
+    // stash the pre-toggle assignment so the submit handler can diff
+    // against it without a second round trip
+    listEl2.dataset.initial = JSON.stringify([...assignedIds]);
+  }
+  document.getElementById('btn-cancel-scope').addEventListener('click', () => {
+    document.getElementById('modal-scope').style.display = 'none';
+    scopingUserId = null;
+  });
+  document.getElementById('btn-submit-scope').addEventListener('click', async () => {
+    if (!scopingUserId) return;
+    const errEl = document.getElementById('scope-modal-err');
+    const submitBtn = document.getElementById('btn-submit-scope');
+    const listEl2 = document.getElementById('scope-checklist');
+    errEl.style.display = 'none';
+
+    const checked = new Set(
+      Array.from(listEl2.querySelectorAll('input:checked')).map(el => el.value)
+    );
+    let currentlyAssigned;
+    try {
+      currentlyAssigned = new Set(JSON.parse(listEl2.dataset.initial || '[]'));
+    } catch {
+      currentlyAssigned = new Set();
+    }
+    const toAdd = [...checked].filter(id => !currentlyAssigned.has(id));
+    const toRemove = [...currentlyAssigned].filter(id => !checked.has(id));
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '保存中…';
+    try {
+      if (toAdd.length) {
+        const { error } = await sb.from('school_members')
+          .insert(toAdd.map(school_id => ({ school_id, user_id: scopingUserId, role: 'coordinator' })));
+        if (error) throw error;
+      }
+      if (toRemove.length) {
+        const { error } = await sb.from('school_members')
+          .delete().eq('user_id', scopingUserId).eq('role', 'coordinator').in('school_id', toRemove);
+        if (error) throw error;
+      }
+      document.getElementById('modal-scope').style.display = 'none';
+      scopingUserId = null;
+      // The coordinator's row in the CURRENTLY viewed school's list may
+      // have just been added or removed — refresh it so the roster
+      // reflects that immediately, same as the teacher-assignment
+      // checklist does on class-detail.html.
+      await loadTeachers(pickerSchool.value);
+    } catch (err) {
+      errEl.textContent = '保存できませんでした。';
       errEl.style.display = 'block';
     } finally {
       submitBtn.disabled = false;

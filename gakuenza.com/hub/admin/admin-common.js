@@ -11,31 +11,58 @@ window.AdminCommon = (function () {
   // requireGradebookAccess (falls through to checking 'educator' on
   // failure, so it can't render a denial yet either) delegate to this,
   // rather than each keeping their own copy of the same three queries.
+  //
+  // Multi-school fix (#114): a coordinator (or, in principle, a school_admin)
+  // can hold more than one school_members row — one per school they're
+  // scoped to. This used to fetch only ONE row (.limit(1).maybeSingle()),
+  // so a coordinator over N>1 schools only ever saw the first. Now fetches
+  // ALL of the caller's school_admin/coordinator rows and returns the UNION
+  // of their schools via admin.schools (and the derived admin.schoolIds).
+  // Product decision: one tier per person — nobody is school_admin at one
+  // school and coordinator at another — so tier is derived from the rows'
+  // shared role. If rows are somehow mixed (shouldn't happen, not enforced
+  // by a DB constraint), prefer the higher-privilege 'school_admin' tier
+  // rather than erroring, and still expose every row's school in
+  // admin.schools/schoolIds — RLS remains the real boundary on any write,
+  // this is only ever the UI's read of "what should I show".
   async function lookupAdminTier(sb, userId) {
     const { data: profileRow } = await sb
       .from('profiles').select('is_platform_admin').eq('id', userId).maybeSingle();
 
     if (profileRow?.is_platform_admin) {
-      return { tier: 'platform_admin', isPlatformAdmin: true, isCoordinator: false, canManageStaff: true, schoolId: null, schoolName: null };
+      return {
+        tier: 'platform_admin', isPlatformAdmin: true, isCoordinator: false, canManageStaff: true,
+        schoolId: null, schoolName: null, schoolIds: null, schools: null, userId,
+      };
     }
 
     const { data } = await sb
       .from('school_members')
       .select('school_id, role, schools(name)')
       .eq('user_id', userId)
-      .in('role', ['school_admin', 'coordinator'])
-      .limit(1)
-      .maybeSingle();
+      .in('role', ['school_admin', 'coordinator']);
 
-    if (!data) return null;
-    const isCoordinator = data.role === 'coordinator';
+    if (!data || data.length === 0) return null;
+
+    const hasSchoolAdmin = data.some(r => r.role === 'school_admin');
+    const isCoordinator = !hasSchoolAdmin;
+    const schools = data.map(r => ({ id: r.school_id, name: r.schools?.name || '' }));
+    const first = data[0];
     return {
       tier: isCoordinator ? 'coordinator' : 'school_admin',
       isPlatformAdmin: false,
       isCoordinator,
       canManageStaff: !isCoordinator, // create teachers/admins, reset passwords
-      schoolId: data.school_id,
-      schoolName: data.schools?.name || '',
+      // Single-school fields kept for existing consumers that only ever
+      // needed "the" school (e.g. sidebar badge text) — the FIRST of the
+      // caller's schools, not necessarily the only one. Any consumer that
+      // needs to know every school this admin can act on must use
+      // schoolIds/schools (or call getAccessibleSchools), not schoolId.
+      schoolId: first.school_id,
+      schoolName: first.schools?.name || '',
+      schoolIds: data.map(r => r.school_id),
+      schools,
+      userId,
     };
   }
 
@@ -76,16 +103,27 @@ window.AdminCommon = (function () {
   }
 
   // Returns the schools this admin can act on: every school for a
-  // platform admin, or just their one school for a scoped admin. Shared
-  // by any admin page that needs a school picker (class-detail.html's
-  // school/year/gumi picker, the teachers list) so there's exactly one
-  // copy of this logic, not one per page quietly drifting apart.
+  // platform admin, or the UNION of every school_admin/coordinator
+  // school_members row's school for a scoped admin (#114 — a coordinator
+  // can be scoped to more than one school; used to return only
+  // admin.schoolId, i.e. just one). Shared by any admin page that needs a
+  // school picker (class-detail.html's school/year/gumi picker, the
+  // teachers list, students list, modules matrix, gradebook) so there's
+  // exactly one copy of this logic, not one per page quietly drifting
+  // apart.
+  //
+  // For non-platform-admins this reads admin.schools, already fetched by
+  // lookupAdminTier — no extra round trip needed. De-duplicated and
+  // sorted by name for a stable picker order (school_members rows arrive
+  // in whatever order Postgres returns them).
   async function getAccessibleSchools(sb, admin) {
     if (admin.isPlatformAdmin) {
       const { data } = await sb.from('schools').select('id, name').order('name');
       return data || [];
     }
-    return [{ id: admin.schoolId, name: admin.schoolName }];
+    const seen = new Map();
+    (admin.schools || []).forEach(s => { if (!seen.has(s.id)) seen.set(s.id, s); });
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'ja'));
   }
 
   // Renders the admin sidebar into #sidebar-mount. Reuses the shared shell
@@ -232,7 +270,10 @@ window.AdminCommon = (function () {
       canManageStaff: false,
       schoolId: data.school_id,
       schoolName: data.schools?.name || '',
+      schoolIds: [data.school_id],
+      schools: [{ id: data.school_id, name: data.schools?.name || '' }],
       taughtClassIds: (taughtRows || []).map(r => r.class_id),
+      userId,
     };
   }
 

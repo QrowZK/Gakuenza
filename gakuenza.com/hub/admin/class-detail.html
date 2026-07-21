@@ -359,7 +359,11 @@
     const { data, error } = await sb
       .from('classes').select('id, name, school_id, year, gumi, schools(name)')
       .eq('id', requestedClassId).maybeSingle();
-    const accessible = data && (admin.isPlatformAdmin || data.school_id === admin.schoolId);
+    // #114: admin.schoolId is only the FIRST of a (possibly multi-school)
+    // coordinator's schools — a direct-URL class_id from a school other
+    // than that first one used to read as inaccessible even though the
+    // admin legitimately administers it. Check the full schoolIds set.
+    const accessible = data && (admin.isPlatformAdmin || (admin.schoolIds || []).includes(data.school_id));
     if (!error && accessible) classRow = data;
   }
 
