@@ -12,8 +12,9 @@
 //   Create a student:
 //     { kind: "student", school_id, class_id, student_number,
 //       display_name, password? }
-//   Create a teacher or admin:
-//     { kind: "teacher" | "admin", school_id, email, display_name, password? }
+//   Create a teacher, admin, or coordinator:
+//     { kind: "teacher" | "admin" | "coordinator", school_id, email,
+//       display_name, password? }
 //
 // Responses:
 //   200 { ok: true, user_id, login: <email or synthetic email>,
@@ -40,13 +41,16 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // student vocabulary (matches what the frontend and this whole design
 // doc use); this map is the one place that translates to the DB's actual
 // values, so nothing else in the function needs to know about the split.
-const DB_ROLE: Record<"admin" | "teacher", "school_admin" | "educator"> = {
+// 'coordinator' (added #114) is 1:1 — the DB role constraint already spells
+// it 'coordinator', so no rename is needed, unlike admin/teacher.
+const DB_ROLE: Record<"admin" | "teacher" | "coordinator", "school_admin" | "educator" | "coordinator"> = {
   admin: "school_admin",
   teacher: "educator",
+  coordinator: "coordinator",
 };
 
 type Body = {
-  kind: "student" | "teacher" | "admin";
+  kind: "student" | "teacher" | "admin" | "coordinator";
   school_id: string;
   class_id?: string;
   student_number?: string;
@@ -120,7 +124,7 @@ Deno.serve(async (req) => {
   if (!kind || !school_id || !display_name?.trim()) {
     return json(400, { ok: false, error: "必須項目が不足しています" });
   }
-  if (!["student", "teacher", "admin"].includes(kind)) {
+  if (!["student", "teacher", "admin", "coordinator"].includes(kind)) {
     return json(400, { ok: false, error: "不正なアカウント種別です" });
   }
 
@@ -257,7 +261,7 @@ Deno.serve(async (req) => {
     const { error: memberErr } = await service.from("school_members").insert({
       school_id,
       user_id: newUserId,
-      role: DB_ROLE[kind as "admin" | "teacher"], // DB check constraint backstops this too
+      role: DB_ROLE[kind as "admin" | "teacher" | "coordinator"], // DB check constraint backstops this too
     });
     if (memberErr) {
       await rollback();

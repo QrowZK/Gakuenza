@@ -65,6 +65,7 @@
         <select id="select-teacher-role">
           <option value="teacher">教員</option>
           <option value="admin">管理者</option>
+          <option value="coordinator">コーディネーター</option>
         </select>
       </div>
       <p class="ac-modal-err" id="add-teacher-err" style="display:none;"></p>
@@ -250,7 +251,7 @@
     e.preventDefault();
     const email = document.getElementById('input-teacher-email').value.trim();
     const displayName = document.getElementById('input-teacher-name').value.trim();
-    const kind = document.getElementById('select-teacher-role').value; // 'teacher' | 'admin'
+    const kind = document.getElementById('select-teacher-role').value; // 'teacher' | 'admin' | 'coordinator'
     const errEl = document.getElementById('add-teacher-err');
     const submitBtn = document.getElementById('btn-submit-add-teacher');
     errEl.style.display = 'none';
