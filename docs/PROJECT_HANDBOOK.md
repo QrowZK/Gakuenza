@@ -339,8 +339,8 @@ Snapshot 2026-07-21 — for the current truth query the live DB / `ROADMAP.md`._
 - **Schools:** 2 — Mizuho (active; 9 classes, 106 students, 7 staff),
   羽咋小学校 (active; 6 classes, 0 students, 2 staff).
 - **Modules:** 30 (japanese 9, english 6, math 6, science 4, social 4, misc 1).
-- **DB:** 20 public tables (all RLS-enabled) · 5 Edge Functions · 2 Storage
-  buckets · 29 migrations.
+- **DB:** 19 public tables (all RLS-enabled) · 5 Edge Functions · 2 Storage
+  buckets · 30 migrations.
 - **Supabase:** project `ohnsawydclmsrgphasbn`, ap-northeast-1, Postgres 17
   (free tier — leaked-password protection is a paid feature, currently off).
 - **Repo:** `QrowZK/Gakuenza`. **Deploy:** rsync → DreamHost on push to `main`.
