@@ -9,13 +9,6 @@
 <link rel="stylesheet" href="admin.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
-<style>
-  /* focus-unit checkboxes (shared markup from module-assign-common.js) */
-  .ma-focus-field { border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
-  .ma-focus-hint { font-size:0.72rem; color:var(--ink-soft); margin-bottom:6px; }
-  .ma-focus-opt { display:flex; align-items:center; gap:7px; padding:3px 0; font-size:0.8rem; cursor:pointer; }
-  .ac-assigned-card .ac-btn { margin-left:6px; }
-</style>
 </head>
 <body>
 
@@ -97,14 +90,14 @@
           <h2 class="section-title">モジュール</h2>
 
           <p style="font-size:0.76rem;color:var(--ink-soft);margin:0 0 14px;line-height:1.5;">
-            学校でのモジュールの有効化は<a href="modules.html" style="color:var(--moss-deep);">モジュール管理</a>で行います。ここでは有効なモジュールをこのクラスに割り当てます。
+            学校でのモジュールの有効化は<a href="modules.html" style="color:var(--moss-deep);">モジュール管理</a>で行います。モジュールの割り当て・スケジュールは成績簿で行います。ここには現在の割り当て状況のみを表示します。
           </p>
 
           <div class="ac-module-subhead">このクラスに割り当て済み</div>
           <div id="assigned-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
             <div class="ac-card ac-skel" style="height:52px;"></div>
           </div>
-          <button class="ac-btn ac-btn-ghost-light ac-btn-md ac-btn-block" id="btn-assign-module" type="button" disabled>+ モジュールを割り当て</button>
+          <a class="ac-btn ac-btn-ghost-light ac-btn-md ac-btn-block" id="btn-goto-assign" href="../gradebook/assign.html" style="text-decoration:none;">成績簿で割り当てる</a>
         </div>
       </div>
     </div>
@@ -292,36 +285,6 @@
       <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-print-reveal">印刷する</button>
       <button class="ac-btn ac-btn-accent ac-btn-md" type="button" id="btn-close-reveal">確認して閉じる</button>
     </div>
-  </div>
-</div>
-
-<!-- ============================================================ -->
-<!-- Assign-module modal — functional placeholder, not design-reviewed
-     (see README). -->
-<!-- ============================================================ -->
-<div class="ac-modal-backdrop" id="modal-assign" style="display:none;">
-  <div class="ac-modal" style="width:420px;">
-    <h2 class="ac-modal-title">モジュールを割り当て</h2>
-    <form id="form-assign">
-      <div class="ac-field">
-        <label class="ac-field-label" for="select-assign-module">モジュール</label>
-        <select id="select-assign-module" required></select>
-      </div>
-      <div class="ac-field">
-        <label class="ac-field-label" for="input-total-items">問題数</label>
-        <input id="input-total-items" type="number" min="1" required>
-      </div>
-      <div class="ac-field">
-        <label class="ac-field-label" for="input-due-date">期限（任意）</label>
-        <input id="input-due-date" type="date">
-      </div>
-      <div class="ac-field" id="assign-focus-slot" style="margin-bottom:20px;"></div>
-      <p class="ac-modal-err" id="assign-err" style="display:none;"></p>
-      <div class="ac-modal-actions">
-        <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-assign">キャンセル</button>
-        <button class="ac-btn ac-btn-accent ac-btn-md" type="submit" id="btn-submit-assign">割り当てる</button>
-      </div>
-    </form>
   </div>
 </div>
 
@@ -710,7 +673,7 @@
   document.getElementById('add-student-class-name').textContent = classRow.name;
   document.getElementById('btn-add-student').disabled = false;
 
-  // ── load roster, assignment, catalog, activity in parallel ────────────
+  // ── load roster, assignment (read-only), teachers, activity in parallel ──
   async function loadRoster() {
     return sb
       .from('enrollments')
@@ -718,21 +681,13 @@
       .eq('class_id', classRow.id)
       .eq('role', 'student');
   }
-  async function loadAssigned() {
-    return sb
-      .from('class_modules')
-      .select('module_id, due_date, total_items, modules(id, key, name, subject)')
-      .eq('class_id', classRow.id);
-  }
-  async function loadCatalogAndEnabled() {
-    const [catalogRes, enabledRes] = await Promise.all([
-      sb.from('modules').select('id, key, name, subject, recommended_grades'),
-      sb.from('school_modules').select('module_id').eq('school_id', schoolId),
-    ]);
-    return { catalogRes, enabledRes };
-  }
+  // Assignment rows use the shared ModuleAssign.loadAssigned() (includes
+  // focus_units) rather than a hand-rolled query — this page only *displays*
+  // assignments now (Option A, #113: assignment/scheduling moved to the
+  // gradebook's assign.html), so it reuses the same read path assign.html
+  // uses instead of maintaining its own.
 
-  let roster = [], assigned = [], catalog = [], enabledIds = new Set(), activityByUser = {}, classTeachers = [];
+  let roster = [], assigned = [], activityByUser = {}, classTeachers = [];
   let rosterExpanded = false; // roster list shows a compact preview until expanded
 
   async function loadClassTeachers() {
@@ -743,15 +698,17 @@
   }
 
   async function refetchAndRender() {
-    const [rosterRes, assignedRes, { catalogRes, enabledRes }, teachersRes] = await Promise.all([
-      loadRoster(), loadAssigned(), loadCatalogAndEnabled(), loadClassTeachers(),
+    const [rosterRes, assignedRes, teachersRes] = await Promise.all([
+      loadRoster(), MA.loadAssigned(sb, classRow.id), loadClassTeachers(),
     ]);
 
     roster = rosterRes.error ? null : (rosterRes.data || []);
     assigned = assignedRes.error ? null : (assignedRes.data || []);
-    catalog = catalogRes.error ? [] : (catalogRes.data || []);
-    enabledIds = new Set((enabledRes.data || []).map(r => r.module_id));
     classTeachers = teachersRes.error ? [] : (teachersRes.data || []);
+    // Pre-load unit lists for every assigned module so the (synchronous)
+    // focusSummary() below can read them from cache while building innerHTML
+    // — same pattern as the gradebook's assign.html.
+    if (assigned) await Promise.all(assigned.map(a => MA.moduleUnitsFor(a.modules ? a.modules.key : null)));
 
     activityByUser = {};
     if (roster && roster.length) {
@@ -858,20 +815,30 @@
     if (rosterToggle) rosterToggle.addEventListener('click', () => { rosterExpanded = !rosterExpanded; renderRoster(); });
   }
 
-  function fmtAssignedMeta(a) {
-    const due = a.due_date ? H.formatDueDate(a.due_date) : '期限なし';
-    return `${due}・${a.total_items ?? '?'}問`;
+  // Focus-unit summary text — same convention as the gradebook's assign.html
+  // focusSummary(): null/empty focus_units means "all units".
+  function focusSummary(a) {
+    const key = a.modules ? a.modules.key : null;
+    if (!a.focus_units || !a.focus_units.length) return '全単元';
+    const units = MA.moduleUnitsCached(key);
+    const labelOf = {}; units.forEach(u => labelOf[u.key] = u.label);
+    const names = a.focus_units.map(k => labelOf[k] || k);
+    return '今週: ' + (names.length <= 2 ? names.join('、') : names.length + '単元');
   }
 
+  function fmtAssignedMeta(a) {
+    const due = a.due_date ? H.formatDueDate(a.due_date) : '期限なし';
+    return `${due}・${focusSummary(a)}${a.total_items != null ? '・' + a.total_items + '問' : ''}`;
+  }
+
+  // Read-only display (Option A, #113): assignment/scheduling now lives on
+  // the gradebook's assign.html — this list has no edit/unassign controls.
   function renderAssigned() {
     const el = document.getElementById('assigned-list');
-    const btnAssign = document.getElementById('btn-assign-module');
     if (assigned === null) {
       el.innerHTML = '<p class="ac-calm-msg">読み込めませんでした</p>';
-      btnAssign.disabled = true;
       return;
     }
-    btnAssign.disabled = false;
     if (assigned.length === 0) {
       el.innerHTML = '<p class="ac-calm-msg">割り当てられたモジュールはまだありません。</p>';
     } else {
@@ -879,51 +846,10 @@
         <div class="ac-card ac-assigned-card" data-module-id="${a.module_id}">
           <div>
             <div class="ac-assigned-title">${H.escapeHtml(a.modules?.name || '(不明なモジュール)')}</div>
-            <div class="ac-assigned-meta" id="assigned-meta-${a.module_id}">${fmtAssignedMeta(a)}</div>
+            <div class="ac-assigned-meta">${fmtAssignedMeta(a)}</div>
           </div>
-          <button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-due" data-module-id="${a.module_id}" type="button">変更</button>
-          <button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="unassign" data-module-id="${a.module_id}" type="button">解除</button>
         </div>`).join('');
-      el.querySelectorAll('[data-action="edit-due"]').forEach(btn => {
-        btn.addEventListener('click', () => editDueDate(btn.dataset.moduleId));
-      });
-      el.querySelectorAll('[data-action="unassign"]').forEach(btn => {
-        btn.addEventListener('click', () => unassignModule(btn.dataset.moduleId));
-      });
     }
-  }
-
-  async function unassignModule(moduleId) {
-    const a = (assigned || []).find(x => x.module_id === moduleId);
-    const name = a && a.modules ? a.modules.name : 'このモジュール';
-    const ok = window.confirm(
-      `「${name}」の割り当てを解除しますか？\n\n` +
-      `解除すると、このクラスの児童の画面からこのモジュールが消え、これまでの成績も児童には表示されなくなります（記録自体は残ります）。`);
-    if (!ok) return;
-    const { error } = await MA.unassignModule(sb, { classId: classRow.id, moduleId });
-    if (error) { alert('解除できませんでした。'); return; }
-    await refetchAndRender();
-  }
-
-  function editDueDate(moduleId) {
-    const a = (assigned || []).find(x => x.module_id === moduleId);
-    if (!a) return;
-    const metaEl = document.getElementById(`assigned-meta-${moduleId}`);
-    const current = a.due_date || '';
-    metaEl.innerHTML = `
-      <input type="date" value="${current}" style="font-size:0.72rem;padding:2px 4px;border:1px solid var(--border);border-radius:4px;">
-      <button data-action="save-due" style="border:none;background:none;color:var(--moss-deep);font-weight:700;cursor:pointer;font-size:0.72rem;width:auto;">保存</button>
-      <button data-action="cancel-due" style="border:none;background:none;color:var(--ink-soft);cursor:pointer;font-size:0.72rem;width:auto;">取消</button>
-    `;
-    metaEl.querySelector('[data-action="cancel-due"]').addEventListener('click', () => { metaEl.textContent = fmtAssignedMeta(a); });
-    metaEl.querySelector('[data-action="save-due"]').addEventListener('click', async () => {
-      const newDate = metaEl.querySelector('input').value || null;
-      metaEl.textContent = '保存中…';
-      const { error } = await sb.from('class_modules').update({ due_date: newDate }).eq('class_id', classRow.id).eq('module_id', moduleId);
-      if (error) { metaEl.textContent = '保存できませんでした'; return; }
-      a.due_date = newDate;
-      metaEl.textContent = fmtAssignedMeta(a);
-    });
   }
 
   async function removeStudent(userIdVal, name, btnEl) {
@@ -1098,69 +1024,18 @@
   });
   document.getElementById('btn-print-reveal').addEventListener('click', () => window.print());
 
-  function openAssignModal() {
-    const notYetAssigned = catalog.filter(m => enabledIds.has(m.id) && !(assigned || []).some(a => a.module_id === m.id));
-    const sel = document.getElementById('select-assign-module');
-    const errEl = document.getElementById('assign-err');
-    errEl.style.display = 'none';
-    document.getElementById('form-assign').reset();
-    if (!notYetAssigned.length) {
-      sel.innerHTML = '<option value="">(割り当て可能なモジュールがありません)</option>';
-      document.getElementById('btn-submit-assign').disabled = true;
-    } else {
-      // Grouped by subject category (optgroup) so the picker stays
-      // navigable once a school has modules across several subjects,
-      // rather than one flat alphabetical-ish list.
-      const bySubject = {};
-      for (const m of notYetAssigned) (bySubject[m.subject] ||= []).push(m);
-      sel.innerHTML = H.sortedSubjectKeys(bySubject).map(subject => `
-        <optgroup label="${H.subjectLabel(subject)}">
-          ${bySubject[subject].map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
-        </optgroup>`).join('');
-      document.getElementById('btn-submit-assign').disabled = false;
-    }
-    renderAssignFocus();
-    document.getElementById('modal-assign').style.display = 'flex';
-  }
-  // Focus-unit checkboxes follow the currently-selected module in the picker.
-  async function renderAssignFocus() {
-    const sel = document.getElementById('select-assign-module');
-    const mod = catalog.find(m => m.id === sel.value);
-    document.getElementById('assign-focus-slot').innerHTML =
-      (mod ? await MA.focusUnitsFieldHtml(mod.key, []) : '') || '';
-  }
-  document.getElementById('select-assign-module').addEventListener('change', renderAssignFocus);
-  document.getElementById('btn-assign-module').addEventListener('click', openAssignModal);
-  document.getElementById('btn-cancel-assign').addEventListener('click', () => {
-    document.getElementById('modal-assign').style.display = 'none';
-  });
-  document.getElementById('form-assign').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const moduleId = document.getElementById('select-assign-module').value;
-    const totalItems = parseInt(document.getElementById('input-total-items').value, 10);
-    const dueDate = document.getElementById('input-due-date').value || null;
-    const errEl = document.getElementById('assign-err');
-    const btn = document.getElementById('btn-submit-assign');
-    if (!moduleId) return;
-    const focusUnits = MA.readFocusUnitsField(document.getElementById('assign-focus-slot'));
-    // Soft grade-mismatch warning (advisory, never blocks).
-    const mod = catalog.find(m => m.id === moduleId);
-    if (mod && MA.gradeMismatch(mod.recommended_grades, classRow.year)) {
-      if (!window.confirm(MA.gradeMismatchMessage(mod.recommended_grades, classRow.year, mod.name))) return;
-    }
-    btn.disabled = true;
-    const { error } = await MA.assignModule(sb, {
-      classId: classRow.id, moduleId, totalItems, dueDate, focusUnits,
+  // Read-only "go assign it in the gradebook" link (Option A, #113). This
+  // page's assign.html link has no ?class_id= param — the gradebook resolves
+  // its current class from localStorage (gb_class_id, see gradebook-common.js
+  // getCurrentClassId/setCurrentClassId), not a URL param — so pre-seed that
+  // same key here to land the educator on this class instead of whatever
+  // class the gradebook last had selected. assign.html itself is untouched.
+  const btnGotoAssign = document.getElementById('btn-goto-assign');
+  if (btnGotoAssign) {
+    btnGotoAssign.addEventListener('click', () => {
+      try { localStorage.setItem('gb_class_id', classRow.id); } catch (err) { /* ignore */ }
     });
-    if (error) {
-      errEl.textContent = '割り当てできませんでした。';
-      errEl.style.display = 'block';
-      btn.disabled = false;
-      return;
-    }
-    document.getElementById('modal-assign').style.display = 'none';
-    await refetchAndRender();
-  });
+  }
 
   await refetchAndRender();
 })();
