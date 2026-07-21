@@ -1,6 +1,6 @@
 # Gakuenza — Roadmap (single source of truth)
 
-_Last updated: 2026-07-20. Living planning doc, not a spec._
+_Last updated: 2026-07-21. Living planning doc, not a spec._
 
 > ### How this roadmap is organized — read before editing
 >
@@ -45,6 +45,47 @@ decentralized (each module owns its own `units.js`), and Kadaiban's
 holistic single-grade reporting had a real double-grading bug that had
 already corrupted a production row before it was caught and fixed. Both
 closed 2026-07-18 — see the completed items in Near-term debt below.
+
+A second school (羽咋市立羽咋小学校) is now provisioned (classes + staff, no
+students yet), and coordinator management now exists end-to-end — so the
+platform is no longer strictly single-school in either data or tooling, even
+though Mizuho remains the only school with real student usage.
+
+## Progress since last update (2026-07-20 → 2026-07-21)
+
+A heavy consolidation + bug-fix window, mostly staff-reported issues via the
+in-app bug button; no new curriculum modules. All merged and deployed:
+
+- **Coordinator management shipped end-to-end** (#114 → #117). There was no way
+  for a platform admin to create a coordinator or set the schools they oversee,
+  and a latent `admin-common.js` bug (`.limit(1)` in `lookupAdminTier`) capped
+  any coordinator at a single school regardless. Fixed: `provision-account` now
+  accepts the `coordinator` kind (redeployed to prod as v6), `teachers.html`
+  gained the create option + a platform-admin-only cross-school scope checklist,
+  and the auth resolution now unions all of a staff member's schools.
+- **Class-detail module-assignment consolidation** (#113 → #116). Removed the
+  duplicate assignment write-surface (and a pointless required 問題数 field)
+  from `hub/admin/class-detail.html`; that section is now a read-only view that
+  links to the gradebook — the intended home for assignment/scheduling.
+- **Second-school rollout groundwork** (#105). Added a bulk "enable modules for
+  a school" action to the admin console (replacing ~24 individual toggles) and
+  an onboarding runbook (`docs/second-school-onboarding.md`). Two stray test
+  schools were cleaned out of prod; 羽咋 (`hakui-honsho`) kept as the real
+  second-school candidate, awaiting student rosters.
+- **Kadaiban draw-screen bug fixes** — three distinct issues on the same 戻る
+  button, all staff-reported: resizing while drawing + a stray "フェーズ2" dev
+  label (#106 — root cause was the recurring `button{width:100%}` footgun, fixed
+  by self-containing `kadaiban.html`'s CSS), near-transparent styling (#107),
+  and 戻る returning to the in-page worksheet list instead of the hub (#109).
+- **Edge-function source recovery** (#115). Two functions live in prod
+  (`update-teacher`, `student-login`) had no source in the repo — recovered
+  verbatim, closing a source-of-truth drift hazard (the `db/`-mirror problem,
+  but for Edge Functions).
+- **`nh6` display rename** (#110) → "外国語 6年" to pair with `eigo5` in the
+  catalog; the full internal key rekey to `eigo6` is deferred (debt #8).
+- **Project handbook** (#118): added `docs/PROJECT_HANDBOOK.md`, a single
+  entry-point orientation doc that ties the project together and defers to this
+  roadmap and `CLAUDE.md` for live status and rules.
 
 ## Progress since last update (2026-07-18 → 2026-07-19)
 
@@ -149,6 +190,23 @@ Debt items, not new ideas:
    lands — same trap as a module registration). Not worth that risk for a
    cosmetic gain now; do it opportunistically if `nh6`'s files are being
    touched anyway (e.g. when fixing its hand-rolled reporter, debt #1).
+9. **Admin-console UX thinness (surfaced by the #114 coordinator work).** The
+   console is multi-school-capable now, but several staff-management gaps
+   remain: no way to **edit a staff member's role** after creation (the
+   edit-teacher modal only does name/password), no **staff removal/deactivation**
+   (students have a delete action; staff don't), no **school edit/status editor**
+   on `schools.html` (create-only; status is a read-only badge), and no
+   **cross-school staff directory / user search** (can't tell if an email
+   already has an account, or see a coordinator's full footprint at a glance).
+   None are blocking at current scale; they get more painful as coordinators and
+   a second school come online. Small, additive, reuse existing modal patterns.
+10. **`modules.html` bulk-assign matrix drops assignment metadata.** The
+    per-class assign matrix on the modules page writes `class_modules` rows with
+    `total_items`/`due_date`/`focus_units` all null, unlike the gradebook's
+    assign flow — so bulk-created assignments are shaped differently from
+    individually-created ones (noticed during the #113 consolidation). Minor
+    data-shape inconsistency; decide whether bulk-assign should carry defaults or
+    prompt for them.
 
 ## What's next — by domain
 
