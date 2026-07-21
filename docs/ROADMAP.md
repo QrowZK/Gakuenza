@@ -99,8 +99,9 @@ Two more PRs landed after the pass above — one docs, one real content fix:
   this pass surfaced are the more important finding than the doc fix itself:**
   `activity_results` is **14 rows**, `activity_result_items` **60**,
   `observation_records` **1**, live today — against 106 enrolled Mizuho
-  students, 9 classes, and 29 active modules. Real classroom usage is still
-  extremely thin. See New ideas below.
+  students, 9 classes, and 29 active modules. Usage is near-zero right now —
+  expected, as schools are on summer break; it resumes with 2学期 in ~2–3
+  weeks (see New ideas below).
 - **shakai5 content-depth fix** (#121, `0880b0c`): 89 new original questions
   (98 → 187) across all 5 units, closing a "low-variety audit flag" — some
   sections had as few as 4–8 questions. This is the first fix of its kind:
@@ -431,22 +432,21 @@ offered as directions worth a deliberate look rather than decisions:
 
 Fresh proposals prompted by today's later pass — not yet scoped as specs:
 
-- **Real classroom usage is the platform's actual open question, and it's
-  more urgent than any item above.** The 2026-07-21 docs-currency pass put a
-  hard number on it: **14** `activity_results` rows and **1**
-  `observation_records` row exist, total, across the whole live database —
-  against 106 enrolled Mizuho students, 9 classes, 29 active modules, and
-  months of module-building. That gap is too large to be explained away as
-  "just after the 07-16 seed purge" without checking: it's worth finding out,
-  directly from whoever owns the Mizuho relationship, whether this reflects
-  (a) real students just haven't been assigned/logged in much yet, (b) a
-  rollout/training gap — teachers don't know to assign modules via the
-  gradebook now that class-detail is read-only (#113), or (c) friction in the
-  student login/assignment flow itself. Every P0 feature and rollout item
-  elsewhere in this roadmap (F1 dashboard, second-school readiness, kadaiban
-  Phase 2) is aimed at *supporting* usage that, on current data, barely
-  exists yet. Worth confirming the real cause before investing further in
-  build — the answer changes which of those items is actually next.
+- **Near-zero live usage right now is the summer-break lull — expected, not a
+  problem to chase.** The 2026-07-21 docs-currency pass put a hard number on
+  current usage: **14** `activity_results` rows and **1** `observation_records`
+  row exist, total, across the live database — against 106 enrolled Mizuho
+  students, 9 classes, and 29 active modules. **Confirmed with the Mizuho owner
+  (2026-07-21): this is expected — Japanese schools are on summer vacation, and
+  usage stays near-zero until ~late August, when 2学期 begins (~2–3 weeks
+  out).** The current push (content-depth fills, teacher-facing semester docs,
+  a teacher user guide) is deliberately timed to be *ready for* that term
+  restart — it is prep ahead of demand, not a response to a usage problem. (The
+  drop from the doc's earlier ~1,359 figure is partly the 2026-07-16 seed
+  purge; the current near-zero is seasonal.) **What to actually watch:** once
+  2学期 starts, live `activity_results` growth becomes the real signal — if
+  usage stays flat *after* term resumes, *then* investigate
+  rollout/training/login-friction. Until then, prep for the term.
 - **"Coverage complete" and "content-ready" turned out to be two different
   claims, and only the first one was ever checked.** The grades-1–6 grid
   (row 217) was marked complete 2026-07-18 based on the coverage matrix — one
@@ -466,8 +466,10 @@ Fresh proposals prompted by today's later pass — not yet scoped as specs:
   nothing else, thankfully). That's a good state to be in, not a backlog to
   keep grinding on — the next update to any of these four should be forced
   by real work (a feature ships, a schema changes, a number goes stale again),
-  not by another dedicated docs pass. Spend the next session's effort on the
-  usage-gap question or debt #11 instead.
+  not by another dedicated docs pass. Spend the next session's effort on
+  term-start prep instead — teacher-facing materials (semester docs + a
+  teacher user guide) and the content-depth fills (debt #11), ahead of the
+  2学期 restart.
 
 ## Explicitly not proposing
 
