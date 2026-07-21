@@ -87,6 +87,32 @@ in-app bug button; no new curriculum modules. All merged and deployed:
   entry-point orientation doc that ties the project together and defers to this
   roadmap and `CLAUDE.md` for live status and rules.
 
+## Progress since last update (2026-07-21, later the same day)
+
+Two more PRs landed after the pass above — one docs, one real content fix:
+
+- **Full docs-currency pass** (#119 → #120, `42482a0`/`ed21822`): a live
+  verification sweep (`list_tables`, `execute_sql`, `list_edge_functions`,
+  `list_migrations`, `get_advisors`) refreshed `codebase-and-db-structure.md`
+  from its stale 2026-07-15 snapshot and corrected the handbook's DB counts to
+  match (19 public tables, not 20; 30 migrations, not 29). **The row counts
+  this pass surfaced are the more important finding than the doc fix itself:**
+  `activity_results` is **14 rows**, `activity_result_items` **60**,
+  `observation_records` **1**, live today — against 106 enrolled Mizuho
+  students, 9 classes, and 29 active modules. Real classroom usage is still
+  extremely thin. See New ideas below.
+- **shakai5 content-depth fix** (#121, `0880b0c`): 89 new original questions
+  (98 → 187) across all 5 units, closing a "low-variety audit flag" — some
+  sections had as few as 4–8 questions. This is the first fix of its kind:
+  every prior module milestone was about *coverage* (does a subject/grade
+  cell exist), this one is about *depth* (is the cell's question bank thick
+  enough to not repeat within a term). See Near-term debt #11 and New ideas
+  below — the coverage grid being "done" (row 217) didn't mean depth was
+  checked anywhere else.
+- **Operationally quiet**: zero open issues, zero open PRs as of this check —
+  the autofix pipeline has had nothing to react to since #107 (2026-07-21
+  morning).
+
 ## Progress since last update (2026-07-18 → 2026-07-19)
 
 The previous roadmap pass was written mid-day on 07-18, before that day's
@@ -207,6 +233,20 @@ Debt items, not new ideas:
     individually-created ones (noticed during the #113 consolidation). Minor
     data-shape inconsistency; decide whether bulk-assign should carry defaults or
     prompt for them.
+11. **Content-depth audit likely needed for `rika3`–`rika6` (and worth
+    re-checking `shakai4`) — shakai5 probably isn't the only thin module.**
+    A rough per-module question-count check (grepping `q:`/question keys,
+    napkin-level, not authoritative) run against this update: `rika4` ~49
+    questions across 12 units, `rika5` ~50/10 units, `rika6` ~53/11 units,
+    `rika3` ~59/11 units, `shakai4` ~66/5 units — all noticeably thinner than
+    `shakai5`'s now-187 or `shakai6`'s 115. shakai5's fix (#121, debt item
+    above) proves this failure mode is real, not hypothetical, and nothing
+    upstream of that one bug report was checking for it — the grades-1–6
+    "complete" grid milestone only ever meant *a module exists per cell*, not
+    *the question bank is deep enough*. Before assuming this is scoped to
+    shakai5, run a real per-section count (not the napkin total-file grep
+    used here) against `rika3`–`rika6` and `shakai4`, using shakai5's ~10–12
+    questions/section as the target bar.
 
 ## What's next — by domain
 
@@ -386,6 +426,48 @@ offered as directions worth a deliberate look rather than decisions:
   test suite" and "recurring Supabase advisor sweep" engineering items above
   are the two concrete steps that would turn this from a lucky habit into a
   system property.
+
+## New ideas & frontiers (2026-07-21)
+
+Fresh proposals prompted by today's later pass — not yet scoped as specs:
+
+- **Real classroom usage is the platform's actual open question, and it's
+  more urgent than any item above.** The 2026-07-21 docs-currency pass put a
+  hard number on it: **14** `activity_results` rows and **1**
+  `observation_records` row exist, total, across the whole live database —
+  against 106 enrolled Mizuho students, 9 classes, 29 active modules, and
+  months of module-building. That gap is too large to be explained away as
+  "just after the 07-16 seed purge" without checking: it's worth finding out,
+  directly from whoever owns the Mizuho relationship, whether this reflects
+  (a) real students just haven't been assigned/logged in much yet, (b) a
+  rollout/training gap — teachers don't know to assign modules via the
+  gradebook now that class-detail is read-only (#113), or (c) friction in the
+  student login/assignment flow itself. Every P0 feature and rollout item
+  elsewhere in this roadmap (F1 dashboard, second-school readiness, kadaiban
+  Phase 2) is aimed at *supporting* usage that, on current data, barely
+  exists yet. Worth confirming the real cause before investing further in
+  build — the answer changes which of those items is actually next.
+- **"Coverage complete" and "content-ready" turned out to be two different
+  claims, and only the first one was ever checked.** The grades-1–6 grid
+  (row 217) was marked complete 2026-07-18 based on the coverage matrix — one
+  ✅ per subject/grade cell. shakai5 had a ✅ and still needed 89 more
+  questions to stop repeating within a section. Nothing between 07-18 and the
+  bug report that triggered #121 was systematically checking per-section
+  question depth across the 29-module catalog. Near-term debt #11 above is
+  the concrete next step (audit `rika3`–`rika6`/`shakai4`); the broader
+  point for future module work is that "the cell has a ✅" and "the cell has
+  enough content" need to be tracked as separate facts, not conflated the way
+  the coverage matrix currently does.
+- **Documentation is unusually current right now — a good moment to let it
+  rest.** Three docs (`CLAUDE.md`, this roadmap, `codebase-and-db-structure.md`)
+  plus the new `PROJECT_HANDBOOK.md` all got real verification passes within
+  the same 48 hours (07-20/07-21), each catching genuine drift (stale row
+  counts, a table-count miscount that propagated from the handbook into
+  nothing else, thankfully). That's a good state to be in, not a backlog to
+  keep grinding on — the next update to any of these four should be forced
+  by real work (a feature ships, a schema changes, a number goes stale again),
+  not by another dedicated docs pass. Spend the next session's effort on the
+  usage-gap question or debt #11 instead.
 
 ## Explicitly not proposing
 
