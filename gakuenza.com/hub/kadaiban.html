@@ -283,7 +283,17 @@
           <button class="kb-submit" id="kb-submit" type="button" disabled>ていしゅつする</button>
         </div>
       </div>`);
-    document.getElementById('kb-back').addEventListener('click', () => { flushSave(); loadItems().then(renderHome); });
+    // "もどる" exits the worksheet back to the hub home — the only place this
+    // screen is ever entered from (index.html surfaces kadaiban cards that
+    // deep-link here as kadaiban.html?a=<id>). Matches the two "ホームにもどる"
+    // exits below (openView / showDone). Await the save first: persistDraft()
+    // is async, so a hard navigation would otherwise race the last debounced
+    // strokes and lose them.
+    document.getElementById('kb-back').addEventListener('click', async () => {
+      clearTimeout(saveTimer);
+      await persistDraft();
+      window.location.href = 'index.html';
+    });
 
     // fetch a signed URL for the worksheet source, then build the canvas
     const url = await signedUrl(SOURCES, it.sourcePath);
