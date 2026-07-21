@@ -132,6 +132,19 @@ Debt items, not new ideas:
    scale it's cheap to defer and expensive to accumulate silently. Worth a
    dedicated pass before a second school multiplies the row counts these
    policies scan.
+8. **Full rekey of `nh6` → `eigo6` (low priority).** As of 2026-07-21 the
+   grade-6 English module's *display name* was aligned with `eigo5` (both now
+   read `外国語 5年` / `外国語 6年` in the hub — migration
+   `20260721000411`), but its internal key is still `nh6`: the directory
+   (`modules/nh6/`), `launch_url`, `nh6-report.js` (whose `activity_results`
+   lookup is `.eq('key','nh6')`), and the `nh6-*` localStorage keys all still
+   use the old key. A full rekey to `eigo6` would make the 5/6 English pair
+   consistent internally too, but it's URL/directory-invisible to users and
+   carries a real deploy-ordering step (rsync `--delete` swaps the directory on
+   merge, so the hub tile 404s until a post-deploy `key`/`launch_url` migration
+   lands — same trap as a module registration). Not worth that risk for a
+   cosmetic gain now; do it opportunistically if `nh6`'s files are being
+   touched anyway (e.g. when fixing its hand-rolled reporter, debt #1).
 
 ## What's next — by domain
 
