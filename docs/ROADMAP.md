@@ -98,8 +98,12 @@ Debt items, not new ideas:
 3. **SECURITY DEFINER EXECUTE pass** (advisor finding #6, open): revoke EXECUTE
    on `app_*` helpers only ever called from inside RLS (e.g. `app_class_school`,
    the `app_user_*_ids` family), to shrink the anonymous attack surface.
-4. **Leaked-password protection is still off.** Dashboard-only toggle
-   (Authentication → Policies) — someone with console access should flip it.
+4. **Leaked-password protection is still off — blocked on the Supabase
+   free tier.** The HaveIBeenPwned check is a **paid-plan feature**; the
+   project is currently on the free tier, so it cannot be enabled yet. It's
+   a Dashboard toggle (Authentication → Policies) once the project is on a
+   paid plan — not something console access alone can flip today. Revisit
+   after any tier upgrade.
 5. ~~Build `SPEC_decentralize_module_units.md`~~ **done 2026-07-18** (#99) —
    the shared-registry corruption class is closed; `kokugo4`/`eigo5` built
    in parallel the same day with zero registry conflict, proving the fix.

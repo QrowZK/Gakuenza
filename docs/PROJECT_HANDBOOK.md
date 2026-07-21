@@ -351,7 +351,8 @@ coordinator management (create + multi-school scope); the bug-report automation
 1. Fix the 5 hand-rolled reporters to populate `activity_result_items`.
 2. Wire `rika3` into `focus_units` (+ ship its `units.js`).
 3. Revoke EXECUTE on RLS-internal `app_*` helpers (security-advisor pass).
-4. Turn on leaked-password protection (Auth dashboard toggle — needs console access).
+4. Turn on leaked-password protection — **blocked on the Supabase free tier**
+   (it's a paid-plan feature; revisit after any tier upgrade).
 5. ~~Decentralize module units~~ ✅ done.
 6. Stand up a CI test suite (tests exist, nothing runs them).
 7. Pay down RLS performance debt (78 multiple-permissive-policies, 13
