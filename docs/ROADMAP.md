@@ -1,6 +1,6 @@
 # Gakuenza — Roadmap (single source of truth)
 
-_Last updated: 2026-07-21. Living planning doc, not a spec._
+_Last updated: 2026-07-22. Living planning doc, not a spec._
 
 > ### How this roadmap is organized — read before editing
 >
@@ -50,6 +50,33 @@ A second school (羽咋市立羽咋小学校) is now provisioned (classes + staf
 students yet), and coordinator management now exists end-to-end — so the
 platform is no longer strictly single-school in either data or tooling, even
 though Mizuho remains the only school with real student usage.
+
+## Progress since last update (2026-07-22)
+
+A quiet day by design — the first calendar day with nothing merged since the
+#122 close (23:57 07-21). Two small, real signals worth recording rather than
+a reason to invent work:
+
+- **Zero new PRs, zero new issues, zero new bug reports** since #122. The
+  autofix pipeline has had nothing to react to.
+- **Security advisors re-run: unchanged.** Same four known finding classes —
+  `bug_reports` RLS-enabled-no-policy, the two `SECURITY DEFINER` views, the
+  `app_*` helper EXECUTE grants (debt #3), and leaked-password-protection-off
+  (debt #4, still blocked on the free tier). No new security finding.
+- **Performance advisors re-run: still 106 lints, same three categories**
+  (78 `multiple_permissive_policies`, 14 `unindexed_foreign_keys`, 13
+  `auth_rls_initplan` — debt #7, unchanged), **plus one new INFO**:
+  `observation_records_created_idx` flagged `unused_index` — expected noise
+  from a table with 1 row, not a real finding, not added to the debt list.
+- **A small real-usage blip, worth noting but not the term-restart signal
+  yet:** `activity_results` grew 14 → 18 since the 07-21 count — four new
+  rows, all `letstry1`, same class, all within ~30 seconds of each other
+  (07:58:30–07:58:56 UTC today), scores 3–4/15 each. The tight timing and
+  repeated low scores read as one person repeat-testing the module rather
+  than a class of students — most likely a teacher or the Mizuho contact
+  trying it ahead of 2学期, not real term usage starting early. Keep watching
+  per the 07-21 note below; this isn't the signal, just noise worth
+  distinguishing from it.
 
 ## Progress since last update (2026-07-20 → 2026-07-21)
 
@@ -427,6 +454,35 @@ offered as directions worth a deliberate look rather than decisions:
   test suite" and "recurring Supabase advisor sweep" engineering items above
   are the two concrete steps that would turn this from a lucky habit into a
   system property.
+
+## New ideas & frontiers (2026-07-22)
+
+Fresh proposals prompted by today's (quiet-day) pass — not yet scoped as specs:
+
+- **This scheduled roadmap-maintenance routine is already doing the "recurring
+  advisor sweep" the 07-20 idea asked for — worth recognizing that, not
+  building something new.** That idea (Engineering & ops initiatives, above)
+  proposed a periodic `get_advisors` (security + performance) check because
+  nothing ran it automatically. This pass ran both types as a normal part of
+  itself, for the second time in three days, and found the numbers unchanged
+  except one trivial INFO. If this routine keeps firing regularly, it already
+  closes that gap in practice — no separate cron/workflow needed unless the
+  cadence turns out to need to be tighter than whatever schedule triggers this
+  routine.
+- **Distinguishing test traffic from real usage will matter more once 2学期
+  actually starts.** Nothing currently tags whether an `activity_results` row
+  came from a real student session vs. staff QA — today's four-row `letstry1`
+  blip had to be read by hand (tight timing + repeated low scores). Not worth
+  building dedicated instrumentation for a single-school pilot, but worth the
+  mental model going into term-restart week: expect a similar burst of fast,
+  low, repeated scores from teachers testing before real class use begins, and
+  don't over-read an early blip like today's as either a login-friction
+  problem or the actual term-restart signal.
+- **Repeat of the 07-21 standing advice, still true:** don't force more docs
+  work on a day nothing shipped — the next *substantial* ROADMAP update
+  should be forced by something shipping, a schema change, or 2学期 usage
+  actually starting, not by another empty-day pass. Today's edit is small on
+  purpose.
 
 ## New ideas & frontiers (2026-07-21)
 
