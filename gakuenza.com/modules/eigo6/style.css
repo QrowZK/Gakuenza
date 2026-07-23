@@ -1,4 +1,4 @@
-/* style.css — New Horizons 6 (nh6). FULLY SELF-CONTAINED.
+/* style.css — 外国語 6年 / eigo6 (New Horizons 6 port). FULLY SELF-CONTAINED.
    Per CLAUDE.md hard rule 1: token values are copied literally here and this
    module NEVER links the shared root style.css (its generic button{width:100%}
    has broken production repeatedly). Do NOT add such a global button rule.
@@ -55,7 +55,7 @@ html, body {
 .eg-topbar-label { font-size: 13px; color: #7a8294; }
 .eg-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
-/* Account bubble (markup injected by nh6-report.js into #module-account-mount) */
+/* Account bubble (markup injected by eigo6-report.js into #module-account-mount) */
 .module-account { position: relative; }
 .module-account-btn {
   display: inline-flex; align-items: center; gap: 8px;

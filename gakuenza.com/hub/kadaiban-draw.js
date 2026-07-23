@@ -1,11 +1,11 @@
 // kadaiban-draw.js — the Kadaiban drawing surface.
 //
-// Fork-and-adapt of modules/nh6/writing.js (WritingCanvas): the stroke model
+// Fork-and-adapt of modules/eigo6/writing.js (WritingCanvas): the stroke model
 // (array of point-arrays), pointer/touch scaling, undo/clear/isEmpty are the
 // same idea. What differs, and why this is a fork not a reuse (per the spec §7):
 //
 //   1. IMAGE-SPACE coordinates. The bitmap is sized to the source worksheet's
-//      NATIVE pixel dimensions and never resized after load (nh6's resizeTo
+//      NATIVE pixel dimensions and never resized after load (eigo6's resizeTo
 //      changes the bitmap — we must not, or saved coords would be invalidated).
 //      Display is scaled purely via CSS. Stored strokes are therefore in image
 //      space, so resume-a-draft and flatten-to-PNG are pixel-exact regardless
