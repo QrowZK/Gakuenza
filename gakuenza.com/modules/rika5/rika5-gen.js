@@ -6,7 +6,11 @@
 // the B-strand (生命・地球) units are authored in rika5-data.js. Generators:
 //   - dissolve      (u07): comparative solubility + temperature effect + water
 //                          amount (物のとけ方)
-//   - electromagnet (u09): controlled-variable strength + polarity (電流がうみ出す力)
+//   - electromagnet (u09): controlled-variable strength + polarity, plus a
+//                          Pareto-dominant setup comparison (turns + series
+//                          cells) and a controlled-variable "condition"
+//                          template that give u09 real per-session variety
+//                          (電流がうみ出す力)
 //   - pendulum      (u10): the grade-5 "control the variables" experiment —
 //                          period depends on LENGTH only (ふりこのきまり)
 //
@@ -141,8 +145,97 @@ window.RIKA5_GEN = (function () {
   // distractors. The two genuine strengthening methods (bigger current, more
   // turns) are NEVER offered as options together, so a "strengthen" question
   // can't have two right answers.
+  //
+  // The `setup` template compares two whole electromagnet SETUPS by winding
+  // count + number of series cells (current). To keep it single-correct AND
+  // solvable by grade-5 reasoning (no ampere-turns arithmetic), the winning
+  // setup ALWAYS Pareto-dominates the other: it has at least as many turns AND
+  // at least as many cells, and strictly more of at least one. "More windings
+  // and/or more batteries → stronger" is then unambiguous — there is never a
+  // "more turns but fewer cells" trade-off that could make a distractor
+  // secretly also correct. EM_TURNS/EM_CELLS list the winding counts and series
+  // cell counts used.
+  const EM_TURNS = [50, 100, 150, 200];
+  const EM_CELLS = [1, 2, 3];
+  function emLabel(turns, cells) {
+    return 'まき数' + turns + '回、かん電池' + cells + '個を直列';
+  }
+  function emParse(label) {
+    const m = label.match(/まき数(\d+)回、かん電池(\d+)個/);
+    return m ? { turns: +m[1], cells: +m[2] } : null;
+  }
+
   function genElectromagnet() {
-    const mode = pick(['turns', 'current', 'strengthen', 'reverse', 'off']);
+    const mode = pick(['turns', 'current', 'strengthen', 'reverse', 'off',
+      'setup', 'setup', 'setup', 'condition']);
+
+    if (mode === 'setup') {
+      // Build a strictly Pareto-dominant winner vs a dominated loser.
+      const kind = pick(['turns', 'cells', 'both']);
+      let win, lose;
+      if (kind === 'turns') {
+        const c = pick(EM_CELLS);
+        const two = sample(EM_TURNS, 2);
+        const hi = Math.max(two[0], two[1]), lo = Math.min(two[0], two[1]);
+        win = { turns: hi, cells: c }; lose = { turns: lo, cells: c };
+      } else if (kind === 'cells') {
+        const t = pick(EM_TURNS);
+        const two = sample(EM_CELLS, 2);
+        const hi = Math.max(two[0], two[1]), lo = Math.min(two[0], two[1]);
+        win = { turns: t, cells: hi }; lose = { turns: t, cells: lo };
+      } else {
+        const tt = sample(EM_TURNS, 2);
+        const cc = sample(EM_CELLS, 2);
+        const thi = Math.max(tt[0], tt[1]), tlo = Math.min(tt[0], tt[1]);
+        const chi = Math.max(cc[0], cc[1]), clo = Math.min(cc[0], cc[1]);
+        win = { turns: thi, cells: chi }; lose = { turns: tlo, cells: clo };
+      }
+      const answer = emLabel(win.turns, win.cells);
+      const reason = kind === 'turns' ? 'コイルのまき数が多い'
+        : kind === 'cells' ? '（直列の）かん電池が多く電流が大きい'
+        : 'コイルのまき数が多く、電流も大きい';
+      return {
+        type: 'choice', cat: '電磁石の強さくらべ', tid: 'gen_em_setup',
+        q: '2つの電磁石を、鉄のクリップに近づけました。より多くのクリップを引きつける' +
+          '（強い）のはどっち？',
+        options: shuffle([answer, emLabel(lose.turns, lose.cells)]), answer,
+        exp: reason + 'ほうが、電磁石は強くなります。',
+        _verify: function (item) {
+          const parsed = item.options.map(emParse);
+          if (parsed.some(function (p) { return !p; })) return false;
+          const aw = emParse(item.answer);
+          // The answer must Pareto-dominate EVERY other option (>= on both,
+          // strictly > on at least one) — so no other option can also be a
+          // valid "stronger" pick.
+          return parsed.every(function (p) {
+            if (p.turns === aw.turns && p.cells === aw.cells) return true;
+            return aw.turns >= p.turns && aw.cells >= p.cells &&
+              (aw.turns > p.turns || aw.cells > p.cells);
+          });
+        },
+      };
+    }
+
+    if (mode === 'condition') {
+      // Controlled-variable: to test one factor, hold the OTHER factor the same.
+      const v = pick([
+        { factor: 'まき数', hold: '電流の大きさ', opts: ['大きくする', '小さくする'] },
+        { factor: '電流の大きさ', hold: 'コイルのまき数', opts: ['多くする', '少なくする'] },
+      ]);
+      return {
+        type: 'choice', cat: '電磁石の実験の仕方', tid: 'gen_em_condition',
+        q: '電磁石の強さが「' + v.factor + '」で変わるかを調べます。' +
+          v.factor + 'を変えるとき、' + v.hold + 'はどうする？',
+        options: shuffle(['同じにする（変えない）'].concat(v.opts)),
+        answer: '同じにする（変えない）',
+        exp: '調べたい条件（' + v.factor + '）以外は同じにして比べます。だから' +
+          v.hold + 'は変えずに同じにします。',
+        _verify: function (item) {
+          return item.answer === '同じにする（変えない）' &&
+            item.options.filter(function (o) { return o === '同じにする（変えない）'; }).length === 1;
+        },
+      };
+    }
 
     if (mode === 'turns') {
       return {
@@ -332,6 +425,7 @@ window.RIKA5_GEN = (function () {
     const optCount = { // expected option count per template (null = varies)
       gen_dissolve_compare: 2, gen_dissolve_temp: 2, gen_dissolve_water: 3,
       gen_em_factor: 3, gen_em_strengthen: 3, gen_em_reverse: 4, gen_em_off: 3,
+      gen_em_setup: 2, gen_em_condition: 3,
       gen_pend_factor: 3, gen_pend_change: 3, gen_pend_compare: 2,
     };
     let checked = 0;
