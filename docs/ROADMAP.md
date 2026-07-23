@@ -204,6 +204,22 @@ Debt items, not new ideas:
    scale it's cheap to defer and expensive to accumulate silently. Worth a
    dedicated pass before a second school multiplies the row counts these
    policies scan.
+   **UPDATE 2026-07-23 (partial pass done, PR #148):** the two low-risk,
+   semantics-preserving categories are fixed and applied live — the **14
+   `unindexed_foreign_keys`** now have covering indexes (migration
+   `20260723060456`), and all **13 `auth_rls_initplan`** policies wrap their
+   bare `auth.uid()` as `(select auth.uid())` via atomic `ALTER POLICY`
+   (`20260723060519`); the performance advisor confirms both categories dropped
+   to 0. (The advisor now shows 13 *new* `unused_index` INFOs — expected: a
+   freshly-created index has zero scans until traffic hits it; do NOT "fix"
+   these by dropping the FK indexes.) **The 78 `multiple_permissive_policies`
+   are deliberately still open.** They are almost all an `ALL` write-policy
+   overlapping a `SELECT` read-policy on the same table; consolidating them
+   means splitting each `ALL` into INSERT/UPDATE/DELETE and folding its SELECT
+   arm into the read policy — a security-model refactor on the exact RLS
+   machinery behind this project's documented P0s, for a WARN-level perf hint at
+   single-school scale. That belongs in a deliberate, per-table, branch-verified
+   pass, not a bulk sweep — leave it for the pre-second-school hardening.
 8. **Full rekey of `nh6` → `eigo6` (low priority).** As of 2026-07-21 the
    grade-6 English module's *display name* was aligned with `eigo5` (both now
    read `外国語 5年` / `外国語 6年` in the hub — migration
