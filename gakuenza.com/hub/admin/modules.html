@@ -118,10 +118,14 @@
     pending.clear();
     if (!schoolId) return;
     const [modRes, smodRes, classRes] = await Promise.all([
-      sb.from('modules').select('id, key, name, name_en, subject, is_active, publisher').order('name'),
+      sb.from('modules').select('id, key, name, name_en, subject, is_active, publisher, launch_url')
+        .not('launch_url', 'is', null).order('name'),
       sb.from('school_modules').select('module_id, enabled').eq('school_id', schoolId),
       sb.from('classes').select('id, name, year, gumi').eq('school_id', schoolId).order('year').order('gumi'),
     ]);
+    // Rows with launch_url = null are reporting anchors (e.g. kadaiban) that
+    // exist purely so activity_results.module_id has a target — they have no
+    // student-facing page and must never appear in the catalog/matrix.
     modules = modRes.data || [];
     enabledSet = new Set((smodRes.data || []).filter(r => r.enabled).map(r => r.module_id));
     classes = classRes.data || [];

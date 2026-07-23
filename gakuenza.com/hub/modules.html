@@ -76,6 +76,14 @@
   const seen = new Set();
   assigned = assigned.filter(a => {
     if (!a.modules || seen.has(a.modules.id)) return false;
+    // Rows with launch_url = null are reporting anchors (e.g. kadaiban) that
+    // exist purely so activity_results.module_id has a target — they have no
+    // student-facing page, so a stray class_modules assignment must not
+    // render a dead tile. (The staffMode/school_modules branch above already
+    // filters on is_active, and the anchor is is_active=false, so it never
+    // reaches here via that path — this check is what protects the
+    // class_modules path, which has no such filter.)
+    if (!a.modules.launch_url) return false;
     seen.add(a.modules.id);
     return true;
   });
