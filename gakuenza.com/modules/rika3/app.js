@@ -8,6 +8,10 @@
   const GEN = window.RIKA3_GEN;
   const QUESTIONS_PER_DRILL = 10;
 
+  // Unit-scoped pacing (class_modules.focus_units): null = show all normally;
+  // a Set = foreground these keys. Loaded async on boot (fails soft to null).
+  let focusUnits = null;
+
   // Flat unit lookup by key, and a stable id for every AUTHORED question
   // (`${unitKey}-${index}`). Generated questions get their id at drill time.
   const UNIT_BY_KEY = {};
@@ -75,11 +79,14 @@
         card.type = 'button';
         card.className = 'unit-card';
         card.setAttribute('data-unit', u.key);
+        const isFocus = !!(focusUnits && focusUnits.has(u.key));
+        if (isFocus) card.classList.add('unit-card--focus');
         const done = state.completed[u.key];
         const count = u.questions.length + (u.gen ? '＋' : '');
         card.innerHTML =
           '<div class="uc-head"><span class="uc-num">' + esc(u.num) + '</span>' +
-          '<span class="uc-title">' + esc(u.title) + '</span></div>' +
+          '<span class="uc-title">' + esc(u.title) + '</span>' +
+          (isFocus ? '<span class="uc-focus-badge">★ 今週</span>' : '') + '</div>' +
           '<div class="uc-meta">' + esc(u.month) + '　・　問題 ' + count + '問' +
           (done ? '　・　✔ ' + esc(done) : '') + '</div>';
         card.addEventListener('click', () => startUnit(u));
@@ -398,4 +405,13 @@
   // ---------- boot ----------
   renderMenu();
   initAccount();
+
+  // Load this class's focus units, then re-render to foreground them. Async and
+  // non-blocking: the menu is already usable with all units; if the fetch fails
+  // or returns null, nothing changes (no regression). Mirrors sansu3.
+  if (window.Rika3Report && window.Rika3Report.getFocusUnits) {
+    window.Rika3Report.getFocusUnits().then(function (keys) {
+      if (keys && keys.length) { focusUnits = new Set(keys); renderMenu(); }
+    });
+  }
 })();

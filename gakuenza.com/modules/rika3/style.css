@@ -212,6 +212,13 @@ button { font-family: inherit; width: auto; }
 }
 .unit-card .uc-title { font-weight: 700; font-size: 1.0rem; }
 .unit-card .uc-meta { color: var(--r3-ink-soft); font-size: 0.8rem; }
+/* focus_units foregrounding (teacher-scoped "this week" units) */
+.unit-card--focus { border-color: var(--r3-moss); box-shadow: 0 2px 12px rgba(74, 107, 79, 0.18); }
+.unit-card .uc-focus-badge {
+  margin-left: auto; background: var(--r3-moss); color: #fff;
+  font-size: 0.7rem; font-weight: 700; border-radius: 999px;
+  padding: 2px 9px; white-space: nowrap; flex-shrink: 0;
+}
 
 /* ---------- lessons ---------- */
 .lesson-card {
