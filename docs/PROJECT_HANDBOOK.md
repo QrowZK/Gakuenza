@@ -288,6 +288,7 @@ oversight.
 | `docs/planning/*` | Domain detail (modules, features, UI, Kadaiban) | Authoritative per domain |
 | `docs/bug-report-automation.md` | The bug pipeline | Authoritative for that subsystem |
 | `docs/second-school-onboarding.md` | New-school runbook | Living runbook |
+| `docs/OPERATIONS.md` | Owner runbook (deploy, secrets, edge fns, incidents, handoff) | Authoritative for running/owning the service |
 | `supabase/README.md` | Migration workflow | Authoritative for migrations |
 | `db/*.sql` | Pre-adoption history | **Mirror only — not applied** |
 
