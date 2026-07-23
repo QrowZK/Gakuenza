@@ -104,7 +104,11 @@ async function runSection(page, base, sectionIndex, label) {
 
 const port = await new Promise(res => server.listen(0, () => res(server.address().port)));
 const BASE = `http://127.0.0.1:${port}`;
-const browser = await chromium.launch();
+const launchOpts = {
+  ...(process.env.PW_EXECUTABLE_PATH ? { executablePath: process.env.PW_EXECUTABLE_PATH } : {}),
+  ...(process.env.PW_LAUNCH_ARGS ? { args: process.env.PW_LAUNCH_ARGS.split(' ').filter(Boolean) } : {}),
+};
+const browser = await chromium.launch(launchOpts);
 const page = await browser.newPage();
 await page.route(/\/hub\/supabase\.js$/, r => r.fulfill({ contentType: 'text/javascript', body: STUB_SUPABASE }));
 await page.route(/\/hub\/config\.js$/, r => r.fulfill({ contentType: 'text/javascript', body: STUB_CONFIG }));

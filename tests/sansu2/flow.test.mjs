@@ -156,7 +156,10 @@ const port = await new Promise(res => server.listen(0, () => res(server.address(
 BASE = `http://127.0.0.1:${port}`;
 // Prefer the environment's pre-installed chromium when the pinned playwright
 // build doesn't match the downloaded browser revision.
-const launchOpts = process.env.PW_EXECUTABLE_PATH ? { executablePath: process.env.PW_EXECUTABLE_PATH } : {};
+const launchOpts = {
+  ...(process.env.PW_EXECUTABLE_PATH ? { executablePath: process.env.PW_EXECUTABLE_PATH } : {}),
+  ...(process.env.PW_LAUNCH_ARGS ? { args: process.env.PW_LAUNCH_ARGS.split(' ').filter(Boolean) } : {}),
+};
 const browser = await chromium.launch(launchOpts);
 const page = await browser.newPage();
 await page.route(/\/hub\/supabase\.js$/, r => r.fulfill({ contentType: 'text/javascript', body: STUB_SUPABASE }));
