@@ -74,25 +74,29 @@ function fail(msg) { console.error('FAIL:', msg); process.exitCode = 1; }
 
 async function runUnit(page, label, unitIndex, modeIndex, mode, expectN) {
   await page.goto(BASE + '/modules/eigo5/index.html', { waitUntil: 'networkidle' });
-  await page.waitForSelector('#unitList .unit-card');
+  await page.waitForSelector('#unitList .eg-unit-row');
   await page.evaluate(() => { window.__reports = []; window.__pq = []; });
 
-  // Open a specific unit card. unitIndex is 1-based over the REAL unit cards
-  // (index 0 is the "all" card, which we skip).
-  const opened = await page.evaluate((idx) => {
-    const cards = Array.from(document.querySelectorAll('#unitList .unit-card'));
-    if (!cards[idx]) return false;
-    cards[idx].click();
+  // Open the unit whose row is labelled "Unit <n>". (Post-redesign the unit
+  // list holds only real unit rows; the "all" set moved to #challengeBtn.)
+  const opened = await page.evaluate((num) => {
+    const rows = Array.from(document.querySelectorAll('#unitList .eg-unit-row'));
+    const row = rows.find(r => {
+      const n = r.querySelector('.eg-unit-num');
+      return n && n.textContent.trim() === 'Unit ' + num;
+    });
+    if (!row) return false;
+    row.click();
     return true;
   }, unitIndex);
-  if (!opened) return fail(`${label}: could not open unit card ${unitIndex}`);
+  if (!opened) return fail(`${label}: could not open unit ${unitIndex}`);
 
   await page.waitForSelector('#screen-mode.active');
   // Pick the mode card matching `mode`.
   const modeOk = await page.evaluate((wantMode) => {
-    const cards = Array.from(document.querySelectorAll('#modeGrid .mode-card'));
+    const cards = Array.from(document.querySelectorAll('#modeGrid .eg-mode-card'));
     const labels = { en2ja: '英語 → 日本語', ja2en: '日本語 → 英語', sentence: '文の練習' };
-    const btn = cards.find(c => c.querySelector('.mode-label') && c.querySelector('.mode-label').textContent === labels[wantMode]);
+    const btn = cards.find(c => c.querySelector('.eg-mode-label') && c.querySelector('.eg-mode-label').textContent === labels[wantMode]);
     if (!btn) return false;
     btn.click();
     return true;
@@ -102,6 +106,8 @@ async function runUnit(page, label, unitIndex, modeIndex, mode, expectN) {
   await page.waitForSelector('#screen-quiz.active');
 
   // The stashed queue __pq now holds this session's questions in order.
+  // Post-redesign: answering shows inline feedback + a manual 「次へ」 (#nextBtn)
+  // advance (no auto-advance), so click the correct choice then #nextBtn.
   let answered = 0;
   while (answered < 40) {
     const done = await page.evaluate(() => document.getElementById('screen-results').classList.contains('active'));
@@ -109,14 +115,16 @@ async function runUnit(page, label, unitIndex, modeIndex, mode, expectN) {
     const ci = await page.evaluate((i) => (window.__pq[i] ? window.__pq[i].correctIndex : null), answered);
     if (ci == null) return fail(`${label}: no stashed question at index ${answered}`);
     const clicked = await page.evaluate((idx) => {
-      const btn = document.querySelector('.choice-btn[data-idx="' + idx + '"]');
+      const btn = document.querySelector('#choicesGrid .choice-btn[data-idx="' + idx + '"]');
       if (!btn) return false;
       btn.click();
       return true;
     }, ci);
     if (!clicked) return fail(`${label}: correct choice button [${ci}] not found at q${answered}`);
     answered++;
-    await page.waitForTimeout(1250); // matches the app's 1150ms advance + margin
+    await page.waitForSelector('#feedbackRow:not(.hidden)', { timeout: 3000 }).catch(() => {});
+    await page.evaluate(() => { const n = document.getElementById('nextBtn'); if (n) n.click(); });
+    await page.waitForTimeout(120);
   }
 
   await page.waitForSelector('#screen-results.active');
@@ -137,7 +145,10 @@ async function runUnit(page, label, unitIndex, modeIndex, mode, expectN) {
 let BASE;
 const port = await new Promise(res => server.listen(0, () => res(server.address().port)));
 BASE = `http://127.0.0.1:${port}`;
-const launchOpts = process.env.PW_EXECUTABLE_PATH ? { executablePath: process.env.PW_EXECUTABLE_PATH } : {};
+const launchOpts = {
+  ...(process.env.PW_EXECUTABLE_PATH ? { executablePath: process.env.PW_EXECUTABLE_PATH } : {}),
+  ...(process.env.PW_LAUNCH_ARGS ? { args: process.env.PW_LAUNCH_ARGS.split(' ').filter(Boolean) } : {}),
+};
 const browser = await chromium.launch(launchOpts);
 const page = await browser.newPage();
 await page.route(/\/hub\/supabase\.js$/, r => r.fulfill({ contentType: 'text/javascript', body: STUB_SUPABASE }));

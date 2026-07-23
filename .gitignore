@@ -1,3 +1,8 @@
 # Transient git worktrees created by isolated subagent runs (auto-cleaned).
 # These are scratch checkouts, never project changes — never commit them.
 .claude/worktrees/
+
+# Node deps for the test harness (tests/run.mjs + CI). Never shipped — the
+# site (gakuenza.com/) is build-step-free. See package.json.
+node_modules/
+package-lock.json
