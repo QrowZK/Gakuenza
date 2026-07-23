@@ -150,15 +150,15 @@ biggest news landed a few hours later. Folding in everything since:
 
 Debt items, not new ideas:
 
-1. **Fix the five hand-rolled reporters.** `nh6`, `nhvocab`, `letstry1`,
-   `letstry2`, and `shakai3` insert into `activity_results` directly instead of
-   calling `HubCommon.reportActivityWithItems`, so none populate
-   `activity_result_items` — the gradebook's per-question analysis has nothing
-   to show for five of 29 modules. Flagged in `CLAUDE.md` as a repeat mistake;
-   the largest remaining hole in gradebook data quality. Kadaiban shipped
-   2026-07-17 using the correct helper from the start — proof the pattern is
-   easy to follow when a module is built fresh; these five just need the same
-   swap.
+1. ~~**Fix the five hand-rolled reporters.**~~ **Done 2026-07-23 (#126).**
+   `nh6`, `nhvocab`, `letstry1`, `letstry2`, and `shakai3` now route through
+   `HubCommon.reportActivityWithItems` and populate `activity_result_items`,
+   so the gradebook's per-question analysis covers all 29 modules. Each app's
+   answer state is threaded into a per-question `items` array
+   (`itemRef/category/prompt/correct/selectedAnswer/correctAnswer`); verified
+   end-to-end with a stubbed-Supabase headless flow test (21/21), including
+   driving nhvocab's real UI to confirm items land. letstry1's match/build
+   stay summary-only (they track no per-question outcome).
 2. **Wire `rika3` into `focus_units`.** It exposes a unit-key list "for
    focus_units alignment" in `rika3-data.js` but never queries `class_modules`
    and ships no `modules/rika3/units.js` — the assignment UI can't scope it.
@@ -215,8 +215,10 @@ Debt items, not new ideas:
    carries a real deploy-ordering step (rsync `--delete` swaps the directory on
    merge, so the hub tile 404s until a post-deploy `key`/`launch_url` migration
    lands — same trap as a module registration). Not worth that risk for a
-   cosmetic gain now; do it opportunistically if `nh6`'s files are being
-   touched anyway (e.g. when fixing its hand-rolled reporter, debt #1).
+   cosmetic gain now; do it opportunistically the next time `nh6`'s files are
+   being touched anyway. (The debt-#1 reporter fix touched `nh6` on 2026-07-23
+   but deliberately kept the `nh6` key to avoid the deploy-ordering trap; a
+   full rekey is still its own separate task.)
 9. **Admin-console UX thinness (surfaced by the #114 coordinator work).** The
    console is multi-school-capable now, but several staff-management gaps
    remain: no way to **edit a staff member's role** after creation (the

@@ -124,9 +124,10 @@ The load-bearing rule: **always report through
 `HubCommon.reportActivityWithItems(...)`**, never a hand-rolled
 `activity_results` insert — because a hand-rolled insert skips
 `activity_result_items`, and then the per-question analysis has nothing to
-show. Five modules currently violate this (§8 debt #1). Kadaiban grading and
-manual score corrections feed the same `activity_results` spine through their
-own paths (see `KADAIBAN_design.md`).
+show. (Five modules used to violate this; all now route through the helper —
+resolved 2026-07-23, #126.) Kadaiban grading and manual score corrections feed
+the same `activity_results` spine through their own paths (see
+`KADAIBAN_design.md`).
 
 ---
 
@@ -265,8 +266,9 @@ near-term-debt list; domain detail lives in
 **Current focus areas** (see ROADMAP for the full picture and ordering):
 - **Reliability:** stand up a CI test suite (tests exist, nothing runs them);
   pay down RLS performance debt; automate the advisor sweep.
-- **Data quality:** migrate the five hand-rolled reporters to populate
-  `activity_result_items`; wire `rika3` into `focus_units`.
+- **Data quality:** ~~migrate the five hand-rolled reporters to populate
+  `activity_result_items`~~ (done 2026-07-23, #126); wire `rika3` into
+  `focus_units`.
 - **Reach vs. depth:** second-school rollout vs. the P0 product features (F1
   assignment dashboard, F16 offline resilience) — an open decision, with the
   data suggesting real usage is still minimal (favoring adoption first).
