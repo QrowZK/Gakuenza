@@ -92,6 +92,20 @@
     return sb.from('class_modules').insert(row);
   }
 
+  // Coarse "ensure assigned, don't touch config" — the shape the bulk matrix
+  // (hub/admin/modules.html) wants. Upserts a null-metadata row ONLY when none
+  // exists; ignoreDuplicates means an already-assigned class keeps whatever
+  // due_date / total_items / focus_units a teacher set in the gradebook, and a
+  // stale-read re-assign can't raise a PK-conflict error. Never carries
+  // metadata itself — null focus_units = all units, null due_date = no deadline,
+  // which are the correct defaults for a grid toggle (metadata is configured in
+  // the gradebook's per-assignment modal, not here).
+  function assignModuleIfAbsent(sb, opts) {
+    var row = { class_id: opts.classId, module_id: opts.moduleId };
+    return sb.from('class_modules')
+      .upsert(row, { onConflict: 'class_id,module_id', ignoreDuplicates: true });
+  }
+
   function unassignModule(sb, opts) {
     return sb.from('class_modules').delete()
       .eq('class_id', opts.classId).eq('module_id', opts.moduleId);
@@ -222,6 +236,7 @@
     loadAssigned: loadAssigned,
     loadSchoolEnabledIds: loadSchoolEnabledIds,
     assignModule: assignModule,
+    assignModuleIfAbsent: assignModuleIfAbsent,
     unassignModule: unassignModule,
     updateAssignment: updateAssignment,
     gradeMismatch: gradeMismatch,
