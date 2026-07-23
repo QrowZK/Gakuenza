@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>先生向けガイド — がくえん座</title>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="hub-shell.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* guides.html-only layout (picker + rendered-markdown pane) and the
+     typography for rendered guide content — hub-shell.css has no markdown
+     rules, so both live here rather than growing the shared stylesheet for
+     one page's content. Fully scoped under .guides-* / .guide-body so
+     nothing here can leak onto other hub pages. */
+  .guides-layout { display: flex; gap: 28px; align-items: flex-start; }
+  .guides-picker { width: 260px; flex: 0 0 auto; }
+  .guides-picker-group { margin-bottom: 20px; }
+  .guides-picker-label { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+  .guides-picker-list { display: flex; flex-direction: column; gap: 2px; }
+  .guides-picker-item { display: block; padding: 7px 10px; border-radius: var(--radius-sm); font-size: 0.82rem; color: var(--ink-soft); text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+  .guides-picker-item:hover { background: var(--paper-dim); color: var(--ink); }
+  .guides-picker-item.active { background: var(--moss-tint); color: var(--moss-deep); font-weight: 700; border-color: var(--moss); }
+  .guides-content { flex: 1; min-width: 0; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 32px 36px; }
+  .guides-content-empty { color: var(--ink-soft); font-size: 0.88rem; padding: 44px 0; text-align: center; }
+  .guides-content-err { color: var(--error); font-size: 0.88rem; padding: 44px 0; text-align: center; }
+
+  /* rendered markdown typography — scoped under .guide-body only */
+  .guide-body { font-size: 0.92rem; line-height: 1.8; color: var(--ink); overflow-x: auto; }
+  .guide-body h1 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 18px; padding-bottom: 10px; border-bottom: 2px dotted var(--gold); color: var(--ink); font-weight: 700; }
+  .guide-body h2 { font-family: var(--font-display); font-size: 1.08rem; margin: 32px 0 14px; color: var(--ink); font-weight: 700; }
+  .guide-body h2:first-of-type { margin-top: 0; }
+  .guide-body h3 { font-family: var(--font-display); font-size: 0.98rem; margin: 22px 0 10px; color: var(--ink); font-weight: 700; }
+  .guide-body h4 { font-size: 0.92rem; margin: 18px 0 8px; color: var(--ink); font-weight: 700; }
+  .guide-body p { margin: 0 0 14px; }
+  .guide-body ul, .guide-body ol { margin: 0 0 14px; padding-left: 22px; }
+  .guide-body li { margin-bottom: 4px; }
+  .guide-body strong { color: var(--ink); }
+  .guide-body blockquote { margin: 0 0 14px; padding: 10px 16px; border-left: 3px solid var(--gold); background: var(--paper-dim); color: var(--ink-soft); border-radius: 0 6px 6px 0; }
+  .guide-body code { background: var(--paper-dim); border-radius: 4px; padding: 1px 5px; font-size: 0.86em; }
+  .guide-body pre { background: var(--paper-dim); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .guide-body pre code { background: none; padding: 0; }
+  .guide-body table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 0.84rem; }
+  .guide-body th, .guide-body td { text-align: left; padding: 8px 10px; border: 1px solid var(--border); vertical-align: top; }
+  .guide-body th { background: var(--paper-dim); font-weight: 700; color: var(--ink); }
+  .guide-body tr:nth-child(even) td { background: rgba(28, 37, 48, 0.02); }
+  .guide-body a { color: var(--moss-deep); }
+  .guide-body hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  @media (max-width: 860px) {
+    .guides-layout { flex-direction: column; }
+    .guides-picker { width: 100%; }
+    .guides-content { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-frame" id="app-root">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="hub-section">
+      <h1 class="greeting-title">先生向けガイド</h1>
+      <p class="greeting-date">モジュールごとの指導ガイド（単元一覧・学習指導要領対応・年間指導計画・使い方）</p>
+    </div>
+
+    <div class="guides-layout">
+      <nav class="guides-picker" id="guides-picker" aria-label="ガイド一覧"></nav>
+      <div class="guides-content" id="guides-content">
+        <p class="guides-content-empty">左の一覧からモジュールを選んでください。</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="hub-common.js"></script>
+<script src="admin/admin-common.js"></script>
+<script src="marked.min.js"></script>
+<script src="guides-render.js"></script>
+<script>
+(async function () {
+  const H = window.HubCommon;
+  const AC = window.AdminCommon;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const session = await H.requireSession(sb);
+  if (!session) return;
+  const userId = session.user.id;
+
+  // Staff-only page — reuses the exact same tier check the gradebook uses
+  // (platform admin / school_admin / coordinator / educator). Students have
+  // no path into this check succeeding.
+  const ctx = await AC.requireGradebookAccess(sb, userId);
+  if (!ctx) {
+    // requireGradebookAccess's built-in denial links "ホームに戻る" to
+    // '../index.html' — correct for its usual callers (hub/admin/*.html,
+    // hub/gradebook/*.html, one level below hub/), but this page lives
+    // directly in hub/ alongside index.html itself, one level shallower.
+    // Fix the link target rather than duplicating the whole tier-lookup
+    // just to render a bespoke denial box.
+    const cta = document.querySelector('.ac-empty-cta');
+    if (cta) cta.setAttribute('href', 'index.html');
+    return;
+  }
+
+  await H.renderSidebar(sb, userId, 'guides');
+
+  // ── guide catalog ────────────────────────────────────────────────────
+  // Hardcoded rather than queried: this mirrors the 29 static files at
+  // hub/guides/<key>.md (one per launchable module, sansu1-6/kokugo1-6/
+  // rika3-6/shakai3-6/letstry1-2/eigo5/nh6/kanken3-5/eiken/nhvocab) — there
+  // is no DB table of "which modules have a guide", and the module keys
+  // here are stable (see CLAUDE.md's module directory convention). Grouped
+  // by subject the way staff think about the catalog, not by the `modules`
+  // table's raw `subject` column (which files kanken3-5 under 'japanese' —
+  // here they get their own 補助教材 group alongside eiken/nhvocab since
+  // none of the five are grade-level curriculum modules).
+  const GROUPS = [
+    { label: '算数', subjectVar: 'math', items: [
+      { key: 'sansu1', label: '算数 1年' },
+      { key: 'sansu2', label: '算数 2年' },
+      { key: 'sansu3', label: '算数 3年' },
+      { key: 'sansu4', label: '算数 4年' },
+      { key: 'sansu5', label: '算数 5年' },
+      { key: 'sansu6', label: '算数 6年' },
+    ] },
+    { label: '国語', subjectVar: 'japanese', items: [
+      { key: 'kokugo1', label: '国語 1年' },
+      { key: 'kokugo2', label: '国語 2年' },
+      { key: 'kokugo3', label: '国語 3年' },
+      { key: 'kokugo4', label: '国語 4年' },
+      { key: 'kokugo5', label: '国語 5年' },
+      { key: 'kokugo6', label: '国語 6年' },
+    ] },
+    { label: '理科', subjectVar: 'science', items: [
+      { key: 'rika3', label: '理科 3年' },
+      { key: 'rika4', label: '理科 4年' },
+      { key: 'rika5', label: '理科 5年' },
+      { key: 'rika6', label: '理科 6年' },
+    ] },
+    { label: '社会', subjectVar: 'social', items: [
+      { key: 'shakai3', label: '社会 3年' },
+      { key: 'shakai4', label: '社会 4年' },
+      { key: 'shakai5', label: '社会 5年' },
+      { key: 'shakai6', label: '社会 6年' },
+    ] },
+    { label: '外国語', subjectVar: 'english', items: [
+      { key: 'letstry1', label: '外国語活動 3年' },
+      { key: 'letstry2', label: '外国語活動 4年' },
+      { key: 'eigo5', label: '外国語 5年' },
+      { key: 'nh6', label: '外国語 6年' },
+    ] },
+    { label: '補助教材', subjectVar: 'misc', items: [
+      { key: 'kanken3', label: '漢字検定 3級' },
+      { key: 'kanken4', label: '漢字検定 4級' },
+      { key: 'kanken5', label: '漢字検定 5級' },
+      { key: 'eiken', label: '英検 各級' },
+      { key: 'nhvocab', label: '外国語（単語） 高学年' },
+    ] },
+  ];
+  const VALID_KEYS = new Set(GROUPS.flatMap(g => g.items.map(i => i.key)));
+
+  const pickerEl = document.getElementById('guides-picker');
+  const contentEl = document.getElementById('guides-content');
+
+  pickerEl.innerHTML = GROUPS.map(g => `
+    <div class="guides-picker-group">
+      <div class="guides-picker-label">
+        <span class="subject-dot" style="background:${H.subjectVar(g.subjectVar)};"></span>
+        <span>${H.escapeHtml(g.label)}</span>
+      </div>
+      <div class="guides-picker-list">
+        ${g.items.map(it => `<a class="guides-picker-item" data-key="${H.escapeHtml(it.key)}" href="#${H.escapeHtml(it.key)}">${H.escapeHtml(it.label)}</a>`).join('')}
+      </div>
+    </div>`).join('');
+
+  async function loadGuide(key) {
+    if (!VALID_KEYS.has(key)) return;
+    document.querySelectorAll('.guides-picker-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.key === key);
+    });
+    contentEl.innerHTML = '<p class="guides-content-empty">読み込み中…</p>';
+    try {
+      const res = await fetch('guides/' + encodeURIComponent(key) + '.md');
+      if (!res.ok) throw new Error('fetch failed: ' + res.status);
+      const text = await res.text();
+      const html = window.GuidesRender.renderMarkdown(text);
+      contentEl.innerHTML = '<div class="guide-body">' + html + '</div>';
+    } catch (e) {
+      console.error('[guides] failed to load guide', key, e);
+      contentEl.innerHTML = '<p class="guides-content-err">ガイドを読み込めませんでした。時間をおいて再度お試しください。</p>';
+    }
+  }
+
+  pickerEl.addEventListener('click', (e) => {
+    const item = e.target.closest('.guides-picker-item');
+    if (!item) return;
+    e.preventDefault();
+    const key = item.dataset.key;
+    history.replaceState(null, '', '#' + key);
+    loadGuide(key);
+  });
+
+  // Deep-link support (#kokugo3 etc.) so a link to a specific guide can be
+  // shared/bookmarked between staff.
+  const initialKey = (location.hash || '').slice(1);
+  if (initialKey && VALID_KEYS.has(initialKey)) loadGuide(initialKey);
+})();
+</script>
+</body>
+</html>

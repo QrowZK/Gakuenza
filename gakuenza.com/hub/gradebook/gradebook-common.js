@@ -132,6 +132,8 @@ window.Gradebook = (function () {
     { key: 'kadaiban',     label: '課題板',         href: 'kadaiban.html' },
     { key: 'karte',        label: '個人カルテ',     href: 'karte.html' },
     { key: 'print',        label: 'プリント作成',   href: 'print.html' },
+    // hub/guides.html sits one level up from hub/gradebook/*.html, hence '../'.
+    { key: 'guides',       label: '先生向けガイド', href: '../guides.html' },
   ];
 
   function renderSidebar(sb, profile, activeKey, ctx, snapshot) {
