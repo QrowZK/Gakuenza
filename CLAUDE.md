@@ -103,14 +103,15 @@ picker, which is harmless.
   2026-07-15). `focus_units` is read by the module runners — `sansu3`
   is the reference (reads the union of focus keys across the student's
   classes, fails soft to null = all units if any class is unscoped),
-  with `kokugo3`, `rika4`, `sansu4`, and `shakai4` following the same
-  pattern (5 modules whose runners read `focus_units`).
-  **`rika3` is NOT wired** despite `rika3-data.js` exposing a
-  unit-key list "for focus_units alignment" — it never queries
-  `class_modules` and ships no `modules/rika3/units.js`, so the
-  assignment UI can't offer it a unit picker. (Don't let the comment
-  in `rika3-data.js` fool you, as this file's own note once did.) It
-  is written by the assignment UIs (`hub/admin/class-detail.html`,
+  with `kokugo3`, `rika4`, `sansu4`, `shakai4`, and now `rika3`
+  following the same pattern (6 modules whose runners read
+  `focus_units`). **`rika3` was wired 2026-07-23** — `rika3-report.js`
+  now exposes `getFocusUnits()`, `app.js` foregrounds the assigned
+  units (`unit-card--focus` + "★ 今週" badge), and it ships
+  `modules/rika3/units.js` (keys `u1_haru … u11_jishaku`, matching
+  `rika3-data.js` UNIT_KEYS exactly) so the assignment UI can offer it
+  a unit picker. `focus_units` is
+  written by the assignment UIs (`hub/admin/class-detail.html`,
   `hub/gradebook/assign.html`, both via `module-assign-common.js`).
   `recommended_grades` is read by those same assignment UIs to suggest
   grade-appropriate modules. **Data caveat:** as of this review no
