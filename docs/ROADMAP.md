@@ -99,9 +99,9 @@ Two more PRs landed after the pass above — one docs, one real content fix:
   this pass surfaced are the more important finding than the doc fix itself:**
   `activity_results` is **14 rows**, `activity_result_items` **60**,
   `observation_records` **1**, live today — against 106 enrolled Mizuho
-  students, 9 classes, and 29 active modules. Usage is near-zero right now —
-  expected, as schools are on summer break; it resumes with 2学期 in ~2–3
-  weeks (see New ideas below).
+  students, 9 classes, and 29 active modules. (That snapshot was the
+  summer-break lull; **real adoption began 2026-07-23** — see the adoption
+  note under New ideas below.)
 - **shakai5 content-depth fix** (#121, `0880b0c`): 89 new original questions
   (98 → 187) across all 5 units, closing a "low-variety audit flag" — some
   sections had as few as 4–8 questions. This is the first fix of its kind:
@@ -434,21 +434,36 @@ offered as directions worth a deliberate look rather than decisions:
 
 Fresh proposals prompted by today's later pass — not yet scoped as specs:
 
-- **Near-zero live usage right now is the summer-break lull — expected, not a
-  problem to chase.** The 2026-07-21 docs-currency pass put a hard number on
-  current usage: **14** `activity_results` rows and **1** `observation_records`
-  row exist, total, across the live database — against 106 enrolled Mizuho
-  students, 9 classes, and 29 active modules. **Confirmed with the Mizuho owner
-  (2026-07-21): this is expected — Japanese schools are on summer vacation, and
-  usage stays near-zero until ~late August, when 2学期 begins (~2–3 weeks
-  out).** The current push (content-depth fills, teacher-facing semester docs,
-  a teacher user guide) is deliberately timed to be *ready for* that term
-  restart — it is prep ahead of demand, not a response to a usage problem. (The
-  drop from the doc's earlier ~1,359 figure is partly the 2026-07-16 seed
-  purge; the current near-zero is seasonal.) **What to actually watch:** once
-  2学期 starts, live `activity_results` growth becomes the real signal — if
-  usage stays flat *after* term resumes, *then* investigate
-  rollout/training/login-friction. Until then, prep for the term.
+- **ADOPTION STARTED 2026-07-23 — grades 5年 and 3年 are now load-bearing
+  (actually in use by students from today onwards); 6年 follows soon.**
+  This ends the summer-break lull ahead of the earlier "~late August 2学期"
+  estimate — real student traffic on the grade-3 and grade-5 modules begins
+  now. **Direct overlap with the same day's shipped work:** the content fills
+  (#125: rika3/rika5/rika6) and the reporter fix (#126: shakai3 is grade-3,
+  nh6 is grade-6) all landed 2026-07-23, hours before adoption — so the very
+  code that just changed is now in front of real students. First read-only
+  prod check right after the merges showed no post-fix attempts yet (only 4
+  pre-fix `letstry1` attempts from 07-22 with 0 item rows — expected history,
+  not a regression). **What to watch now:** `activity_results` growth for
+  grades 3/5/6 and, specifically, that new attempts in the five fixed modules
+  populate `activity_result_items` (`item_rows > 0`) — that's the live proof
+  the #126 fix works with real students, not just the stub flow test. If real
+  traffic appears but items stay empty, investigate the reporter wiring first.
+  (Prior context, now superseded: the 2026-07-21 snapshot of 14
+  `activity_results` / 1 `observation_records` rows was the seasonal lull,
+  confirmed with the owner at the time; the drop from the doc's earlier ~1,359
+  figure was partly the 2026-07-16 seed purge.)
+- **NH English apps (`nh6`, `nhvocab`) are out for a design makeover
+  (2026-07-23, in-flight).** Both still carry the pre-Gakuenza beta design
+  layouts and were shipped to design for a visual refresh. **Guardrail for the
+  redesign:** preserve the Gakuenza reporting wiring added in #126 — app.js
+  accumulates per-question detail in `handleAnswer` and passes an `items`
+  array to `window.hk.syncQuizResult`, which routes through
+  `HubCommon.reportActivityWithItems`. A visual-only makeover must keep that
+  data path intact (and the `module-account-mount` account bubble, the shared
+  session, and `hub-common.js` load order) or the gradebook loses this
+  module's per-question data again. Re-run the reporter flow test after the
+  redesign lands.
 - **"Coverage complete" and "content-ready" turned out to be two different
   claims, and only the first one was ever checked.** The grades-1–6 grid
   (row 217) was marked complete 2026-07-18 based on the coverage matrix — one
