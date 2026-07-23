@@ -81,7 +81,11 @@
 <!-- ============================================================ -->
 <!-- Edit-teacher modal (added 2026-07-09) — top-tier only, both by UI
      gating and by update-teacher's own server-side authorization.
-     Admin-typed password, same convention as edit-student. -->
+     Admin-typed password, same convention as edit-student.
+     Role change + remove-from-school added 2026-07-23 (roadmap #9):
+     both write school_members directly via the anon-key client, gated by
+     the members_admin_write RLS policy (school_admin of THIS school, or a
+     platform admin). Hidden when editing your own row (self-lockout). -->
 <!-- ============================================================ -->
 <div class="ac-modal-backdrop" id="modal-edit-teacher" style="display:none;">
   <div class="ac-modal" style="width:400px;">
@@ -91,6 +95,14 @@
         <label class="ac-field-label" for="edit-teacher-name">表示名</label>
         <input id="edit-teacher-name" required maxlength="80" autocomplete="off">
       </div>
+      <div class="ac-field" id="edit-teacher-role-field">
+        <label class="ac-field-label" for="edit-teacher-role">役割</label>
+        <select id="edit-teacher-role">
+          <option value="educator">教員</option>
+          <option value="school_admin">管理者</option>
+          <option value="coordinator">コーディネーター</option>
+        </select>
+      </div>
       <div class="ac-field" style="margin-bottom:20px;">
         <label class="ac-field-label" for="edit-teacher-password">新しいパスワード（変更する場合のみ）</label>
         <input id="edit-teacher-password" type="password" autocomplete="new-password" placeholder="変更しない場合は空欄のまま">
@@ -99,6 +111,12 @@
       <div class="ac-modal-actions">
         <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-edit-teacher">キャンセル</button>
         <button class="ac-btn ac-btn-accent ac-btn-md" type="submit" id="btn-submit-edit-teacher">保存する</button>
+      </div>
+      <!-- Remove-from-school (danger): deletes THIS school's school_members
+           row. The login account + profile are kept, mirroring remove-student
+           on class-detail.html — this only removes staff membership here. -->
+      <div id="edit-teacher-danger" style="border-top:1px solid var(--border);margin-top:18px;padding-top:16px;">
+        <button class="ac-btn-danger" type="button" id="btn-remove-teacher">この学校の教員から外す</button>
       </div>
     </form>
   </div>
@@ -215,7 +233,7 @@
       const isCoordinatorRow = m.role === 'coordinator';
       const roleLabel = isAdmin ? '管理者' : isCoordinatorRow ? 'コーディネーター' : '教員';
       const editBtn = admin.canManageStaff
-        ? `<button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-teacher" data-user-id="${m.user_id}" data-name="${name.replace(/"/g, '')}" type="button">編集</button>`
+        ? `<button class="ac-btn ac-btn-ghost-light ac-btn-sm" data-action="edit-teacher" data-user-id="${m.user_id}" data-name="${name.replace(/"/g, '')}" data-role="${m.role}" type="button">編集</button>`
         : '';
       // Scope-granting is platform-admin-only and only meaningful for
       // coordinator rows (#114) — a school_admin/educator's schools are
@@ -237,7 +255,7 @@
     }).join('');
     if (admin.canManageStaff) {
       listEl.querySelectorAll('[data-action="edit-teacher"]').forEach(btn => {
-        btn.addEventListener('click', () => openEditTeacherModal(btn.dataset.userId, btn.dataset.name));
+        btn.addEventListener('click', () => openEditTeacherModal(btn.dataset.userId, btn.dataset.name, btn.dataset.role));
       });
     }
     if (admin.isPlatformAdmin) {
@@ -330,12 +348,29 @@
   });
 
   // ── edit teacher / admin (top-tier only) ────────────────────────────
+  // Name/password go through the update-teacher Edge Function (needs
+  // service_role for the auth password write). Role change and removal are
+  // plain school_members writes the anon-key client can do under
+  // members_admin_write RLS, so they don't need an Edge Function — the
+  // policy already confines them to schools where the caller is school_admin
+  // (or every school, for a platform admin), and the role CHECK constraint
+  // confines the value to the four staff/student roles. Neither path can
+  // reach profiles.is_platform_admin (a separate, client-locked column).
   let editingStaffId = null;
-  function openEditTeacherModal(userId, name) {
-    editingStaffId = userId;
+  let editingStaffRole = null;
+  function openEditTeacherModal(staffUserId, name, role) {
+    editingStaffId = staffUserId;
+    editingStaffRole = (role === 'school_admin' || role === 'coordinator') ? role : 'educator';
     document.getElementById('edit-teacher-err').style.display = 'none';
     document.getElementById('edit-teacher-name').value = name || '';
     document.getElementById('edit-teacher-password').value = '';
+    document.getElementById('edit-teacher-role').value = editingStaffRole;
+    // Self-lockout guard: you can rename/re-password your own account but
+    // cannot change your own role or remove yourself from the school you are
+    // currently administering (would strip your own access mid-session).
+    const isSelf = staffUserId === userId;
+    document.getElementById('edit-teacher-role-field').style.display = isSelf ? 'none' : '';
+    document.getElementById('edit-teacher-danger').style.display = isSelf ? 'none' : '';
     document.getElementById('modal-edit-teacher').style.display = 'flex';
   }
   document.getElementById('btn-cancel-edit-teacher').addEventListener('click', () => {
@@ -379,6 +414,20 @@
         errEl.style.display = 'block';
         return;
       }
+      // Role change (only for other people's rows — the field is hidden for a
+      // self-edit). Written straight to school_members; RLS is the boundary.
+      const newRole = document.getElementById('edit-teacher-role').value;
+      if (editingStaffId !== userId && newRole !== editingStaffRole) {
+        const { error: roleErr } = await sb.from('school_members')
+          .update({ role: newRole })
+          .eq('school_id', pickerSchool.value)
+          .eq('user_id', editingStaffId);
+        if (roleErr) {
+          errEl.textContent = '役割を変更できませんでした。';
+          errEl.style.display = 'block';
+          return;
+        }
+      }
       document.getElementById('modal-edit-teacher').style.display = 'none';
       editingStaffId = null;
       await loadTeachers(pickerSchool.value);
@@ -388,6 +437,47 @@
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = '保存する';
+    }
+  });
+
+  // ── remove staff member from this school (#9) ───────────────────────
+  // Deletes the (school, user, staff-role) school_members row via the
+  // anon-key client. members_admin_write (FOR ALL) permits DELETE for a
+  // school_admin of this school or a platform admin, and confines it to that
+  // school — a coordinator (canManageStaff=false) never sees the edit button
+  // that reaches here, and cross-tenant deletes fail the policy's USING. The
+  // auth account + profile are intentionally preserved (re-addable later),
+  // exactly like remove-student removes an enrollment, not the account.
+  document.getElementById('btn-remove-teacher').addEventListener('click', async () => {
+    if (!editingStaffId || editingStaffId === userId) return;
+    const nm = document.getElementById('edit-teacher-name').value.trim() || 'この教員';
+    if (!window.confirm(`${nm}を「${currentSchoolName}」の教員から外しますか？\nログインアカウント自体は削除されません。`)) return;
+    const errEl = document.getElementById('edit-teacher-err');
+    errEl.style.display = 'none';
+    const btn = document.getElementById('btn-remove-teacher');
+    btn.disabled = true;
+    btn.textContent = '削除中…';
+    try {
+      const { error } = await sb.from('school_members')
+        .delete().eq('school_id', pickerSchool.value).eq('user_id', editingStaffId);
+      if (error) throw error;
+      // Best-effort: also drop this member's class_teacher assignments in
+      // this school so a removed educator's gradebook scope doesn't linger.
+      // Tolerate failure — the membership removal above is authoritative.
+      const { data: schoolClasses } = await sb.from('classes').select('id').eq('school_id', pickerSchool.value);
+      const classIds = (schoolClasses || []).map(c => c.id);
+      if (classIds.length) {
+        await sb.from('class_teachers').delete().eq('user_id', editingStaffId).in('class_id', classIds).then(() => {}, () => {});
+      }
+      document.getElementById('modal-edit-teacher').style.display = 'none';
+      editingStaffId = null;
+      await loadTeachers(pickerSchool.value);
+    } catch (e) {
+      errEl.textContent = '削除できませんでした。';
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'この学校の教員から外す';
     }
   });
 

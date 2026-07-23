@@ -181,8 +181,14 @@ window.AdminCommon = (function () {
     // Platform admins (全校管理者) get a cross-school 学校 tab for creating
     // and reviewing schools — a sysadmin-global surface, so it's only added
     // for that tier (RLS also gates the actual create to platform admins).
+    // The スタッフ名簿 (cross-school staff directory, #9) is likewise a
+    // cross-school view whose value is the platform-wide footprint, so it
+    // rides alongside 学校 for the same tier. The page itself is RLS-scoped
+    // and harmless if a scoped admin reaches it directly, but for a
+    // single-school admin it would just mirror 教員, so it's not shown there.
     if (admin?.isPlatformAdmin) {
       navItems.splice(1, 0, { key: 'schools', label: '学校', href: 'schools.html' });
+      navItems.splice(2, 0, { key: 'staff-directory', label: 'スタッフ名簿', href: 'staff-directory.html' });
     }
 
     mount.innerHTML = `
