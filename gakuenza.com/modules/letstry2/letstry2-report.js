@@ -75,20 +75,27 @@
   // `typeof window.hk !== 'undefined'`:
   //   await window.hk.syncQuizResult({ level, setId, category, correct, total, app_id });
   window.hk = {
-    async syncQuizResult({ level, setId, category, correct, total, app_id }) {
+    async syncQuizResult({ level, setId, category, correct, total, app_id, items }) {
       if (!moduleId || !schoolId) return; // context didn't resolve; nothing to report
-      const ref = `letstry2/${category}/${level}/${Date.now()}`;
-      const { error } = await sb.from('activity_results').insert({
-        school_id: schoolId,
-        class_id: classId,
-        module_id: moduleId,
-        user_id: userId,
-        activity_ref: ref,
+      if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) {
+        console.warn('[LetsTry2Report] HubCommon.reportActivityWithItems unavailable — skipping.');
+        return;
+      }
+      // Route through the shared helper so the summary row AND per-question
+      // activity_result_items detail are written together (this shim used to
+      // hand-roll the activity_results insert and never wrote the item detail,
+      // so the gradebook's per-question analysis had nothing for letstry2).
+      const out = await window.HubCommon.reportActivityWithItems(sb, {
+        schoolId, classId, moduleId, userId,
+        activityRef: `letstry2/${category}/${level}/${Date.now()}`,
         score: correct,
-        max_score: total,
+        maxScore: total,
         payload: { level, setId, category, app_id },
+        items: items || [],
       });
-      if (error) { console.error('[LetsTry2Report] failed to report result:', error); throw error; }
+      // Preserve the original throw-on-failure contract: showReview()'s
+      // try/catch shows the "⚠️ 保存に失敗しました" banner when this rejects.
+      if (!out.ok) { console.error('[LetsTry2Report] failed to report result:', out.error); throw out.error || new Error('report failed'); }
       console.log('[LetsTry2Report] reported', correct, '/', total, 'to activity_results');
     },
   };

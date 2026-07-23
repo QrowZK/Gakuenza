@@ -75,20 +75,25 @@
     async getUser() {
       return { id: userId, email: session.user.email };
     },
-    async syncQuizResult({ level, setId, category, correct, total, app_id }) {
+    async syncQuizResult({ level, setId, category, correct, total, app_id, items }) {
       if (!moduleId || !schoolId) return; // context didn't resolve; nothing to report
-      const ref = `nhvocab/${level}/${setId}/${Date.now()}`;
-      const { error } = await sb.from('activity_results').insert({
-        school_id: schoolId,
-        class_id: classId,
-        module_id: moduleId,
-        user_id: userId,
-        activity_ref: ref,
+      if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) {
+        console.warn('[NHVocabReport] HubCommon.reportActivityWithItems unavailable — skipping.');
+        return;
+      }
+      // Route through the shared helper so the summary row AND per-question
+      // activity_result_items detail are written together (this shim used to
+      // hand-roll the activity_results insert and never wrote the item detail,
+      // so the gradebook's per-question analysis had nothing for nhvocab).
+      const out = await window.HubCommon.reportActivityWithItems(sb, {
+        schoolId, classId, moduleId, userId,
+        activityRef: `nhvocab/${level}/${setId}/${Date.now()}`,
         score: correct,
-        max_score: total,
+        maxScore: total,
         payload: { level, setId, category, app_id },
+        items: items || [],
       });
-      if (error) console.error('[NHVocabReport] failed to report result:', error);
+      if (!out.ok) console.error('[NHVocabReport] failed to report result:', out.error);
       else console.log('[NHVocabReport] reported', correct, '/', total, 'to activity_results');
     },
   };

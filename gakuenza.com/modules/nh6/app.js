@@ -120,6 +120,7 @@ function startQuiz(mode) {
   S.questions = sample(pool, Math.min(SESSION, pool.length));
   S.qIndex    = 0;
   S.score     = 0;
+  S.answers   = [];   // per-question detail for activity_result_items
 
   $('quiz-back').onclick = () => { if (confirm('やめますか？')) showScreen('screen-unit'); };
   showScreen('screen-quiz');
@@ -201,6 +202,17 @@ function renderQuestion() {
 
 function handleAnswer(correct, btn, q) {
   $('choices-grid').querySelectorAll('.choice-btn').forEach(b => b.classList.add('disabled'));
+
+  // Record per-question detail for the gradebook's per-question analysis.
+  const selIdx = parseInt(btn.dataset.orig);
+  (S.answers || (S.answers = [])).push({
+    itemRef: `u${S.unit}/${S.mode}/${S.qIndex}`,
+    category: S.mode,
+    prompt: S.mode === 'grammar' ? q.prompt : q.q,
+    correct: !!correct,
+    selectedAnswer: q.choices[selIdx],
+    correctAnswer: q.choices[q.correct],
+  });
 
   if (correct) {
     btn.classList.add('correct');
@@ -380,7 +392,8 @@ async function showResults() {
           category: S.mode,
           correct,
           total,
-          app_id:   'nh6'
+          app_id:   'nh6',
+          items:    S.answers || []
         });
         $('results-sync').textContent = '✓ 成績を保存しました';
       } catch(e) { console.warn('[NH6] sync error:', e.message); }

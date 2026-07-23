@@ -254,14 +254,27 @@ function handleAnswer(correct, btn, q) {
   // Disable all choices
   $('choices-grid').querySelectorAll('.choice-btn').forEach(b => b.classList.add('disabled'));
 
+  // Per-question detail for activity_result_items (gradebook per-question
+  // analysis). prompt/answer orientation follows the quiz direction.
+  const selTextEl = btn.querySelector('.choice-text');
+  const detail = {
+    id: q.id,
+    correct: !!correct,
+    itemRef: String(q.id),
+    category: q.cat || null,
+    prompt: state.qtype === 'en2ja' ? q.en : q.ja,
+    selectedAnswer: selTextEl ? selTextEl.textContent : null,
+    correctAnswer: state.qtype === 'en2ja' ? q.ja : q.en,
+  };
+
   if (correct) {
     btn.classList.add('correct');
     state.score++;
-    state.answers.push({ id: q.id, correct: true });
+    state.answers.push(detail);
     showResultOverlay('✅', 'せいかい！');
   } else {
     btn.classList.add('wrong');
-    state.answers.push({ id: q.id, correct: false });
+    state.answers.push(detail);
     // Highlight correct answer — matched by choice id (set in renderQuestion),
     // not by text content, since the English choices now contain extra
     // markup (the speaker button) inside them.
@@ -354,7 +367,8 @@ async function showResults() {
           category: state.mode || 'category',
           correct,
           total,
-          app_id:   'newhorizon'
+          app_id:   'newhorizon',
+          items:    state.answers || []
         });
         $('sync-status').textContent = '✓ 成績を保存しました';
       } catch (e) {

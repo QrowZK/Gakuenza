@@ -79,21 +79,28 @@
       const ctx = await getContext();
       if (!ctx || !ctx.moduleId) return false;
       const sb = getClient();
-      const payload = {
-        user_id: ctx.userId,
-        module_id: ctx.moduleId,
-        class_id: ctx.classId,
-        school_id: ctx.schoolId,
-        // activity_ref (not activity_key — that column doesn't exist) and
-        // payload (not detail — same issue) — both fixed 2026-07-09.
-        // Timestamp suffix added to match every other module's
-        // convention (eiken/nh6/etc. all do `${...}/${Date.now()}`) —
-        // without it, every attempt at the same section would try to
-        // report under the exact same activity_ref, which the gradebook's
-        // per-assignment grouping now depends on being distinguishable.
-        activity_ref: `shakai3/${result.sectionId}/${Date.now()}`,
+      if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) {
+        console.log('[Shakai3Report] HubCommon.reportActivityWithItems unavailable — skipping.');
+        return false;
+      }
+      // Route through the shared helper so the summary row AND the
+      // per-question activity_result_items detail are written in one place
+      // (previously this hand-rolled the activity_results insert and never
+      // populated activity_result_items — the gradebook's per-question
+      // analysis had nothing for this module).
+      // Timestamp suffix matches every other module's convention
+      // (eiken/nh6/etc. all do `${...}/${Date.now()}`) — without it, every
+      // attempt at the same section would report under the same activity_ref,
+      // which the gradebook's per-assignment grouping depends on being
+      // distinguishable.
+      const out = await window.HubCommon.reportActivityWithItems(sb, {
+        schoolId: ctx.schoolId,
+        classId: ctx.classId,
+        moduleId: ctx.moduleId,
+        userId: ctx.userId,
+        activityRef: `shakai3/${result.sectionId}/${Date.now()}`,
         score: result.score,
-        max_score: result.total,
+        maxScore: result.total,
         payload: {
           section: result.sectionTitle,
           unit: result.unit,
@@ -103,10 +110,10 @@
           right: result.rightIds || [],
           wrong: result.wrongIds || [],
         },
-      };
-      const { error } = await sb.from('activity_results').insert(payload);
-      if (error) {
-        console.log('[Shakai3Report] insert failed:', error.message);
+        items: result.items || [],
+      });
+      if (!out.ok) {
+        console.log('[Shakai3Report] insert failed:', out.error && out.error.message);
         return false;
       }
       return true;
