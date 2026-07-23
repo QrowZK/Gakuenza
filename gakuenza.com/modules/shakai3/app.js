@@ -457,6 +457,16 @@
         total,
         rightIds: state.results.filter((r) => r.correct).map((r) => r.q.id),
         wrongIds: state.results.filter((r) => !r.correct).map((r) => r.q.id),
+        // Per-question detail for activity_result_items (gradebook per-question
+        // analysis). Built from the same state.results the review card renders.
+        items: state.results.map((r) => ({
+          itemRef: String(r.q.id),
+          category: r.q.cat || null,
+          prompt: r.q.q,
+          correct: r.correct,
+          selectedAnswer: r.user,
+          correctAnswer: r.q.type === 'order' ? r.q.items.join(' → ') : r.q.a[0],
+        })),
       });
     }
   }

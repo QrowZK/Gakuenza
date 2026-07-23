@@ -784,7 +784,7 @@ function showScreen(id) {
 // Gakuenza's hub already gates module access on an active session (see
 // letstry1-report.js), so there is no logged-out state to handle here —
 // unlike the original app's currentUser-gated flow.
-async function saveResultToSupabase(actType, unitId, score, total) {
+async function saveResultToSupabase(actType, unitId, score, total, items) {
   if (!window.hk) return null;
   try {
     // Use the shared platform hk.syncQuizResult — same table/schema as EikenApp + NH6
@@ -794,7 +794,8 @@ async function saveResultToSupabase(actType, unitId, score, total) {
       setId: 'unit' + unitId,
       category: actType,
       correct: score,
-      total: total
+      total: total,
+      items: items || []
     });
     return true;
   } catch(e) {
@@ -1168,7 +1169,20 @@ async function showReview(type) {
   syncDiv.innerHTML = "";
   syncDiv.classList.remove("hidden");
   const unitId = currentUnitData ? currentUnitData.id : 0;
-  const saved = await saveResultToSupabase(type, unitId, score, total);
+  // Per-question detail for activity_result_items. Only the quiz activity
+  // tracks per-question outcomes (qResults); match/build record a summary
+  // score only, so they report with no item breakdown.
+  const items = type === "quiz"
+    ? qResults.map((r, i) => ({
+        itemRef: "unit" + unitId + "/quiz/" + i,
+        category: "quiz",
+        prompt: r.item.en,
+        correct: !!r.correct,
+        selectedAnswer: r.chosen,
+        correctAnswer: r.item.jp,
+      }))
+    : [];
+  const saved = await saveResultToSupabase(type, unitId, score, total, items);
   syncDiv.innerHTML = saved
     ? `<div class="sync-banner">☁️ 成績をクラウドに保存しました！</div>`
     : `<div class="sync-banner error">⚠️ 保存に失敗しました。後でもう一度お試しください。</div>`;

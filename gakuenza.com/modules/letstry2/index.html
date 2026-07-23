@@ -1316,6 +1316,16 @@ async function showReview(from) {
   const syncEl = document.getElementById("rv-sync");
   syncEl.textContent = "";
   syncEl.classList.remove("error");
+  // Per-question detail for activity_result_items (gradebook per-question
+  // analysis). Both quiz and build populate qResults, so both report detail.
+  const items = qResults.map((r, i) => ({
+    itemRef: "unit" + currentUnit + "/" + from + "/" + i,
+    category: from,
+    prompt: r.item.en || r.item.jp || "",
+    correct: !!r.correct,
+    selectedAnswer: r.chosen,
+    correctAnswer: r.item.correct || r.item.jp || null,
+  }));
   if (typeof window.hk !== "undefined") {
     try {
       await window.hk.syncQuizResult({
@@ -1325,6 +1335,7 @@ async function showReview(from) {
         correct,
         total,
         app_id: "letstry2",
+        items,
       });
       syncEl.textContent = "✓ 成績を保存しました";
     } catch (e) {

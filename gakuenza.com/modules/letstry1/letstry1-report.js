@@ -78,20 +78,25 @@
   // build/match/flash) instead, so the ref is actually informative —
   // shaped like "letstry1/unit0/quiz/<ts>".
   window.hk = {
-    async syncQuizResult({ level, setId, category, correct, total, app_id }) {
+    async syncQuizResult({ level, setId, category, correct, total, app_id, items }) {
       if (!moduleId || !schoolId) return; // context didn't resolve; nothing to report
-      const ref = `letstry1/${level}/${category}/${Date.now()}`;
-      const { error } = await sb.from('activity_results').insert({
-        school_id: schoolId,
-        class_id: classId,
-        module_id: moduleId,
-        user_id: userId,
-        activity_ref: ref,
+      if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) {
+        console.warn('[LT1Report] HubCommon.reportActivityWithItems unavailable — skipping.');
+        return;
+      }
+      // Route through the shared helper so the summary row AND per-question
+      // activity_result_items detail are written together (this shim used to
+      // hand-roll the activity_results insert and never wrote the item detail,
+      // so the gradebook's per-question analysis had nothing for letstry1).
+      const out = await window.HubCommon.reportActivityWithItems(sb, {
+        schoolId, classId, moduleId, userId,
+        activityRef: `letstry1/${level}/${category}/${Date.now()}`,
         score: correct,
-        max_score: total,
+        maxScore: total,
         payload: { level, setId, category, app_id },
+        items: items || [],
       });
-      if (error) console.error('[LT1Report] failed to report result:', error);
+      if (!out.ok) console.error('[LT1Report] failed to report result:', out.error);
       else console.log('[LT1Report] reported', correct, '/', total, 'to activity_results');
     },
   };
