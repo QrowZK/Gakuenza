@@ -304,6 +304,34 @@ function guessGenKey(declaredGenKeys, q) {
 }
 
 // =============================================================================
+// 3. CONTENT DEPTH — each unit's effective distinct-question pool must clear the
+//    "no repeats within a term" bar (Near-term-debt #11 / shakai5 depth bar,
+//    ~10-12 per unit). For authored-only units this is just the authored count;
+//    for a unit with a `gen` list it is authored + the number of DISTINCT
+//    generatable instances (measured by sampling the declared generators, keyed
+//    on q-text + answer — the same signature app.js/generateFor de-dupe on).
+// =============================================================================
+const DEPTH_MIN = 10;         // effective distinct questions required per unit
+const DEPTH_SAMPLE = 60000;   // samples per gen unit to enumerate distinct set
+allUnits.forEach(({ u }) => {
+  const authored = (u.questions || []).length;
+  let genDistinct = 0;
+  if (u.gen && u.gen.length) {
+    const seen = new Set();
+    for (let i = 0; i < DEPTH_SAMPLE; i++) {
+      const g = u.gen[Math.floor(Math.random() * u.gen.length)];
+      const q = GEN.GENERATORS[g]();
+      seen.add(norm(q.q) + '||' + norm(q.answer));
+    }
+    genDistinct = seen.size;
+  }
+  const effective = authored + genDistinct;
+  if (effective < DEPTH_MIN) {
+    fail(`unit ${u.key}: effective distinct pool ${effective} (authored ${authored} + gen-distinct ${genDistinct}) is below the depth bar of ${DEPTH_MIN}`);
+  }
+});
+
+// =============================================================================
 // Report
 // =============================================================================
 console.log('rika4 generator + data stress test');
