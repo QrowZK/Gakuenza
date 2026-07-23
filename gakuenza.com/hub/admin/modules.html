@@ -112,6 +112,11 @@
 
   // ── state ────────────────────────────────────────────────────────────
   let modules = [], enabledSet = new Set(), classes = [], assignedSet = new Set();
+  // Keys (classId|moduleId) whose class_modules row carries teacher-set
+  // metadata (due_date / total_items / focus_units). The coarse matrix must
+  // warn before unassigning these — a DELETE here silently discards config a
+  // teacher built in the gradebook's per-assignment modal.
+  let configuredSet = new Set();
   const pending = new Map(); // "classId|moduleId" -> true(assign)/false(unassign)
 
   async function load() {
@@ -130,10 +135,18 @@
     enabledSet = new Set((smodRes.data || []).filter(r => r.enabled).map(r => r.module_id));
     classes = classRes.data || [];
     assignedSet = new Set();
+    configuredSet = new Set();
     if (classes.length) {
       const classIds = classes.map(c => c.id);
-      const { data: cms } = await sb.from('class_modules').select('class_id, module_id').in('class_id', classIds);
-      (cms || []).forEach(r => assignedSet.add(r.class_id + '|' + r.module_id));
+      const { data: cms } = await sb.from('class_modules')
+        .select('class_id, module_id, due_date, total_items, focus_units').in('class_id', classIds);
+      (cms || []).forEach(r => {
+        const key = r.class_id + '|' + r.module_id;
+        assignedSet.add(key);
+        if (r.due_date != null || r.total_items != null ||
+            (r.focus_units != null && (!Array.isArray(r.focus_units) || r.focus_units.length)))
+          configuredSet.add(key);
+      });
     }
     renderBulkToolbar();
     renderCatalog();
@@ -328,16 +341,30 @@
 
   async function applyPending() {
     const applyBtn = document.getElementById('md-apply');
-    applyBtn.disabled = true;
     const entries = Array.from(pending.entries());
+    // Guard the destructive half: unassigning a row that carries teacher-set
+    // metadata (due date / 問題数 / 今週の単元) silently discards that config.
+    // Warn once with a count before touching any of them.
+    const configuredRemovals = entries.filter(([key, assign]) => !assign && configuredSet.has(key));
+    if (configuredRemovals.length) {
+      const ok = window.confirm(
+        `解除しようとしている ${configuredRemovals.length}件の割り当てには、` +
+        `期限・問題数・今週の単元などの設定が含まれています。\n\n` +
+        `解除するとこれらの設定は失われます（成績表の課題設定で行った内容です）。続けますか？`);
+      if (!ok) return; // leave pending intact, button stays enabled
+    }
+    applyBtn.disabled = true;
     const failures = [];
     for (const [key, assign] of entries) {
       const [classId, moduleId] = key.split('|');
+      // Assign via the non-clobbering upsert: an already-configured row keeps
+      // its metadata, and a stale-read re-assign can't PK-conflict.
       const res = assign
-        ? await MA.assignModule(sb, { classId, moduleId })
+        ? await MA.assignModuleIfAbsent(sb, { classId, moduleId })
         : await MA.unassignModule(sb, { classId, moduleId });
       if (res.error) failures.push(key);
-      else { if (assign) assignedSet.add(key); else assignedSet.delete(key); }
+      else if (assign) { assignedSet.add(key); }
+      else { assignedSet.delete(key); configuredSet.delete(key); }
     }
     pending.clear();
     if (failures.length) alert(`${entries.length - failures.length}件を適用しました。${failures.length}件は失敗しました。`);
