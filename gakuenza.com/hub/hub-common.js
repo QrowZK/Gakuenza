@@ -122,6 +122,10 @@ window.HubCommon = (function () {
         : { key: 'grades', href: 'grades.html', label: '成績' },
       { key: 'settings', href: 'settings.html', label: '設定' },
     ];
+    // Staff-only entry point into hub/guides.html (the per-module teacher
+    // guides) — never shown to a plain student (isEducator/isFullAdminUser
+    // are both false for them, same gate the 管理画面 link below uses).
+    if (isEducator || isFullAdminUser) navItems.splice(3, 0, { key: 'guides', href: 'guides.html', label: '先生向けガイド' });
     // No specific class in mind here — admin/class-detail.html handles a
     // missing class_id by showing its own school/year/gumi picker, so
     // this link doesn't need to (and shouldn't try to) guess a class.

@@ -157,10 +157,14 @@ window.AdminCommon = (function () {
     // deliberately minimal nav: only 成績 is actually meant for them.
     // The rest of the admin console stays admin-tier only — this isn't
     // a general "teacher login" yet, just gradebook access.
+    // hub/guides.html sits one level up from hub/admin/*.html, hence '../'.
+    // Shown to every tier that reaches this sidebar (educator included) —
+    // this file is only ever loaded on staff surfaces, never the student hub.
     const navItems = admin?.tier === 'educator'
       ? [
           { key: 'home', label: 'ホーム', href: '../index.html' },
           { key: 'gradebook', label: '成績', href: '../gradebook/index.html' },
+          { key: 'guides', label: '先生向けガイド', href: '../guides.html' },
           { key: 'settings', label: '設定', href: '../settings.html' },
         ]
       : [
@@ -170,6 +174,7 @@ window.AdminCommon = (function () {
           { key: 'classes', label: 'クラス', href: 'class-detail.html' },
           { key: 'modules', label: 'モジュール', href: 'modules.html' },
           { key: 'gradebook', label: '成績', href: '../gradebook/index.html' },
+          { key: 'guides', label: '先生向けガイド', href: '../guides.html' },
           { key: 'settings', label: '設定', href: '../settings.html' },
         ];
 
