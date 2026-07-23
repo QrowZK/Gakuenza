@@ -11,23 +11,37 @@ let recognition = null;
 let isSpeaking = false;
 let isListening = false;
 
+let _cachedVoices = synth.getVoices();
+if (typeof synth.onvoiceschanged !== 'undefined') {
+  synth.onvoiceschanged = () => { _cachedVoices = synth.getVoices(); };
+}
+
 function getVoice(lang) {
-  const voices = synth.getVoices();
+  const voices = _cachedVoices.length ? _cachedVoices : synth.getVoices();
   return voices.find(v => v.lang.startsWith(lang)) || voices[0] || null;
 }
 
 function speakText(text, onEnd) {
-  if (isSpeaking) { synth.cancel(); }
-  const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = 'en-GB';
-  utt.rate = 0.88;
-  utt.pitch = 1.0;
-  const voice = getVoice('en');
-  if (voice) utt.voice = voice;
-  utt.onstart  = () => { isSpeaking = true; };
-  utt.onend    = () => { isSpeaking = false; if (onEnd) onEnd(); };
-  utt.onerror  = () => { isSpeaking = false; if (onEnd) onEnd(); };
-  synth.speak(utt);
+  const doSpeak = () => {
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'en-GB';
+    utt.rate = 0.88;
+    utt.pitch = 1.0;
+    const voice = getVoice('en');
+    if (voice) utt.voice = voice;
+    utt.onstart  = () => { isSpeaking = true; };
+    utt.onend    = () => { isSpeaking = false; if (onEnd) onEnd(); };
+    utt.onerror  = () => { isSpeaking = false; if (onEnd) onEnd(); };
+    synth.speak(utt);
+  };
+  if (isSpeaking) {
+    synth.cancel();
+    // cancel() is asynchronous in every major engine; speaking in the same
+    // tick silently drops the new utterance (chromium issue 835373).
+    setTimeout(doSpeak, 50);
+  } else {
+    doSpeak();
+  }
 }
 
 function stopSpeaking() {
