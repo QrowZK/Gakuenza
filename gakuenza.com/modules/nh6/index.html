@@ -9,173 +9,173 @@
   <title>New Horizons 6 — がくえん座</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="module-topbar">
-  <a href="../../hub/index.html" class="module-back">← ホームへ</a>
-  <span class="module-name">New Horizons 6</span>
-  <div id="module-account-mount" style="margin-left:auto;"></div>
-</div>
+<header class="eg-topbar">
+  <a class="eg-back" href="../../hub/index.html">← ホームへ</a>
+  <span class="eg-topbar-label">New Horizons 6</span>
+  <div class="eg-topbar-right" id="module-account-mount"></div>
+</header>
 
-<!-- ══ MENU ══════════════════════════════════════════════════════════════ -->
-<div id="screen-menu" class="screen active">
-  <header class="app-header">
-    <div class="header-left">
-      <span class="app-icon">📗</span>
-      <div>
-        <div class="eyebrow">小学6年 英語</div>
-        <div class="app-title">New Horizons 6</div>
-        <div class="dot-rule" style="width:120px;"></div>
-        <div class="app-sub">小学6年 英語練習</div>
+<main class="eg-shell">
+  <!-- ══ MENU ══ -->
+  <section class="screen active" id="screen-menu">
+    <div class="eg-menu-head">
+      <div class="eg-eyebrow">PRACTICE</div>
+      <h1 class="eg-h1">New Horizons 6　メニュー</h1>
+      <div class="eg-rule"></div>
+    </div>
+    <p class="eg-note">ユニットを選んで練習しよう！文法・応答・書きの3つの練習ができます。</p>
+
+    <div class="eg-menu-grid">
+      <div class="eg-card eg-unit-panel">
+        <div class="eg-panel-head">
+          <h2 class="eg-h2">ユニットをえらぶ</h2>
+          <span class="eg-panel-sub" id="unit-count-label"></span>
+        </div>
+        <div class="eg-rule eg-rule--sm"></div>
+        <div class="eg-unit-list" id="unit-grid"></div>
+      </div>
+
+      <div class="eg-menu-side">
+        <div class="eg-card eg-stats" id="menu-stats" hidden>
+          <h2 class="eg-h2 eg-h2--sm">あなたの成績</h2>
+          <div class="eg-stats-row">
+            <div class="eg-stat">
+              <div class="eg-stat-num" id="stat-accuracy">–</div>
+              <div class="eg-stat-label">正答率</div>
+            </div>
+            <div class="eg-stat eg-stat--div">
+              <div class="eg-stat-num eg-stat-num--ink" id="stat-streak">–</div>
+              <div class="eg-stat-label">連続日数</div>
+            </div>
+          </div>
+        </div>
+
+        <a class="eg-card eg-vocab-link" id="unit-vocab-link"
+           href="https://hakuicity.github.io/TangoApp/" target="_blank" rel="noopener">
+          <div class="eg-vocab-text">
+            <h2 class="eg-h2 eg-h2--sm">単語練習</h2>
+            <p>NH 絵辞典アプリへ</p>
+          </div>
+          <span class="eg-vocab-arrow">↗</span>
+        </a>
       </div>
     </div>
-    <div class="header-right">
-      <button id="theme-btn" class="icon-btn">🌙</button>
-    </div>
-  </header>
+  </section>
 
-  <main class="menu-body">
-    <p class="menu-intro">ユニットを選んで練習しよう！</p>
-    <div class="unit-grid" id="unit-grid"></div>
-
-    <section id="menu-stats" style="display:none; margin-top:20px">
-      <p class="section-label">あなたの成績</p>
-      <div class="stats-row" id="stats-row"></div>
-    </section>
-  </main>
-</div>
-
-<!-- ══ UNIT ══════════════════════════════════════════════════════════════ -->
-<div id="screen-unit" class="screen">
-  <div id="unit-header" class="unit-header">
-    <button id="back-to-menu" class="back-btn-white">← もどる</button>
-    <div class="unit-header-inner">
-      <div id="unit-emoji" class="unit-header-emoji">👋</div>
+  <!-- ══ UNIT / MODE ══ -->
+  <section class="screen" id="screen-unit">
+    <button class="eg-btn-ghost" id="back-to-menu" type="button">← Unit一覧</button>
+    <div class="eg-mode-head">
+      <span class="eg-mode-emoji" id="unit-emoji">👋</span>
       <div>
-        <div id="unit-num"   class="unit-header-num">Unit 1</div>
-        <div id="unit-title" class="unit-header-title">This is me!</div>
-        <div id="unit-ja"    class="unit-header-ja"></div>
+        <div class="eg-eyebrow" id="unit-num" style="color:var(--moss-deep)">UNIT 1</div>
+        <h1 class="eg-h1 eg-h1--sm" id="unit-title">This is me!</h1>
+        <p class="eg-mode-head-ja" id="unit-ja"></p>
       </div>
     </div>
-  </div>
+    <div class="eg-mode-grid">
+      <button class="eg-mode-card" id="mode-grammar" type="button" style="border-top-color:var(--moss)">
+        <span class="eg-mode-emoji-lg">📝</span>
+        <span class="eg-mode-label">文法練習</span>
+        <span class="eg-mode-desc">文を完成させよう</span>
+      </button>
+      <button class="eg-mode-card" id="mode-response" type="button" style="border-top-color:var(--gold)">
+        <span class="eg-mode-emoji-lg">💬</span>
+        <span class="eg-mode-label">応答練習</span>
+        <span class="eg-mode-desc">質問に正しく答えよう</span>
+      </button>
+      <button class="eg-mode-card" id="mode-writing" type="button" style="border-top-color:var(--clay)">
+        <span class="eg-mode-emoji-lg">✏️</span>
+        <span class="eg-mode-label">書き練習</span>
+        <span class="eg-mode-desc">文字・単語・文を書こう</span>
+      </button>
+    </div>
+  </section>
 
-  <div class="mode-list">
-    <button class="mode-card" id="mode-grammar">
-      <span class="mode-icon">📝</span>
-      <div>
-        <div class="mode-title">文法練習</div>
-        <div class="mode-desc">文を完成させよう</div>
+  <!-- ══ QUIZ (grammar / response) ══ -->
+  <section class="screen" id="screen-quiz">
+    <div class="eg-quiz-layout">
+      <div class="eg-quiz-main">
+        <div class="eg-quiz-top">
+          <button class="eg-btn-ghost" id="quiz-back" type="button">← モードへ</button>
+          <span class="eg-quiz-score" id="quiz-score-disp">⭐ 0</span>
+        </div>
+        <div class="eg-progress-track"><div class="eg-progress-fill" id="quiz-progress-fill"></div></div>
+        <div class="eg-quiz-counter" id="quiz-progress-text"></div>
+
+        <div class="eg-q-card">
+          <span class="eg-q-badge" id="question-label"></span>
+          <p class="eg-q-prompt" id="question-prompt"></p>
+          <p class="eg-q-hint" id="question-hint"></p>
+        </div>
+
+        <div class="eg-choices" id="choices-grid"></div>
+
+        <div class="eg-feedback-row hidden" id="feedback-row">
+          <span class="eg-feedback-text" id="feedback-text"></span>
+          <button class="eg-btn-next" id="next-btn" type="button">次へ →</button>
+        </div>
       </div>
-      <span class="mode-count" id="unit-grammar-count"></span>
-    </button>
 
-    <button class="mode-card" id="mode-response">
-      <span class="mode-icon">💬</span>
-      <div>
-        <div class="mode-title">応答練習</div>
-        <div class="mode-desc">質問に正しく答えよう</div>
+      <aside class="eg-tracker" id="tracker-panel">
+        <div class="eg-tracker-head">進捗</div>
+        <div class="eg-tracker-grid" id="tracker-grid"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ══ WRITING (rich tracing canvas — preserved) ══ -->
+  <section class="screen" id="screen-writing">
+    <div class="eg-quiz-main eg-write-main">
+      <div class="eg-quiz-top">
+        <button class="eg-btn-ghost" id="write-back" type="button">← モードへ</button>
+        <button class="eg-btn-ghost" id="write-mode-btn" type="button">🙈 コピーモード</button>
       </div>
-      <span class="mode-count" id="unit-response-count"></span>
-    </button>
+      <div class="eg-progress-track"><div class="eg-progress-fill eg-progress-fill--gold" id="write-progress-fill"></div></div>
+      <div class="eg-quiz-counter" id="write-progress-text">1 / 8</div>
 
-    <button class="mode-card" id="mode-writing">
-      <span class="mode-icon">✏️</span>
-      <div>
-        <div class="mode-title">書き練習</div>
-        <div class="mode-desc">文字・単語・文を書こう</div>
+      <div class="eg-write-inst" id="write-instruction"></div>
+      <div class="eg-write-tabs" id="write-tabs"></div>
+
+      <div class="canvas-wrap">
+        <div class="guide-overlay" id="guide-overlay"></div>
+        <canvas id="write-canvas" class="write-canvas"></canvas>
       </div>
-      <span class="mode-count" id="unit-writing-count"></span>
-    </button>
 
-    <a class="mode-card mode-card--vocab" id="unit-vocab-link"
-       href="https://hakuicity.github.io/TangoApp/" target="_blank" rel="noopener">
-      <span class="mode-icon">📖</span>
-      <div>
-        <div class="mode-title">単語練習</div>
-        <div class="mode-desc">NH 絵辞典アプリへ</div>
+      <div class="eg-write-controls">
+        <button class="eg-write-btn" id="write-undo-btn" type="button">↩ 戻す</button>
+        <button class="eg-write-btn" id="write-clear-btn" type="button">🗑 消す</button>
+        <button class="eg-write-btn" id="write-prev-btn" type="button" disabled>← まえ</button>
+        <button class="eg-write-btn eg-write-btn--next" id="write-next-btn" type="button">つぎ →</button>
       </div>
-      <span class="mode-count">→</span>
-    </a>
-  </div>
-</div>
-
-<!-- ══ QUIZ ══════════════════════════════════════════════════════════════ -->
-<div id="screen-quiz" class="screen">
-  <header class="quiz-header">
-    <button class="icon-btn" id="quiz-back">✕</button>
-    <div class="quiz-progress">
-      <div class="progress-bar"><div class="progress-fill" id="quiz-progress-fill"></div></div>
-      <span class="progress-text" id="quiz-progress-text">1 / 10</span>
     </div>
-    <div class="quiz-score" id="quiz-score-disp">⭐ 0</div>
-  </header>
+  </section>
 
-  <div class="quiz-body">
-    <div class="question-card" id="question-card">
-      <div class="question-label" id="question-label">文を完成させよう</div>
-      <div class="question-prompt" id="question-prompt"></div>
-      <div class="question-hint"   id="question-hint"></div>
+  <!-- ══ REVIEW ══ -->
+  <section class="screen" id="screen-results">
+    <div class="eg-review">
+      <div class="eg-ring" id="result-ring">
+        <div class="eg-ring-inner">
+          <div class="eg-ring-pct" id="results-score">0%</div>
+          <div class="eg-ring-label">せいかい率</div>
+        </div>
+      </div>
+      <h2 class="eg-h2 eg-review-msg" id="results-msg"></h2>
+      <p class="eg-review-score" id="results-scoretext"></p>
+      <div class="eg-sync" id="results-sync"></div>
+      <div class="eg-wrong" id="results-wrong"></div>
+      <button class="eg-btn-primary eg-btn-block" id="results-menu" type="button">メニューに戻る</button>
+      <div class="eg-review-secondary">
+        <button class="eg-btn-ghost" id="results-retry" type="button">もう一度</button>
+        <button class="eg-btn-ghost" id="results-unit" type="button">ユニットへ</button>
+      </div>
     </div>
-
-    <div class="choices-grid" id="choices-grid"></div>
-
-    <div class="result-overlay hidden" id="result-overlay">
-      <div class="result-icon" id="result-icon"></div>
-      <div class="result-msg"  id="result-msg"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ WRITING ════════════════════════════════════════════════════════════ -->
-<div id="screen-writing" class="screen">
-  <header class="quiz-header">
-    <button class="icon-btn" id="write-back">✕</button>
-    <div class="quiz-progress">
-      <div class="progress-bar"><div class="progress-fill" id="write-progress-fill"></div></div>
-      <span class="progress-text" id="write-progress-text">1 / 8</span>
-    </div>
-    <button class="mode-toggle-btn" id="write-mode-btn">🙈 コピーモード</button>
-  </header>
-
-  <div class="writing-body">
-    <div class="write-instruction" id="write-instruction"></div>
-    <div class="write-tabs" id="write-tabs"></div>
-
-    <div class="canvas-wrap">
-      <div class="guide-overlay" id="guide-overlay"></div>
-      <canvas id="write-canvas" class="write-canvas"></canvas>
-    </div>
-
-    <div class="write-controls">
-      <button class="write-btn" id="write-undo-btn">↩ 戻す</button>
-      <button class="write-btn write-btn--clear" id="write-clear-btn">🗑 消す</button>
-      <button class="write-btn" id="write-prev-btn" disabled>← まえ</button>
-      <button class="write-btn write-btn--next" id="write-next-btn">つぎ →</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ RESULTS ════════════════════════════════════════════════════════════ -->
-<div id="screen-results" class="screen">
-  <div class="results-body">
-    <div class="results-emoji" id="results-emoji">🎉</div>
-    <h1 class="results-title">結果</h1>
-    <div class="results-score" id="results-score"></div>
-    <div class="results-bar-wrap">
-      <div class="results-bar" id="results-bar"></div>
-    </div>
-    <div class="results-msg"  id="results-msg"></div>
-    <div class="results-sync" id="results-sync"></div>
-    <div class="results-btns">
-      <button class="result-btn result-btn--primary" id="results-retry">もう一度</button>
-      <button class="result-btn" id="results-unit">ユニットへ</button>
-      <button class="result-btn" id="results-menu">メニューへ</button>
-    </div>
-  </div>
-</div>
-
+  </section>
+</main>
 
 <script src="data.js"></script>
 <script src="writing.js"></script>
