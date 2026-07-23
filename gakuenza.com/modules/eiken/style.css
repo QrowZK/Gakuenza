@@ -54,7 +54,8 @@
   .page-layout { min-height: 100vh; }
   .main-col { padding: 0; max-width: none; margin: 0; }
   #menu-screen { max-width: 1180px; margin: 0 auto; padding: 32px 28px 64px; }
-  #quiz-screen, #review-screen, #stats-screen { max-width: 720px; margin: 0 auto; padding: 26px 22px 56px; }
+  #quiz-screen, #review-screen, #stats-screen,
+  #iv-level-screen, #iv-session-screen, #iv-quiz-screen, #iv-results-screen { max-width: 720px; margin: 0 auto; padding: 26px 22px 56px; }
 
   /* ── Signature motifs ── */
   .eyebrow { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: .09em; color: var(--gold-deep, #A8843A); text-transform: uppercase; }
