@@ -206,6 +206,7 @@ function renderPassagePhase() {
   $iv('iv-btn-next').textContent = '質問へ進む →';
   $iv('iv-btn-next').onclick = () => { ivPhase = 'question'; ivRenderQuestion(); };
   $iv('iv-transcript-area').innerHTML = '';
+  $iv('iv-transcript-area').classList.add('hidden');
   $iv('iv-feedback-area').innerHTML = '';
 }
 
@@ -250,6 +251,7 @@ function ivRenderQuestion() {
   $iv('iv-btn-next').style.display = 'none';
   $iv('iv-btn-next').style.background = cfg().accent;
   $iv('iv-transcript-area').innerHTML = '';
+  $iv('iv-transcript-area').classList.remove('hidden');
   $iv('iv-feedback-area').innerHTML = '';
 }
 
