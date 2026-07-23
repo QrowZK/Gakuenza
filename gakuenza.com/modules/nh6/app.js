@@ -1,4 +1,8 @@
-// app.js — NH6 Practice main app
+// app.js — NH6 Practice main app.
+// UI re-skinned 2026-07 to the Gakuenza satoyama design mockup; the quiz
+// engine, content (data.js), writing canvas (writing.js), TTS (tts.js), and
+// gradebook reporting (nh6-report.js, via window.hk.syncQuizResult) are
+// unchanged. Per-question items still flow through S.answers → syncQuizResult.
 'use strict';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -9,11 +13,11 @@ const S = {
   questions:  [],
   qIndex:     0,
   score:      0,
+  answered:   false,
+  answers:    [],      // per-question detail for activity_result_items (#126)
   writeItems: [],
   writeIdx:   0,
   writeMode:  'trace', // 'trace' | 'copy'
-  theme:      localStorage.getItem('nh6-theme') || 'light',
-  loginTab:   'email',
   wcanvas:    null,    // WritingCanvas instance
 };
 
@@ -21,9 +25,6 @@ const S = {
 const $ = id => document.getElementById(id);
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-// Builds a speaker-icon button that reads `text` aloud via tts.js.
-// `text` is the RAW (unescaped) string to be spoken; it is escaped for the
-// data attribute here so callers don't need to worry about it.
 function ttsBtn(text, extraClass) {
   if (!text) return '';
   const safe = esc(text).replace(/"/g, '&quot;');
@@ -44,70 +45,83 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
   S.screen = id;
+  if (window.NH6TTS) NH6TTS.stop();
   window.scrollTo(0,0);
 }
 
-// ── Theme ──────────────────────────────────────────────────────────────────
-function applyTheme() {
-  document.body.classList.toggle('dark', S.theme === 'dark');
-  $('theme-btn').textContent = S.theme === 'dark' ? '☀️' : '🌙';
+// ── Local stats (client-side; powers the 成績 card) ──────────────────────────
+const LETTERS = ['A', 'B', 'C', 'D'];
+function dayStamp(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function saveLocalStats(unit, mode, correct, total) {
+  const d = JSON.parse(localStorage.getItem('nh6-stats') || '{}');
+  const key = `u${unit}-${mode}`;
+  if (!d[key]) d[key] = { correct:0, total:0, sessions:0 };
+  d[key].correct  += correct;
+  d[key].total    += total;
+  d[key].sessions += 1;
+  d.overall = d.overall || { correct:0, total:0, sessions:0, lastDay:null, streak:0 };
+  d.overall.correct  += correct;
+  d.overall.total    += total;
+  d.overall.sessions += 1;
+  const today = dayStamp(new Date());
+  if (d.overall.lastDay !== today) {
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    d.overall.streak = (d.overall.lastDay === dayStamp(y)) ? ((d.overall.streak || 0) + 1) : 1;
+    d.overall.lastDay = today;
+  } else if (!d.overall.streak) {
+    d.overall.streak = 1;
+  }
+  localStorage.setItem('nh6-stats', JSON.stringify(d));
 }
-$('theme-btn').onclick = () => {
-  S.theme = S.theme === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('nh6-theme', S.theme);
-  applyTheme();
-};
-applyTheme();
+function renderMenuStats() {
+  const d  = JSON.parse(localStorage.getItem('nh6-stats') || '{}');
+  const ov = d.overall;
+  if (!ov || ov.sessions === 0) { $('menu-stats').hidden = true; return; }
+  $('menu-stats').hidden = false;
+  const pct = ov.total > 0 ? Math.round(ov.correct / ov.total * 100) : 0;
+  $('stat-accuracy').innerHTML = pct + '<span class="eg-stat-pct">%</span>';
+  $('stat-streak').textContent = String(ov.streak || 0);
+}
 
 // ── Main menu ──────────────────────────────────────────────────────────────
 function buildMenu() {
   const grid = $('unit-grid');
+  $('unit-count-label').textContent = '全' + NH6_UNITS.length + 'ユニット';
   grid.innerHTML = NH6_UNITS.map(u => `
-    <button class="unit-card" data-unit="${u.id}" style="--uc:${u.color}">
-      <div class="uc-num">Unit ${u.id}</div>
-      <div class="uc-emoji">${u.emoji}</div>
-      <div class="uc-title">${esc(u.title)}</div>
-      <div class="uc-ja">${esc(u.titleJa)}</div>
+    <button class="eg-unit-row" data-unit="${u.id}" type="button">
+      <span class="eg-unit-emoji">${u.emoji}</span>
+      <span class="eg-unit-num">Unit ${u.id}</span>
+      <span class="eg-unit-titles">
+        <span class="eg-unit-en">${esc(u.title)}</span>
+        <span class="eg-unit-ja">${esc(u.titleJa)}</span>
+      </span>
+      <span class="eg-unit-arrow" style="color:${u.color}">→</span>
     </button>`).join('');
 
-  grid.querySelectorAll('.unit-card').forEach(btn => {
+  grid.querySelectorAll('.eg-unit-row').forEach(btn => {
     btn.onclick = () => {
       S.unit = parseInt(btn.dataset.unit);
       buildUnitScreen();
       showScreen('screen-unit');
     };
   });
-  updateMenuStats();
+  renderMenuStats();
 }
 
-// ── Unit screen ────────────────────────────────────────────────────────────
+// ── Unit / mode screen ───────────────────────────────────────────────────────
 function buildUnitScreen() {
   const u = NH6_UNITS[S.unit - 1];
-  $('unit-header').style.background = u.color;
-  $('unit-num').textContent  = `Unit ${u.id}`;
+  $('unit-emoji').textContent = u.emoji;
+  $('unit-num').textContent   = `UNIT ${u.id}`;
+  $('unit-num').style.color   = u.color;
   $('unit-title').textContent = u.title;
   $('unit-ja').textContent    = u.titleJa;
-  $('unit-emoji').textContent = u.emoji;
-
-  const grammar = NH6_GRAMMAR[S.unit]  || [];
-  const response = NH6_RESPONSE[S.unit] || [];
-  const writing  = NH6_WRITING[S.unit]  || [];
-
-  $('unit-grammar-count').textContent  = `${grammar.length} 問`;
-  $('unit-response-count').textContent = `${response.length} 問`;
-  $('unit-writing-count').textContent  = `${writing.length} 項目`;
-
-  // Vocab link
-  const vu = NH6_UNITS[S.unit-1];
-  const cats = vu.vocabCats.split(',')[0]; // first category for deep link
-  $('unit-vocab-link').href = `https://hakuicity.github.io/TangoApp/?cat=${cats}`;
 }
 
 $('back-to-menu').onclick = () => showScreen('screen-menu');
-
-document.getElementById('mode-grammar').onclick  = () => startQuiz('grammar');
-document.getElementById('mode-response').onclick = () => startQuiz('response');
-document.getElementById('mode-writing').onclick  = () => startWriting();
+$('mode-grammar').onclick  = () => startQuiz('grammar');
+$('mode-response').onclick = () => startQuiz('response');
+$('mode-writing').onclick  = () => startWriting();
 
 // ── Quiz engine ────────────────────────────────────────────────────────────
 const SESSION = 10;
@@ -120,9 +134,8 @@ function startQuiz(mode) {
   S.questions = sample(pool, Math.min(SESSION, pool.length));
   S.qIndex    = 0;
   S.score     = 0;
-  S.answers   = [];   // per-question detail for activity_result_items
-
-  $('quiz-back').onclick = () => { if (confirm('やめますか？')) showScreen('screen-unit'); };
+  S.answered  = false;
+  S.answers   = [];
   showScreen('screen-quiz');
   renderQuestion();
 }
@@ -130,22 +143,18 @@ function startQuiz(mode) {
 function renderQuestion() {
   const q = S.questions[S.qIndex];
   if (!q) { showResults(); return; }
-
-  // Stop any in-progress speech when moving to a new question
   if (window.NH6TTS) NH6TTS.stop();
+  S.answered = false;
 
-  // Progress
   const pct = (S.qIndex / S.questions.length) * 100;
   $('quiz-progress-fill').style.width = pct + '%';
   $('quiz-progress-text').textContent = `${S.qIndex + 1} / ${S.questions.length}`;
   $('quiz-score-disp').textContent    = `⭐ ${S.score}`;
-  $('result-overlay').classList.add('hidden');
+  $('question-label').textContent = S.mode === 'grammar' ? '文法練習' : '応答練習';
 
   if (S.mode === 'grammar') {
-    // Show sentence with blank
     const parts = q.prompt.split('___');
-    // For TTS, read the completed sentence (blank filled with the correct answer)
-    // so the student hears a natural, grammatically complete sentence.
+    // TTS reads the completed sentence so the child hears natural English.
     const fullSentence = q.prompt.replace('___', q.choices[q.correct]);
     $('question-prompt').innerHTML =
       `<span class="qp-text">${esc(parts[0])}</span>` +
@@ -155,57 +164,76 @@ function renderQuestion() {
     $('question-hint').textContent = q.hint || '';
     $('question-hint').style.display = q.hint ? '' : 'none';
   } else {
-    // Response mode: show question
     $('question-prompt').innerHTML =
       `<span class="qp-question">${esc(q.q)}</span>` +
       ttsBtn(q.q, 'qp-tts');
     $('question-hint').style.display = 'none';
   }
 
-  // Choices - shuffle with correct answer tracking
+  const grid = $('choices-grid');
   const indexed = q.choices.map((c, i) => ({ text: c, orig: i }));
   const shuffled = shuffle(indexed);
   const correctOrig = q.correct;
-
-  // NOTE: .choice-btn is a <div role="button"> rather than a real <button>.
-  // HTML does not allow a <button> (the speaker icon) to be nested inside
-  // another <button> — browsers silently split/auto-close the markup if we
-  // try, which breaks click handling. Using a div + role="button" avoids
-  // that while keeping the element keyboard-accessible.
-  $('choices-grid').innerHTML = shuffled.map(item => `
+  grid.innerHTML = shuffled.map((item, pos) => `
     <div class="choice-btn" role="button" tabindex="0" data-orig="${item.orig}">
+      <span class="choice-letter">${LETTERS[pos] || ''}</span>
       <span class="choice-text">${esc(item.text)}</span>
       ${ttsBtn(item.text, 'choice-tts')}
     </div>`).join('');
 
-  $('choices-grid').querySelectorAll('.choice-btn').forEach(btn => {
-    const selectThis = (e) => {
-      // Don't treat a tap on the speaker icon as an answer selection.
+  grid.querySelectorAll('.choice-btn').forEach(btn => {
+    const select = (e) => {
       if (e.target.closest('.tts-btn')) return;
       if (btn.classList.contains('disabled')) return;
       handleAnswer(parseInt(btn.dataset.orig) === correctOrig, btn, q);
     };
-    btn.onclick = selectThis;
+    btn.onclick = select;
     btn.onkeydown = (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectThis(e); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(e); }
     };
   });
 
-  // Animate in
-  const card = $('question-card');
-  card.style.opacity = '0'; card.style.transform = 'translateY(8px)';
-  requestAnimationFrame(() => {
-    card.style.transition = 'opacity .2s, transform .2s';
-    card.style.opacity = '1'; card.style.transform = 'none';
+  $('feedback-row').classList.add('hidden');
+  renderTracker();
+}
+
+function renderTracker() {
+  const grid = $('tracker-grid');
+  grid.innerHTML = '';
+  S.questions.forEach((_, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'eg-tracker-cell';
+    const done = i < S.qIndex || (i === S.qIndex && S.answered);
+    if (done && S.answers[i]) {
+      cell.classList.add(S.answers[i].correct ? 'is-correct' : 'is-wrong');
+    } else if (i === S.qIndex) {
+      cell.classList.add('is-current');
+    }
+    cell.textContent = String(i + 1);
+    grid.appendChild(cell);
   });
 }
 
 function handleAnswer(correct, btn, q) {
-  $('choices-grid').querySelectorAll('.choice-btn').forEach(b => b.classList.add('disabled'));
+  if (S.answered) return;
+  S.answered = true;
+  const grid = $('choices-grid');
+  grid.querySelectorAll('.choice-btn').forEach(b => b.classList.add('disabled'));
 
-  // Record per-question detail for the gradebook's per-question analysis.
+  if (correct) {
+    btn.classList.add('correct');
+    S.score++;
+  } else {
+    btn.classList.add('wrong');
+    grid.querySelectorAll('.choice-btn').forEach(b => {
+      if (parseInt(b.dataset.orig) === q.correct) b.classList.add('correct');
+    });
+  }
+  $('quiz-score-disp').textContent = `⭐ ${S.score}`;
+
+  // Record per-question detail for the gradebook (unchanged #126 contract).
   const selIdx = parseInt(btn.dataset.orig);
-  (S.answers || (S.answers = [])).push({
+  S.answers.push({
     itemRef: `u${S.unit}/${S.mode}/${S.qIndex}`,
     category: S.mode,
     prompt: S.mode === 'grammar' ? q.prompt : q.q,
@@ -214,29 +242,20 @@ function handleAnswer(correct, btn, q) {
     correctAnswer: q.choices[q.correct],
   });
 
-  if (correct) {
-    btn.classList.add('correct');
-    S.score++;
-    showResult('✅', 'せいかい！');
-  } else {
-    btn.classList.add('wrong');
-    // Highlight correct
-    $('choices-grid').querySelectorAll('.choice-btn').forEach(b => {
-      if (parseInt(b.dataset.orig) === q.correct) b.classList.add('correct');
-    });
-    showResult('❌', esc(q.choices[q.correct]));
-  }
-
-  setTimeout(() => { S.qIndex++; renderQuestion(); }, 1300);
+  // Inline feedback + manual advance (mockup design).
+  const fb = $('feedback-text');
+  fb.textContent = correct ? '✅ せいかい！' : `❌ こたえ：${q.choices[q.correct]}`;
+  fb.style.color = correct ? 'var(--moss-deep)' : 'var(--clay)';
+  $('feedback-row').classList.remove('hidden');
+  renderTracker();
 }
 
-function showResult(icon, msg) {
-  $('result-overlay').classList.remove('hidden');
-  $('result-icon').textContent = icon;
-  $('result-msg').textContent  = msg;
+function nextQuestion() {
+  S.qIndex++;
+  renderQuestion();
 }
 
-// ── Writing practice ───────────────────────────────────────────────────────
+// ── Writing practice (rich tracing canvas — preserved verbatim) ──────────────
 function startWriting() {
   const items = NH6_WRITING[S.unit] || [];
   if (!items.length) return;
@@ -272,7 +291,6 @@ function startWriting() {
 function toggleWriteMode() {
   S.writeMode = S.writeMode === 'trace' ? 'copy' : 'trace';
   $('write-mode-btn').textContent = S.writeMode === 'trace' ? '🙈 コピーモード' : '👀 なぞりモード';
-  // Guide is drawn on canvas — just set/clear the text
   var overlay = $('guide-overlay');
   if (S.wcanvas) {
     S.wcanvas.setGuide(S.writeMode === 'trace' ? overlay.textContent : '');
@@ -292,7 +310,6 @@ function renderWriteItem() {
   $('write-mode-btn').textContent = S.writeMode === 'trace' ? '🙈 コピーモード' : '👀 なぞりモード';
 
   const overlay = $('guide-overlay');
-  // Opacity managed by canvas now — keep overlay hidden, canvas draws guide
   overlay.style.opacity = '0';
 
   if (item.type === 'letter') {
@@ -338,15 +355,12 @@ function renderWriteItem() {
       var charText = tab.dataset.char;
       overlay.textContent = charText;
       if (S.wcanvas) S.wcanvas.setGuide(S.writeMode === 'trace' ? charText : '');
-      // Update the speaker button so it reads whichever tab (letter/word) is active
       var ttsBtnEl = document.querySelector('#write-instruction .tts-btn');
       if (ttsBtnEl) ttsBtnEl.setAttribute('data-tts', esc(charText).replace(/"/g, '&quot;'));
     };
   });
 
-  // Size canvas-wrap and guide font to fit content
-  // Pass guide text directly to canvas — it measures and draws itself
-  var guideText = overlay.textContent; // still set above for tab switches
+  var guideText = overlay.textContent;
   sizeWritingCanvas(item.type);
   if (S.wcanvas) S.wcanvas.setGuide(S.writeMode === 'trace' ? guideText : '');
 }
@@ -358,31 +372,57 @@ function sizeWritingCanvas(type) {
   else if (type === 'digraph')  { wPx = maxW; hPx = 220; }
   else if (type === 'word')     { wPx = maxW; hPx = 210; }
   else                          { wPx = maxW; hPx = 175; }  // sentence
-  // Synchronous: pins wrap + bitmap + CSS to the same pixels in one step.
-  // No rAF needed — bitmap and display size can never disagree.
   if (S.wcanvas) S.wcanvas.resizeTo(wPx, hPx);
 }
 
-// ── Results ────────────────────────────────────────────────────────────────
+// ── Results / review ─────────────────────────────────────────────────────────
 async function showResults() {
-  const isWriting = (S.mode === null || S.mode === 'writing');
-  const total   = isWriting ? S.writeItems.length : S.questions.length;
-  const correct = isWriting ? total : S.score;
-  const pct     = Math.round(correct / total * 100);
+  const isWriting = S.mode === 'writing';
 
-  $('results-emoji').textContent = pct >= 80 ? '🎉' : pct >= 60 ? '😊' : '💪';
-  $('results-score').textContent = isWriting
-    ? `${total} 項目 完了！`
-    : `${correct} / ${total} 正解 (${pct}%)`;
-  $('results-bar').style.width = pct + '%';
-  $('results-msg').textContent  = pct >= 80 ? 'すばらしい！よくできました！'
-    : pct >= 60 ? 'よくがんばりました！'
-    : 'もう一度チャレンジしよう！';
+  if (isWriting) {
+    const total = S.writeItems.length;
+    $('result-ring').style.background = 'conic-gradient(var(--moss) 100%, var(--paper-dim) 100%)';
+    $('results-score').textContent = '✓';
+    $('results-msg').textContent = '書き練習かんりょう！';
+    $('results-scoretext').textContent = `${total} 項目 完了`;
+    $('results-sync').textContent = '';
+    $('results-wrong').innerHTML = '';
+    showScreen('screen-results');
+    return;
+  }
+
+  const score = S.score;
+  const total = S.answers.length;
+  const pct = total ? Math.round(score / total * 100) : 0;
+
+  $('result-ring').style.background = `conic-gradient(var(--moss) ${pct}%, var(--paper-dim) ${pct}%)`;
+  $('results-score').textContent = pct + '%';
+  $('results-msg').textContent =
+    pct >= 80 ? 'すばらしい！' :
+    pct >= 60 ? 'よくがんばりました！' :
+    'もう一度チャレンジしよう！';
+  $('results-scoretext').textContent = `${score} / ${total} 正解`;
   $('results-sync').textContent = '';
+
+  const wrong = S.answers.filter(a => !a.correct);
+  $('results-wrong').innerHTML = wrong.length
+    ? `<div class="eg-wrong-head">まちがえた問題</div>` +
+      wrong.map(w =>
+        `<div class="eg-wrong-item">` +
+        `<div class="eg-wrong-prompt">${esc(w.prompt)}</div>` +
+        `<div class="eg-wrong-ans">こたえ：${esc(w.correctAnswer)}</div>` +
+        `</div>`
+      ).join('')
+    : '';
+
+  saveLocalStats(S.unit, S.mode, score, total);
+  renderMenuStats();
+
   showScreen('screen-results');
 
-  // Supabase sync
-  if (!isWriting && typeof window.hk !== 'undefined') {
+  // Gradebook reporting — unchanged #126 wiring: per-question items flow
+  // through the window.hk shim to HubCommon.reportActivityWithItems.
+  if (typeof window.hk !== 'undefined') {
     const user = await window.hk.getUser();
     if (user) {
       try {
@@ -390,53 +430,23 @@ async function showResults() {
           level:    `u${S.unit}`,
           setId:    S.mode,
           category: S.mode,
-          correct,
+          correct:  score,
           total,
           app_id:   'nh6',
           items:    S.answers || []
         });
         $('results-sync').textContent = '✓ 成績を保存しました';
-      } catch(e) { console.warn('[NH6] sync error:', e.message); }
+      } catch (e) { console.warn('[NH6] sync error:', e.message); }
     }
   }
-
-  saveLocalStats(S.unit, S.mode, correct, total);
-  updateMenuStats();
-
-  $('results-retry').onclick = () => {
-    if (S.mode === 'writing') startWriting();
-    else startQuiz(S.mode);
-  };
-  $('results-menu').onclick = () => showScreen('screen-menu');
-  $('results-unit').onclick = () => showScreen('screen-unit');
 }
 
-// ── Local stats ────────────────────────────────────────────────────────────
-function saveLocalStats(unit, mode, correct, total) {
-  const d = JSON.parse(localStorage.getItem('nh6-stats') || '{}');
-  const key = `u${unit}-${mode}`;
-  if (!d[key]) d[key] = { correct:0, total:0, sessions:0 };
-  d[key].correct  += correct;
-  d[key].total    += total;
-  d[key].sessions += 1;
-  d.overall = d.overall || { correct:0, total:0, sessions:0 };
-  d.overall.correct  += correct;
-  d.overall.total    += total;
-  d.overall.sessions += 1;
-  localStorage.setItem('nh6-stats', JSON.stringify(d));
-}
-
-function updateMenuStats() {
-  const d  = JSON.parse(localStorage.getItem('nh6-stats') || '{}');
-  const ov = d.overall;
-  if (!ov || ov.sessions === 0) { $('menu-stats').style.display = 'none'; return; }
-  $('menu-stats').style.display = '';
-  const pct = ov.total > 0 ? Math.round(ov.correct / ov.total * 100) : 0;
-  $('stats-row').innerHTML = `
-    <div class="stat-card"><div class="stat-num">${ov.sessions}</div><div class="stat-lbl">セッション</div></div>
-    <div class="stat-card"><div class="stat-num">${ov.total}</div><div class="stat-lbl">回答数</div></div>
-    <div class="stat-card"><div class="stat-num">${pct}%</div><div class="stat-lbl">正答率</div></div>`;
-}
+// ── Buttons / wiring ────────────────────────────────────────────────────────
+$('quiz-back').onclick   = () => { if (confirm('やめますか？')) showScreen('screen-unit'); };
+$('next-btn').onclick    = () => nextQuestion();
+$('results-retry').onclick = () => { if (S.mode === 'writing') startWriting(); else startQuiz(S.mode); };
+$('results-unit').onclick  = () => showScreen('screen-unit');
+$('results-menu').onclick  = () => { buildMenu(); showScreen('screen-menu'); };
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 buildMenu();
