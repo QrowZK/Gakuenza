@@ -124,6 +124,7 @@ window.Gradebook = (function () {
 
   // ── sidebar ──────────────────────────────────────────────────────────
   const NAV = [
+    { key: 'home',         label: 'ホーム',         href: '../index.html' },
     { key: 'dashboard',    label: 'ダッシュボード', href: 'index.html' },
     { key: 'assign',       label: '課題',           href: 'assign.html' },
     { key: 'roster',       label: '名簿',           href: 'roster.html' },
@@ -149,7 +150,7 @@ window.Gradebook = (function () {
       : `<b>週次スナップショット</b><span class="gb-muted">未実行</span>`;
 
     mount.innerHTML = `
-      <a class="gb-brand" href="index.html">
+      <a class="gb-brand" href="../index.html">
         <div class="gb-brand-mark">がくえん座</div>
         <div class="gb-brand-sub">Gradebook · 成績簿</div>
       </a>
