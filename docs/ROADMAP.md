@@ -163,9 +163,29 @@ Debt items, not new ideas:
    focus_units alignment" in `rika3-data.js` but never queries `class_modules`
    and ships no `modules/rika3/units.js` — the assignment UI can't scope it.
    Same shape as the `sansu3` reference; a small follow-up.
-3. **SECURITY DEFINER EXECUTE pass** (advisor finding #6, open): revoke EXECUTE
-   on `app_*` helpers only ever called from inside RLS (e.g. `app_class_school`,
-   the `app_user_*_ids` family), to shrink the anonymous attack surface.
+3. **SECURITY DEFINER EXECUTE pass** (advisor finding #6). **Investigated +
+   partially closed 2026-07-23 (migration `20260723061812`, PR #149).** The
+   security advisor flags 9 SECURITY DEFINER functions (0028/0029) and 2
+   SECURITY DEFINER views (0010) as anon/authenticated-reachable. On inspection
+   almost all of it is intentional and low-exposure, **not** the "shrink the
+   anonymous attack surface" win the original note assumed:
+   - The 8 read helpers (`app_user_*_ids`, `app_has_role`, `app_is_platform_admin`,
+     `app_class_school`) are all `auth.uid()`-scoped — called via `/rpc` they
+     reveal only the **caller's own** context. They are called inside nearly
+     every RLS policy, so `authenticated` MUST keep EXECUTE (revoking it, or
+     `SECURITY INVOKER`, would lock users out). Left as-is, documented as
+     accepted with a DB `COMMENT` on each.
+   - `public_classes` / `public_schools` are SECURITY DEFINER **on purpose** —
+     they feed the pre-login school/class pickers to `anon`; `security_invoker`
+     would break login. Documented with a `COMMENT` each; do not "fix".
+   - **Done:** revoked `anon` EXECUTE on `app_set_module_active` — the only
+     mutating helper and the only one not referenced by any RLS policy (so no
+     lockout risk); it already self-guards on `app_is_platform_admin()`.
+   - **Deferred (optional hardening):** moving the read helpers into a
+     non-exposed schema would drop them from the API surface entirely and clear
+     the 0028/0029 WARNs, but it is an all-RLS refactor (rewrite every policy
+     reference) with real lockout risk — belongs in the pre-second-school
+     hardening pass, verified on a Supabase branch, not a bulk sweep.
 4. **Leaked-password protection is still off — blocked on the Supabase
    free tier.** The HaveIBeenPwned check is a **paid-plan feature**; the
    project is currently on the free tier, so it cannot be enabled yet. It's
