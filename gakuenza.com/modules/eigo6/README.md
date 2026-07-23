@@ -1,8 +1,16 @@
-# New Horizons 6 — ported module
+# 外国語 6年 (eigo6) — ported module
+
+> **Rekeyed 2026-07-23 (roadmap debt #8):** module key `nh6` → `eigo6` and
+> directory `modules/nh6/` → `modules/eigo6/`, to match the 外国語 5/6 pair
+> (`eigo5`/`eigo6`) internally. `<key>-report.js` and the `<key>-*` localStorage
+> keys moved with it; the `modules` row's `key`/`launch_url` were flipped by a
+> migration once the renamed directory was live. Content is unchanged (still the
+> New Horizons 6 port described below). A redirect stub remains at
+> `modules/nh6/index.html` → `/modules/eigo6/index.html` for old links.
 
 ## Where this goes
-`modules/nh6/` (all 7 files) drops in alongside `modules/eiken/`, same
-convention throughout. `migration_register_nh6.sql` registers it in the
+`modules/eigo6/` (all 7 files) drops in alongside `modules/eiken/`, same
+convention throughout. A registration migration registers it in the
 `modules` table — run once, idempotent.
 
 ## What changed from the original NH6WebUtil repo
@@ -14,7 +22,7 @@ convention throughout. `migration_register_nh6.sql` registers it in the
   none of Gakuenza's other modules register a service worker or manifest,
   and one scoped to a module subpath risks caching/scope surprises for
   the rest of the site.
-- **Added:** `nh6-report.js` — same role as `eiken-report.js`. Trusts the
+- **Added:** `eigo6-report.js` — same role as `eiken-report.js`. Trusts the
   Gakuenza session already established by the hub and defines a minimal
   `window.hk` (`getUser()` + `syncQuizResult()`) — the exact two calls
   `app.js`'s `showResults()` already made, unmodified. Also adds the
@@ -45,7 +53,7 @@ result. All passing:
    "✓ 成績を保存しました" confirmation.
 5. The resulting `activity_results` insert has the correct `school_id`,
    `class_id`, `module_id`, `user_id`, an `activity_ref` shaped like
-   `nh6/u1/grammar/<timestamp>`, and correct `score`/`max_score`.
+   `eigo6/u1/grammar/<timestamp>`, and correct `score`/`max_score`.
 6. The old Hakui Supabase project (`rfntsrcguhldybddfgcl.supabase.co`) is
    never contacted — zero requests.
 7. Writing-practice mode (which deliberately does *not* sync — handwriting

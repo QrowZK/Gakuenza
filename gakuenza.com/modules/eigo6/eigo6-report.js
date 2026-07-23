@@ -1,4 +1,6 @@
-// nh6-report.js — the module-contract adapter, same role as eiken-report.js.
+// eigo6-report.js — the module-contract adapter, same role as eiken-report.js.
+// (Module key rekeyed nh6 -> eigo6 on 2026-07-23 to match the 外国語5/6 pair;
+// the content is still the New Horizons 6 port described below.)
 // Replaces NH6's own login modal + independent Supabase backend (a
 // different project, its own quiz_results table) entirely: this module
 // trusts the SAME Supabase session the hub already established, and
@@ -55,7 +57,7 @@
   // Resolve this module's id, and this student's class/school — needed to
   // satisfy activity_results' NOT NULL columns and RLS scoping.
   const [{ data: moduleRow }, { data: enrollmentRows }] = await Promise.all([
-    sb.from('modules').select('id').eq('key', 'nh6').maybeSingle(),
+    sb.from('modules').select('id').eq('key', 'eigo6').maybeSingle(),
     sb.from('enrollments').select('class_id, classes(school_id)').eq('user_id', userId).eq('role', 'student').limit(1),
   ]);
   const moduleId = moduleRow?.id || null;
@@ -63,7 +65,7 @@
   const schoolId = enrollmentRows?.[0]?.classes?.school_id || null;
 
   if (!moduleId || !schoolId) {
-    console.warn('[NH6Report] no module/school context for this account — results will not be reported.');
+    console.warn('[Eigo6Report] no module/school context for this account — results will not be reported.');
   }
 
   // The shim itself. app.js's showResults() (unchanged from the original
@@ -78,7 +80,7 @@
     async syncQuizResult({ level, setId, category, correct, total, app_id, items }) {
       if (!moduleId || !schoolId) return; // context didn't resolve; nothing to report
       if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) {
-        console.warn('[NH6Report] HubCommon.reportActivityWithItems unavailable — skipping.');
+        console.warn('[Eigo6Report] HubCommon.reportActivityWithItems unavailable — skipping.');
         return;
       }
       // Route through the shared helper so the summary row AND per-question
@@ -87,14 +89,14 @@
       // so the gradebook's per-question analysis had nothing for nh6).
       const out = await window.HubCommon.reportActivityWithItems(sb, {
         schoolId, classId, moduleId, userId,
-        activityRef: `nh6/${level}/${setId}/${Date.now()}`,
+        activityRef: `eigo6/${level}/${setId}/${Date.now()}`,
         score: correct,
         maxScore: total,
         payload: { level, setId, category, app_id },
         items: items || [],
       });
-      if (!out.ok) console.error('[NH6Report] failed to report result:', out.error);
-      else console.log('[NH6Report] reported', correct, '/', total, 'to activity_results');
+      if (!out.ok) console.error('[Eigo6Report] failed to report result:', out.error);
+      else console.log('[Eigo6Report] reported', correct, '/', total, 'to activity_results');
     },
   };
 })();

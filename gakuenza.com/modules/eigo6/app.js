@@ -1,7 +1,7 @@
 // app.js — NH6 Practice main app.
 // UI re-skinned 2026-07 to the Gakuenza satoyama design mockup; the quiz
 // engine, content (data.js), writing canvas (writing.js), TTS (tts.js), and
-// gradebook reporting (nh6-report.js, via window.hk.syncQuizResult) are
+// gradebook reporting (eigo6-report.js, via window.hk.syncQuizResult) are
 // unchanged. Per-question items still flow through S.answers → syncQuizResult.
 'use strict';
 
@@ -53,7 +53,7 @@ function showScreen(id) {
 const LETTERS = ['A', 'B', 'C', 'D'];
 function dayStamp(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
 function saveLocalStats(unit, mode, correct, total) {
-  const d = JSON.parse(localStorage.getItem('nh6-stats') || '{}');
+  const d = JSON.parse(localStorage.getItem('eigo6-stats') || '{}');
   const key = `u${unit}-${mode}`;
   if (!d[key]) d[key] = { correct:0, total:0, sessions:0 };
   d[key].correct  += correct;
@@ -71,10 +71,10 @@ function saveLocalStats(unit, mode, correct, total) {
   } else if (!d.overall.streak) {
     d.overall.streak = 1;
   }
-  localStorage.setItem('nh6-stats', JSON.stringify(d));
+  localStorage.setItem('eigo6-stats', JSON.stringify(d));
 }
 function renderMenuStats() {
-  const d  = JSON.parse(localStorage.getItem('nh6-stats') || '{}');
+  const d  = JSON.parse(localStorage.getItem('eigo6-stats') || '{}');
   const ov = d.overall;
   if (!ov || ov.sessions === 0) { $('menu-stats').hidden = true; return; }
   $('menu-stats').hidden = false;
@@ -432,7 +432,7 @@ async function showResults() {
           category: S.mode,
           correct:  score,
           total,
-          app_id:   'nh6',
+          app_id:   'eigo6',
           items:    S.answers || []
         });
         $('results-sync').textContent = '✓ 成績を保存しました';

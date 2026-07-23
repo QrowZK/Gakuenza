@@ -1,6 +1,6 @@
-// report.test.js — report-path integration test for nh6 (New Horizons 6),
+// report.test.js — report-path integration test for eigo6 (外国語6 / New Horizons 6 port),
 // no browser needed.
-// Run: node tests/nh6/report.test.js
+// Run: node tests/eigo6/report.test.js
 //
 // nh6 does NOT expose a report() function like eigo5 — instead
 // nh6-report.js is an async IIFE that defines window.hk with
@@ -43,7 +43,7 @@ function makeClient() {
       insert(rows) { inserted[table] = inserted[table] || []; inserted[table].push(rows); return b; },
       then(resolve) {
         queried.push(table);
-        if (table === 'modules') return resolve({ data: { id: 'mod-nh6' }, error: null });
+        if (table === 'modules') return resolve({ data: { id: 'mod-eigo6' }, error: null });
         if (table === 'profiles') return resolve({ data: { display_name: 'テスト 太郎' }, error: null });
         if (table === 'enrollments') return resolve({ data: [{ class_id: 'cls-1', classes: { id: 'cls-1', school_id: 'sch-1' } }], error: null });
         if (table === 'activity_results') return resolve({ data: { id: 'ar-1' }, error: null });
@@ -87,7 +87,7 @@ global.document = {
 };
 
 eval(fs.readFileSync(path.join(base, 'hub/hub-common.js'), 'utf8'));
-eval(fs.readFileSync(path.join(base, 'modules/nh6/nh6-report.js'), 'utf8'));
+eval(fs.readFileSync(path.join(base, 'modules/eigo6/eigo6-report.js'), 'utf8'));
 
 if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) fail('HubCommon.reportActivityWithItems not loaded');
 
@@ -112,7 +112,7 @@ if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) fail('HubCom
 
   await window.hk.syncQuizResult({
     level: 'u1', setId: 'grammar', category: 'grammar',
-    correct: 2, total: 3, app_id: 'nh6',
+    correct: 2, total: 3, app_id: 'eigo6',
     items,
   });
 
@@ -123,11 +123,11 @@ if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) fail('HubCom
   const arBatches = inserted.activity_results || [];
   if (arBatches.length !== 1) fail(`expected 1 activity_results insert, got ${arBatches.length}`);
   const ar = arBatches[0];
-  if (ar.module_id !== 'mod-nh6') fail(`wrong module_id ${ar.module_id}`);
+  if (ar.module_id !== 'mod-eigo6') fail(`wrong module_id ${ar.module_id}`);
   if (ar.school_id !== 'sch-1' || ar.class_id !== 'cls-1') fail(`wrong school/class ${ar.school_id}/${ar.class_id}`);
   if (ar.user_id !== 'user-1') fail(`wrong user_id ${ar.user_id}`);
   if (ar.score !== 2 || ar.max_score !== 3) fail(`wrong score/max ${ar.score}/${ar.max_score}`);
-  if (!String(ar.activity_ref).startsWith('nh6/')) fail(`activity_ref ${ar.activity_ref}`);
+  if (!String(ar.activity_ref).startsWith('eigo6/')) fail(`activity_ref ${ar.activity_ref}`);
 
   // Per-item rows — THE hard-rule-2 / #126 regression check.
   const itemBatches = inserted.activity_result_items || [];
@@ -143,7 +143,7 @@ if (!window.HubCommon || !window.HubCommon.reportActivityWithItems) fail('HubCom
     if (r.correct_answer == null) fail(`item ${i}: missing correct_answer`);
   });
 
-  console.log('nh6 report-path integration test');
+  console.log('eigo6 report-path integration test');
   console.log(`  queried tables:        ${[...new Set(queried)].join(', ')}`);
   console.log(`  activity_results rows: ${arBatches.length}`);
   console.log(`  activity_result_items: ${rows.length}`);
