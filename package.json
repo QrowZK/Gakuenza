@@ -1,0 +1,15 @@
+{
+  "name": "gakuenza-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Test harness + CI runner for the Gakuenza learning-platform modules. Not shipped — gakuenza.com/ is a build-step-free static site; this package only powers `node tests/run.mjs` and CI. NOTE: intentionally NOT \"type\":\"module\" — the *.test.js files are CommonJS (require); the runner and flow.test.mjs use the .mjs extension for ESM.",
+  "scripts": {
+    "test": "node tests/run.mjs all",
+    "test:syntax": "node tests/run.mjs syntax",
+    "test:unit": "node tests/run.mjs unit",
+    "test:e2e": "node tests/run.mjs e2e"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}
