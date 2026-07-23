@@ -61,6 +61,13 @@ let orderCount = 0;
 let typedCount = 0;
 const redundantAnswerNotes = [];
 
+// Depth bar: shakai5 (the proven-good exemplar after fix #121) carries a
+// per-section floor of 10 questions (median 11). A section thinner than this
+// repeats within a term, which is the whole point of Near-term-debt #11.
+// Enforce it here so nobody silently re-thins a section.
+const MIN_QUESTIONS_PER_SECTION = 10;
+const sectionCounts = []; // { id, title, count } for the end-of-run report
+
 UNITS.forEach((unit) => {
   if (!unit.id) fail(`unit missing id: ${JSON.stringify(unit).slice(0, 80)}`);
   if (!unit.title) fail(`unit ${unit.id}: missing title`);
@@ -84,6 +91,8 @@ UNITS.forEach((unit) => {
       fail(`section ${sec.id}: no questions`);
       return;
     }
+
+    sectionCounts.push({ id: sec.id, title: sec.title, count: sec.questions.length });
 
     const qTextSeen = new Map(); // "q fig" -> first index
 
@@ -147,6 +156,17 @@ UNITS.forEach((unit) => {
       // fig references must point at real figures.
       if (q.fig && !figureKeys.has(q.fig)) fail(`${tag}: unknown fig key "${q.fig}"`);
 
+      // Distractor-collision guard. shakai4 is an all-typed/order bank: it has
+      // NO multiple-choice shape, so there is no fixed wrong-option set that
+      // could secretly contain a second correct answer. That property is what
+      // makes the collision bug structurally impossible here — assert it stays
+      // true. If anyone later adds an `options`/`choices` field (a real MC
+      // surface), this fails loudly, forcing them to add real collision testing
+      // rather than inheriting a test that only ever looked at typed answers.
+      if ('options' in q || 'choices' in q) {
+        fail(`${tag}: unexpected multiple-choice field (options/choices) — shakai4 is an all-typed bank; adding MC requires distractor-collision testing (see CLAUDE.md testing bar)`);
+      }
+
       // hint, if present, should not be blank (hintBtn is only hidden when
       // q.hint is falsy — a whitespace-only hint would render an empty
       // "ヒント：" bubble).
@@ -169,6 +189,13 @@ nums.forEach((n, i) => {
   if (n !== i + 1) fail(`UNITS.num sequence broken: expected ${i + 1}, found ${JSON.stringify(nums)}`);
 });
 
+// Per-section depth bar (Near-term-debt #11): no section below the floor.
+sectionCounts.forEach((s) => {
+  if (s.count < MIN_QUESTIONS_PER_SECTION) {
+    fail(`section ${s.id} ("${s.title}") has only ${s.count} question(s) — below the depth bar of ${MIN_QUESTIONS_PER_SECTION} (shakai5's per-section floor). Add more original questions.`);
+  }
+});
+
 // lesson.fig references (rendered by figureBox in app.js) must also point
 // at real figures — check alongside questions since both draw from FIGURES.
 UNITS.forEach((unit) => {
@@ -189,6 +216,10 @@ console.log(`  questions:  ${questionCount}  (typed: ${typedCount}, order: ${ord
 console.log(`  unique ids: ${seenIds.size}`);
 console.log(`  figures:    ${figureKeys.size}`);
 console.log(`  MODULE_UNITS.shakai4 keys: ${moduleUnits.length}`);
+console.log(`  per-section (floor ${MIN_QUESTIONS_PER_SECTION}):`);
+sectionCounts.forEach((s) => {
+  console.log(`    ${s.id.padEnd(6)} ${String(s.count).padStart(2)}  ${s.title}`);
+});
 if (redundantAnswerNotes.length) {
   console.log(`  note: ${redundantAnswerNotes.length} question(s) have a harmless case-insensitive duplicate in a[] (informational, not a failure):`);
   redundantAnswerNotes.forEach(n => console.log('    - ' + n));
