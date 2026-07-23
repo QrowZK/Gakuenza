@@ -1,0 +1,41 @@
+name: CI
+
+# Runs the Gakuenza module test suite on every PR and on pushes to main.
+# The site (gakuenza.com/) has no build step; this workflow only exercises the
+# module JS via tests/run.mjs. It does NOT deploy — deploy.yml handles that.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  unit:
+    name: Syntax + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax check (node --check on every module + test file)
+        run: node tests/run.mjs syntax
+      - name: Unit tests (generators / report / data-integrity)
+        run: node tests/run.mjs unit
+
+  e2e:
+    name: E2E flow tests (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright
+        run: npm install
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Flow tests (headless quiz drive → reporting assertions)
+        env:
+          # GitHub runners need --no-sandbox for the bundled Chromium.
+          PW_LAUNCH_ARGS: '--no-sandbox'
+        run: node tests/run.mjs e2e
