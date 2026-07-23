@@ -56,13 +56,15 @@ picker, which is harmless.
 2. **Always use `HubCommon.reportActivityWithItems(sb, {schoolId,
    classId, moduleId, userId, activityRef, score, maxScore, payload,
    items})` for reporting. Never hand-roll the `activity_results`
-   insert.** Five modules currently do (`nh6`, `nhvocab`, `letstry1`,
+   insert.** Five modules used to (`nh6`, `nhvocab`, `letstry1`,
    `letstry2`, `shakai3`) — they got the `activity_results` column
-   names right but never write to `activity_result_items`, so the
-   gradebook's per-question analysis has nothing to show for them.
-   Live, unfixed, don't repeat it (and note it's five, not the three
-   this file once claimed — the ported English apps `nh6`/`nhvocab`/
-   `letstry1`/`letstry2` plus `shakai3` all hand-roll).
+   names right but never wrote to `activity_result_items`, so the
+   gradebook's per-question analysis had nothing to show for them.
+   **Fixed by PR #126 (`c5a8820`, 2026-07-23) — all five now route
+   through the shared helper; re-verified clean (no bare
+   `activity_results` insert anywhere in `modules/`) same day.** Keep
+   this rule anyway: it's the fifth time a ported/legacy module has
+   hand-rolled this, don't add a sixth.
 
 3. **Resolve a student's context via `enrollments → classes.school_id`
    — never `profiles.home_school_id`.** That column is real (used in
