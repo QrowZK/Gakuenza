@@ -1,6 +1,6 @@
 # Gakuenza — Roadmap (single source of truth)
 
-_Last updated: 2026-07-21. Living planning doc, not a spec._
+_Last updated: 2026-07-23. Living planning doc, not a spec._
 
 > ### How this roadmap is organized — read before editing
 >
@@ -27,9 +27,13 @@ Gakuenza has grown from a handful of grade-3 drills into a genuinely complete
 elementary curriculum platform for the Mizuho pilot: **29 module directories**
 (all registered and active, except the intentionally-inactive `kadaiban`
 catch-all reporting anchor), a five-tier role model, a real gradebook with
-weekly trend snapshots, a working automated bug-fix pipeline (5 real fixes
+weekly trend snapshots, a working automated bug-fix pipeline (8 real fixes
 shipped through it so far), and **Kadaiban (課題板)**, the platform's first
 non-drill feature and first use of Supabase Storage, shipped 2026-07-17. As of
+2026-07-23 two foundations that were long missing are also in place: a **CI
+test suite** covering all 28 drill modules (runs on every PR), and the
+gradebook's per-question analysis now covers **all 29 modules** (the last five
+hand-rolled reporters were fixed) — see the 07-23 progress section below. As of
 2026-07-18 (see below) **the grades 1–6 core curriculum grid is complete**:
 算数/国語/理科/社会 all run grades 1–6 (国語/算数 grades 1–2 shipped
 2026-07-17; 国語4 and 外国語5 — the last two holes — shipped 2026-07-18) and
@@ -50,6 +54,82 @@ A second school (羽咋市立羽咋小学校) is now provisioned (classes + staf
 students yet), and coordinator management now exists end-to-end — so the
 platform is no longer strictly single-school in either data or tooling, even
 though Mizuho remains the only school with real student usage.
+
+**Adoption note (2026-07-23):** grades 3年 and 5年 are now **load-bearing** —
+in real use by Mizuho students as of today onward; 6年 is expected to follow
+shortly (recorded via #134). Today's live check showed no `activity_results`
+traffic through the end of the school day, but that is discounted as
+weekend/summer-break timing, not a platform problem.
+
+## Progress since last update (2026-07-21 → 2026-07-23)
+
+A very large merge window — ~30 PRs (#123–#157), the biggest single push since
+the platform was assembled. No architecture changes; it was consolidation,
+debt burn-down, test infrastructure, and content depth. Grouped by theme:
+
+- **The five hand-rolled reporters are fixed (#126).** `nh6`, `nhvocab`,
+  `letstry1`, `letstry2`, `shakai3` now route through
+  `HubCommon.reportActivityWithItems` and populate `activity_result_items`, so
+  the gradebook's per-question analysis finally covers **all 29 modules** (was
+  the longest-standing correctness gap; see hard rule #2, now marked fixed in
+  `CLAUDE.md`). This closes **Near-term debt #1** — was already listed done, now
+  fully verified.
+- **A real CI test suite exists (#144 + #145) — closes Near-term debt #6.** A
+  plain-Node runner (`tests/run.mjs`) + GitHub Actions workflow (`ci.yml`: a
+  syntax+unit job and a Playwright e2e job) now cover **all 28 drill modules**
+  (Phase 1 shipped the harness + 13 modules; Phase 2 backfilled the other 16 via
+  parallel subagents). The eiken data test caught a real bug in the process — 3
+  of 2142 vocab questions had the answer duplicated into a distractor, fixed.
+  **Ordering hazard, now resolved:** #145 (tests) merged before #144 (the
+  harness), leaving `main` temporarily unable to run the suite; fixed by merging
+  #144 and re-validating every open branch against it. The suite now runs green
+  on every PR.
+- **Debt burn-down (four items).** #2 `rika3` wired into `focus_units` (#146);
+  #10 the `modules.html` bulk-assign matrix no longer clobbers/drops assignment
+  metadata (#147, non-clobbering upsert + warn-before-destroy); #7 the
+  **performance-advisor** pass, partial (#148) — 14 FK covering indexes + 13
+  `auth.uid()` initplan wraps applied live, both advisor categories → 0, the 78
+  `multiple_permissive_policies` deliberately deferred; #3 the
+  **security-definer** pass, partial (#149) — `anon` EXECUTE revoked on the one
+  mutating helper, the rest documented in-DB as accepted-by-design, full
+  schema-move hardening deferred. See the updated debt items 3/7 below for the
+  reasoning on what was deferred and why.
+- **Content depth for the science/social modules — addresses Near-term debt
+  #11.** An initial Tier-1 fill wave (#125, plus #130 `shakai4` / #131 `rika6` /
+  #132 `rika5`) followed by a systematic per-section **audit** (#151–#155)
+  across `rika3`–`rika6` + `shakai4`. The audit's finding: the roadmap's earlier
+  napkin question-counts were consistent under-counts — most units were already
+  at the ~10–12/section bar (shakai5's #121 depth), so only the genuinely-thin
+  units were deepened (mostly A-strand generator units with no rotation headroom
+  against the drill length; `rika3` needed nothing). Every fill is original
+  content and was collision/structural stress-tested; `rika5` gained its first
+  unit test.
+- **Admin-console UX — partially addresses Near-term debt #9 (#155).** Shipped
+  as pure-frontend over existing RLS: edit a staff member's role, remove a staff
+  member from a school (both with self-lockout guards), and a cross-school staff
+  directory/search. The auth-adjacent parts (school edit/status, staff
+  soft-disable, account-lookup-by-email) were **specced, not built** —
+  `docs/specs/SPEC_admin_staff_management.md` — because each needs a
+  human-approved, branch-verified RLS/Edge-Function change.
+- **Eiken (英検) fixes.** Interview Web-Speech hardening (#150 — `recognition.start()`
+  guard so a throw can't strand the record button; wait for the voice list to
+  load so English isn't read in a Japanese voice), plus autofix-pipeline fixes
+  for the interview white-box (#143) and two other staff-reported issues
+  (#137, #139).
+- **Kadaiban catalog-anchor fix (#136)** resolving issue #133.
+- **Owner/handoff docs.** `docs/OPERATIONS.md` owner runbook (#127), teacher
+  enablement docs + an in-hub document viewer (#123/#124), and a
+  teacher-guides-needing-curriculum-sign-off list (#128).
+- **UI redesigns.** `eigo5` (#140) and `nh6`/外国語6 (#141) rebuilt from design
+  mockups (layout handed off by design; code ours).
+- **Migration-ledger reconciliation (#156).** Backfilled 10 missing
+  module-registration migration files so `supabase/migrations/` matches the live
+  ledger (the `db/`-is-a-mirror hazard, closed for those 10).
+- **Security tooling (#157).** The official **Security Guidance** plugin is now
+  enabled repo-wide via `.claude/settings.json`, so future Claude Code sessions
+  get per-edit + per-commit security review. (Built-in `/security-review`
+  remains available on demand; the GitHub-Action route was declined — it needs
+  API billing, not the repo's subscription auth.)
 
 ## Progress since last update (2026-07-20 → 2026-07-21)
 
@@ -159,10 +239,12 @@ Debt items, not new ideas:
    end-to-end with a stubbed-Supabase headless flow test (21/21), including
    driving nhvocab's real UI to confirm items land. letstry1's match/build
    stay summary-only (they track no per-question outcome).
-2. **Wire `rika3` into `focus_units`.** It exposes a unit-key list "for
-   focus_units alignment" in `rika3-data.js` but never queries `class_modules`
-   and ships no `modules/rika3/units.js` — the assignment UI can't scope it.
-   Same shape as the `sansu3` reference; a small follow-up.
+2. ~~**Wire `rika3` into `focus_units`.**~~ **Done 2026-07-23 (#146).**
+   `rika3-report.js` now exposes `getFocusUnits()`, `app.js` foregrounds the
+   assigned units (`unit-card--focus` + "★ 今週"), and it ships
+   `modules/rika3/units.js` (keys `u1_haru … u11_jishaku`). `rika3` is now the
+   6th runner reading `focus_units` (with `sansu3`/`kokugo3`/`rika4`/`sansu4`/
+   `shakai4`). Same shape as the `sansu3` reference.
 3. **SECURITY DEFINER EXECUTE pass** (advisor finding #6). **Investigated +
    partially closed 2026-07-23 (migration `20260723061812`, PR #149).** The
    security advisor flags 9 SECURITY DEFINER functions (0028/0029) and 2
@@ -195,17 +277,17 @@ Debt items, not new ideas:
 5. ~~Build `SPEC_decentralize_module_units.md`~~ **done 2026-07-18** (#99) —
    the shared-registry corruption class is closed; `kokugo4`/`eigo5` built
    in parallel the same day with zero registry conflict, proving the fix.
-6. **Test coverage is inconsistent and un-enforced — and the 07-18 kadaiban
-   bug is a concrete case, not a hypothetical one.** Only 13 of 29 modules
-   have a `tests/<key>/` directory — the rest (`rika3/4`, `shakai3–6`,
-   `sansu3/4`, all five English-family modules, `kanken*`, and `kadaiban`)
-   have none. There is still no CI workflow enforcing `CLAUDE.md`'s stated
-   testing bar (stress test + flow test + migration idempotency). The
-   double-grading bug (#83/#97) shipped past a manual rolled-back-transaction
-   test that only covered a single grade, not a re-grade — exactly the kind
-   of scenario a real flow test would encode once and run on every future
-   kadaiban PR. Use it as the motivating case when the "real CI test suite"
-   engineering item below finally gets built.
+6. ~~**Test coverage is inconsistent and un-enforced.**~~ **Done 2026-07-23
+   (#144 + #145).** A plain-Node runner (`tests/run.mjs`) + GitHub Actions
+   workflow (`ci.yml`) now cover **all 28 drill modules** — Phase 1 shipped the
+   harness + 13 modules, Phase 2 backfilled the other 16 via parallel subagents
+   (`nh6`, `nhvocab`, `letstry1/2`, `shakai3–6`, `rika3/4`, `sansu3/4`,
+   `kanken3–5`, `eiken`). CI runs a syntax+unit job and a Playwright e2e job on
+   every PR. It already earned its keep: the eiken data test caught 3 of 2142
+   vocab questions with the answer duplicated into a distractor (fixed). Note
+   the motivating case for building it — the 07-18 kadaiban double-grading bug
+   (#83/#97) shipped past a single-grade manual test; a real re-grade flow test
+   would have caught it, and that class of test now runs on every kadaiban PR.
 7. **First-ever performance advisor pass surfaced real findings — nobody has
    looked at this axis before.** `get_advisors(type=performance)` (run for
    this update, 2026-07-20) returns 106 lints across the live schema: **78
@@ -255,23 +337,27 @@ Debt items, not new ideas:
    being touched anyway. (The debt-#1 reporter fix touched `nh6` on 2026-07-23
    but deliberately kept the `nh6` key to avoid the deploy-ordering trap; a
    full rekey is still its own separate task.)
-9. **Admin-console UX thinness (surfaced by the #114 coordinator work).** The
-   console is multi-school-capable now, but several staff-management gaps
-   remain: no way to **edit a staff member's role** after creation (the
-   edit-teacher modal only does name/password), no **staff removal/deactivation**
-   (students have a delete action; staff don't), no **school edit/status editor**
-   on `schools.html` (create-only; status is a read-only badge), and no
-   **cross-school staff directory / user search** (can't tell if an email
-   already has an account, or see a coordinator's full footprint at a glance).
-   None are blocking at current scale; they get more painful as coordinators and
-   a second school come online. Small, additive, reuse existing modal patterns.
-10. **`modules.html` bulk-assign matrix drops assignment metadata.** The
-    per-class assign matrix on the modules page writes `class_modules` rows with
-    `total_items`/`due_date`/`focus_units` all null, unlike the gradebook's
-    assign flow — so bulk-created assignments are shaped differently from
-    individually-created ones (noticed during the #113 consolidation). Minor
-    data-shape inconsistency; decide whether bulk-assign should carry defaults or
-    prompt for them.
+9. **Admin-console UX thinness (surfaced by the #114 coordinator work) —
+   partially done 2026-07-23 (#155).** The console is multi-school-capable now,
+   and three of the four gaps shipped as pure-frontend over existing RLS:
+   **edit a staff member's role**, **remove a staff member from a school** (both
+   with self-lockout guards), and a **cross-school staff directory / search**.
+   **Still open (specced, not built):** **school edit/status editor** on
+   `schools.html` (needs a platform-admin-only `schools` UPDATE policy — the
+   table currently has none), **staff soft-disable/deactivation** (needs a
+   `service_role` `set-staff-active` Edge Function doing a GoTrue ban), and
+   **account-lookup-by-email** (needs a `service_role` `lookup-account`
+   function, platform-admin only, to avoid an enumeration oracle). Each of these
+   is auth-adjacent and deliberately left for a human-approved, branch-verified
+   pass — full design in `docs/specs/SPEC_admin_staff_management.md`.
+10. ~~**`modules.html` bulk-assign matrix drops assignment metadata.**~~ **Done
+    2026-07-23 (#147).** Decided: null `total_items`/`due_date`/`focus_units`
+    are the correct defaults for a coarse grid toggle (per-cell prompting would
+    duplicate the gradebook modal), so the fix made the matrix **non-destructive**
+    instead: a new `ModuleAssign.assignModuleIfAbsent()` upsert (ignore-duplicates
+    on the `(class_id, module_id)` PK) so a re-assign never clobbers or errors,
+    plus a confirm-before-unassign warning when a row carries teacher-set
+    metadata (due date / 問題数 / 今週の単元) configured in the gradebook.
 11. **Content-depth audit likely needed for `rika3`–`rika6` (and worth
     re-checking `shakai4`) — shakai5 probably isn't the only thin module.**
     A rough per-module question-count check (grepping `q:`/question keys,
@@ -286,6 +372,18 @@ Debt items, not new ideas:
     shakai5, run a real per-section count (not the napkin total-file grep
     used here) against `rika3`–`rika6` and `shakai4`, using shakai5's ~10–12
     questions/section as the target bar.
+    **Done 2026-07-23 (#125, #130–#132, #151–#155).** The authoritative
+    per-section audit was run across all five. Key finding: the napkin counts
+    above were consistent **under**-counts — most units were already at the
+    ~10–12 bar, so only the genuinely-thin units were deepened (no padding of
+    at-bar units). `rika3` needed nothing (121 authored, 11/unit). The thin
+    cases were mostly A-strand **generator** units with too little rotation
+    headroom against the fixed drill length — e.g. `rika5`'s electromagnet
+    generator produced only 6 distinct items feeding a 5-slot drill (enriched to
+    19), and a `rika6` unit was serving 9-question drills against a 10-question
+    quiz. Every fill is original content, collision/structural stress-tested.
+    Depth-floor assertions were added to the affected modules' tests to keep the
+    bar enforced going forward.
 
 ## What's next — by domain
 
