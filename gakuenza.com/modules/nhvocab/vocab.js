@@ -111,6 +111,10 @@ const NH_VOCAB = [
   { id:'sh06', en:'diamond',   ja:'ひしがた',      emoji:'💎', cat:'shapes', grade:5, unit:1 },
   { id:'sh07', en:'heart',     ja:'ハート',        emoji:'❤️', cat:'shapes', grade:5, unit:1 },
   { id:'sh08', en:'rectangle', ja:'ちょうほうけい', emoji:'▬', cat:'shapes', grade:5, unit:1 },
+  { id:'sh09', en:'oval',      ja:'だえん',        emoji:'🥚', cat:'shapes', grade:5, unit:1 },
+  { id:'sh10', en:'crescent',  ja:'みかづき',      emoji:'🌙', cat:'shapes', grade:5, unit:1 },
+  { id:'sh11', en:'arrow',     ja:'やじるし',      emoji:'➡️', cat:'shapes', grade:5, unit:1 },
+  { id:'sh12', en:'cube',      ja:'りっぽうたい',   emoji:'🧊', cat:'shapes', grade:5, unit:1 },
 
   // ── SPORTS ────────────────────────────────────────────────────────────────
   { id:'sp01', en:'baseball',       ja:'やきゅう',         emoji:'⚾', cat:'sports', grade:5, unit:3 },
@@ -177,6 +181,10 @@ const NH_VOCAB = [
   { id:'dr06', en:'mineral water', ja:'ミネラルウォーター',emoji:'🫙', cat:'drinks', grade:5, unit:6 },
   { id:'dr07', en:'juice',         ja:'ジュース',    emoji:'🍹', cat:'drinks', grade:5, unit:6 },
   { id:'dr08', en:'soda',          ja:'ソーダ',      emoji:'🥤', cat:'drinks', grade:5, unit:6 },
+  { id:'dr09', en:'lemonade',      ja:'レモネード',  emoji:'🍋', cat:'drinks', grade:5, unit:6 },
+  { id:'dr10', en:'hot cocoa',     ja:'ココア',      emoji:'☕', cat:'drinks', grade:5, unit:6 },
+  { id:'dr11', en:'smoothie',      ja:'スムージー',  emoji:'🥤', cat:'drinks', grade:5, unit:6 },
+  { id:'dr12', en:'sports drink',  ja:'スポーツドリンク',emoji:'🧃', cat:'drinks', grade:5, unit:6 },
 
   // ── DESSERTS ──────────────────────────────────────────────────────────────
   { id:'de01', en:'cake',          ja:'ケーキ',      emoji:'🎂', cat:'desserts', grade:5, unit:6 },
@@ -278,6 +286,10 @@ const NH_VOCAB = [
   { id:'sa06', en:'penguin',   ja:'ペンギン', emoji:'🐧', cat:'sea-animals', grade:6, unit:5 },
   { id:'sa07', en:'sea turtle',ja:'うみがめ', emoji:'🐢', cat:'sea-animals', grade:6, unit:5 },
   { id:'sa08', en:'fish',      ja:'さかな',   emoji:'🐠', cat:'sea-animals', grade:6, unit:5 },
+  { id:'sa09', en:'octopus',   ja:'たこ',     emoji:'🐙', cat:'sea-animals', grade:6, unit:5 },
+  { id:'sa10', en:'seal',      ja:'あざらし', emoji:'🦭', cat:'sea-animals', grade:6, unit:5 },
+  { id:'sa11', en:'sea otter', ja:'らっこ',   emoji:'🦦', cat:'sea-animals', grade:6, unit:5 },
+  { id:'sa12', en:'starfish',  ja:'ヒトデ',   emoji:'⭐', cat:'sea-animals', grade:6, unit:5 },
 
   // ── BUGS ──────────────────────────────────────────────────────────────────
   { id:'bu01', en:'ant',          ja:'あり',       emoji:'🐜', cat:'bugs', grade:6, unit:5 },
@@ -288,6 +300,10 @@ const NH_VOCAB = [
   { id:'bu06', en:'mantis',       ja:'カマキリ',   emoji:'🦗', cat:'bugs', grade:6, unit:5 },
   { id:'bu07', en:'butterfly',    ja:'ちょうちょ', emoji:'🦋', cat:'bugs', grade:6, unit:5 },
   { id:'bu08', en:'dragonfly',    ja:'とんぼ',     emoji:'🪰', cat:'bugs', grade:6, unit:5 },
+  { id:'bu09', en:'ladybug',      ja:'てんとうむし',emoji:'🐞', cat:'bugs', grade:6, unit:5 },
+  { id:'bu10', en:'bee',          ja:'はち',       emoji:'🐝', cat:'bugs', grade:6, unit:5 },
+  { id:'bu11', en:'caterpillar',  ja:'いもむし',   emoji:'🐛', cat:'bugs', grade:6, unit:5 },
+  { id:'bu12', en:'snail',        ja:'かたつむり', emoji:'🐌', cat:'bugs', grade:6, unit:5 },
 
   // ── NATURE ────────────────────────────────────────────────────────────────
   { id:'na01', en:'mountain',   ja:'やま',     emoji:'🏔️', cat:'nature', grade:5, unit:0 },
@@ -298,6 +314,10 @@ const NH_VOCAB = [
   { id:'na06', en:'forest',     ja:'もり',     emoji:'🌲', cat:'nature', grade:5, unit:0 },
   { id:'na07', en:'river',      ja:'かわ',     emoji:'🏞️', cat:'nature', grade:5, unit:0 },
   { id:'na08', en:'desert',     ja:'さばく',   emoji:'🏜️', cat:'nature', grade:5, unit:0 },
+  { id:'na09', en:'island',    ja:'しま',     emoji:'🏝️', cat:'nature', grade:5, unit:0 },
+  { id:'na10', en:'waterfall', ja:'たき',     emoji:'💦', cat:'nature', grade:5, unit:0 },
+  { id:'na11', en:'hill',      ja:'おか',     emoji:'⛰️', cat:'nature', grade:5, unit:0 },
+  { id:'na12', en:'valley',    ja:'たに',     emoji:'🏞️', cat:'nature', grade:5, unit:0 },
 
   // ── TIME (months, days, seasons) ─────────────────────────────────────────
   { id:'mo01', en:'January',   ja:'いちがつ・1月', emoji:'❄️', cat:'time', grade:5, unit:2 },
@@ -334,6 +354,9 @@ const NH_VOCAB = [
   { id:'we07', en:'warm',    ja:'あたたかい',emoji:'🌤️', cat:'weather', grade:5, unit:0 },
   { id:'we08', en:'hot',     ja:'あつい',  emoji:'🌡️', cat:'weather', grade:5, unit:0 },
   { id:'we09', en:'humid',   ja:'むしあつい',emoji:'😓', cat:'weather', grade:5, unit:0 },
+  { id:'we10', en:'foggy',   ja:'きり',      emoji:'🌫️', cat:'weather', grade:5, unit:0 },
+  { id:'we11', en:'cool',    ja:'すずしい',  emoji:'🍃', cat:'weather', grade:5, unit:0 },
+  { id:'we12', en:'stormy',  ja:'あらし',    emoji:'⛈️', cat:'weather', grade:5, unit:0 },
 
   // ── PEOPLE ────────────────────────────────────────────────────────────────
   { id:'pe01', en:'man',        ja:'おとこのひと', emoji:'👨', cat:'people', grade:5, unit:4 },
@@ -344,6 +367,10 @@ const NH_VOCAB = [
   { id:'pe06', en:'baby',       ja:'あかちゃん',   emoji:'👶', cat:'people', grade:5, unit:4 },
   { id:'pe07', en:'friends',    ja:'ともだち',     emoji:'👫', cat:'people', grade:5, unit:4 },
   { id:'pe08', en:'classmates', ja:'クラスメート', emoji:'🏫', cat:'people', grade:5, unit:4 },
+  { id:'pe09', en:'adult',      ja:'おとな',       emoji:'🧑', cat:'people', grade:5, unit:4 },
+  { id:'pe10', en:'everyone',   ja:'みんな',       emoji:'👥', cat:'people', grade:5, unit:4 },
+  { id:'pe11', en:'teammate',   ja:'チームメイト', emoji:'🤝', cat:'people', grade:5, unit:4 },
+  { id:'pe12', en:'neighbor',   ja:'きんじょのひと',emoji:'🏘️', cat:'people', grade:5, unit:4 },
 
   // ── FAMILY ────────────────────────────────────────────────────────────────
   { id:'fa01', en:'grandfather', ja:'おじいさん', emoji:'👴', cat:'family', grade:5, unit:4 },
@@ -366,6 +393,10 @@ const NH_VOCAB = [
   { id:'pr06', en:'funny',    ja:'おもしろい',    emoji:'😂', cat:'personalities', grade:5, unit:4 },
   { id:'pr07', en:'kind',     ja:'やさしい',      emoji:'🥰', cat:'personalities', grade:5, unit:4 },
   { id:'pr08', en:'strong',   ja:'つよい',        emoji:'💪', cat:'personalities', grade:5, unit:4 },
+  { id:'pr09', en:'cheerful', ja:'あかるい',      emoji:'😄', cat:'personalities', grade:5, unit:4 },
+  { id:'pr10', en:'honest',   ja:'しょうじき',    emoji:'🙂', cat:'personalities', grade:5, unit:4 },
+  { id:'pr11', en:'quiet',    ja:'しずか',        emoji:'🤫', cat:'personalities', grade:5, unit:4 },
+  { id:'pr12', en:'polite',   ja:'れいぎ正しい',  emoji:'🙇', cat:'personalities', grade:5, unit:4 },
 
   // ── ACTIONS (5th grade) ───────────────────────────────────────────────────
   { id:'ac01', en:'spell',   ja:'つづりを言う',   emoji:'🔤', cat:'actions', grade:5, unit:1 },
@@ -550,6 +581,9 @@ const NH_VOCAB = [
   { id:'mi07', en:'piano',              ja:'ピアノ',           emoji:'🎹', cat:'instruments', grade:5, unit:3 },
   { id:'mi08', en:'guitar',             ja:'ギター',           emoji:'🎸', cat:'instruments', grade:5, unit:3 },
   { id:'mi09', en:'keyboard harmonica', ja:'鍵盤ハーモニカ',   emoji:'🎹', cat:'instruments', grade:5, unit:3 },
+  { id:'mi10', en:'flute',              ja:'フルート',         emoji:'🎵', cat:'instruments', grade:5, unit:3 },
+  { id:'mi11', en:'trumpet',            ja:'トランペット',     emoji:'🎺', cat:'instruments', grade:5, unit:3 },
+  { id:'mi12', en:'castanets',          ja:'カスタネット',     emoji:'🎶', cat:'instruments', grade:5, unit:3 },
 
   // ── EVERYDAY THINGS ───────────────────────────────────────────────────────
   { id:'th01', en:'bag',          ja:'かばん',     emoji:'👜', cat:'things', grade:5, unit:2 },
