@@ -22,7 +22,19 @@ function getVoice(lang) {
 }
 
 function speakText(text, onEnd) {
-  const doSpeak = () => {
+  const doSpeak = (attempt) => {
+    // The voice list can still be empty on the very first call in Chrome, until
+    // the async 'voiceschanged' event fires. Speaking then makes the engine fall
+    // back to the OS default voice — on a Japanese-locale machine that reads
+    // English text in a Japanese voice ("doesn't read correctly"). Briefly wait
+    // (bounded ~1.2s) for the list to populate, then speak regardless so it can
+    // never hang. getVoice('en') is null only when the list is genuinely empty
+    // (a loaded list with no English voice still returns voices[0]).
+    if (!getVoice('en') && attempt < 10) {
+      _cachedVoices = synth.getVoices();
+      setTimeout(() => doSpeak(attempt + 1), 120);
+      return;
+    }
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = 'en-GB';
     utt.rate = 0.88;
@@ -38,9 +50,9 @@ function speakText(text, onEnd) {
     synth.cancel();
     // cancel() is asynchronous in every major engine; speaking in the same
     // tick silently drops the new utterance (chromium issue 835373).
-    setTimeout(doSpeak, 50);
+    setTimeout(() => doSpeak(0), 50);
   } else {
-    doSpeak();
+    doSpeak(0);
   }
 }
 
@@ -68,7 +80,16 @@ function startListening(onResult, onError) {
     onError(e.error);
   };
   recognition.onend = () => { isListening = false; };
-  recognition.start();
+  // recognition.start() throws synchronously if the engine is already running
+  // (InvalidStateError 'already started') or otherwise can't start. Without this
+  // guard the throw escapes handleRecord and the record button stays stuck on
+  // "録音中..."; surface it through onError so the caller resets button state.
+  try {
+    recognition.start();
+  } catch (e) {
+    isListening = false;
+    onError(e && e.name === 'InvalidStateError' ? 'already_started' : 'start_failed');
+  }
 }
 
 function stopListening() {
@@ -315,6 +336,9 @@ function handleRecord() {
       if (err === 'not_supported') {
         $iv('iv-transcript-area').innerHTML =
           '<div style="color:#C62828;font-size:13px">⚠️ このブラウザは音声認識に対応していません。Chrome をご利用ください。</div>';
+      } else if (err === 'already_started' || err === 'start_failed') {
+        $iv('iv-transcript-area').innerHTML =
+          '<div style="color:#C62828;font-size:13px">⚠️ 録音を開始できませんでした。少し待ってから、もう一度「話す」を押してください。</div>';
       } else {
         $iv('iv-transcript-area').innerHTML =
           '<div style="color:#C62828;font-size:13px">⚠️ 音声を認識できませんでした。もう一度お試しください。（エラー：' + err + '）</div>';
