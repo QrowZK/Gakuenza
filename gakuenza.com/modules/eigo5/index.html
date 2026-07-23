@@ -11,72 +11,129 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="module-topbar">
-    <a class="back-link" href="../../hub/index.html">← ハブへもどる</a>
-    <span class="module-name">外国語 5年</span>
-    <span class="spacer"></span>
-    <div class="account-bubble" id="accountBubble" hidden>
-      <button class="bubble-btn" id="bubbleBtn" type="button">
-        <span class="avatar" id="bubbleAvatar"></span>
-        <span id="bubbleName"></span>
-      </button>
-      <div class="dropdown">
-        <button type="button" id="signoutBtn">サインアウト</button>
+  <header class="eg-topbar">
+    <a class="eg-back" href="../../hub/index.html">← ホームへ</a>
+    <span class="eg-topbar-label">外国語 5年</span>
+    <div class="eg-topbar-right">
+      <div class="account-bubble" id="accountBubble" hidden>
+        <button class="bubble-btn" id="bubbleBtn" type="button">
+          <span class="avatar" id="bubbleAvatar"></span>
+          <span id="bubbleName"></span>
+        </button>
+        <div class="dropdown">
+          <button type="button" id="signoutBtn">サインアウト</button>
+        </div>
       </div>
     </div>
   </header>
 
-  <main class="wrap">
-    <!-- menu: pick a unit -->
+  <main class="eg-shell">
+    <!-- ══ MENU ══ -->
     <section class="screen active" id="screen-menu">
-      <h1 class="page-title">外国語 5年　メニュー</h1>
-      <p class="page-note">Unitをえらんで、たんごや文をれんしゅうしよう。問題は毎回あたらしく作られます。</p>
-      <div class="unit-list" id="unitList"></div>
-    </section>
+      <div class="eg-menu-head">
+        <div class="eg-eyebrow">PRACTICE</div>
+        <h1 class="eg-h1">外国語 5年　メニュー</h1>
+        <div class="eg-rule"></div>
+      </div>
+      <p class="eg-note">Unitをえらんで、たんごや文をれんしゅうしよう。問題は毎回あたらしく作られます。</p>
 
-    <!-- mode: pick a practice type -->
-    <section class="screen" id="screen-mode">
-      <div class="sub-head">
-        <button class="btn ghost" id="modeBack" type="button">← Unit一覧</button>
-        <h1 class="page-title" id="modeTitle"></h1>
-      </div>
-      <div class="mode-grid" id="modeGrid"></div>
-    </section>
-
-    <!-- quiz -->
-    <section class="screen" id="screen-quiz">
-      <div class="quiz-progress">
-        <button class="btn ghost quiz-quit" id="quizBack" type="button">✕</button>
-        <div class="progress-track"><div class="progress-fill" id="quizFill"></div></div>
-        <span class="quiz-counter" id="quizCounter"></span>
-        <span class="quiz-score" id="quizScore">⭐ 0</span>
-      </div>
-      <div class="question-card">
-        <div class="q-emoji" id="qEmoji"></div>
-        <div class="q-label" id="qLabel"></div>
-        <div class="q-prompt" id="qPrompt"></div>
-        <div class="q-hint" id="qHint"></div>
-      </div>
-      <div class="choices-grid" id="choicesGrid"></div>
-      <div class="result-overlay hidden" id="resultOverlay">
-        <div class="result-icon" id="resultIcon"></div>
-        <div class="result-msg" id="resultMsg"></div>
-      </div>
-    </section>
-
-    <!-- results -->
-    <section class="screen" id="screen-results">
-      <div class="results-body">
-        <div class="results-emoji" id="resultsEmoji">🎉</div>
-        <h1 class="page-title">結果</h1>
-        <div class="results-score" id="resultsScore"></div>
-        <div class="results-bar-wrap"><div class="results-bar" id="resultsBar"></div></div>
-        <div class="results-msg" id="resultsMsg"></div>
-        <div class="sync-status" id="syncStatus"></div>
-        <div class="results-actions">
-          <button class="btn primary" id="resultsRetry" type="button">もう一度</button>
-          <button class="btn" id="resultsMenu" type="button">メニューへ</button>
+      <div class="eg-menu-grid">
+        <div class="eg-card eg-unit-panel">
+          <div class="eg-panel-head">
+            <h2 class="eg-h2">ユニットをえらぶ</h2>
+            <span class="eg-panel-sub" id="unitCountLabel"></span>
+          </div>
+          <div class="eg-rule eg-rule--sm"></div>
+          <div id="focusNoteMount"></div>
+          <div class="eg-unit-list" id="unitList"></div>
         </div>
+
+        <div class="eg-menu-side">
+          <div class="eg-card eg-stats" id="statsCard" hidden>
+            <h2 class="eg-h2 eg-h2--sm">あなたの成績</h2>
+            <div class="eg-stats-row">
+              <div class="eg-stat">
+                <div class="eg-stat-num" id="statAccuracy">–</div>
+                <div class="eg-stat-label">正答率</div>
+              </div>
+              <div class="eg-stat eg-stat--div">
+                <div class="eg-stat-num eg-stat-num--ink" id="statStreak">–</div>
+                <div class="eg-stat-label">連続日数</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="eg-card eg-challenge">
+            <div class="eg-challenge-text">
+              <h2 class="eg-h2 eg-h2--sm">力だめし</h2>
+              <p>すべてのUnitからまぜて出題。</p>
+            </div>
+            <button class="eg-btn-clay" id="challengeBtn" type="button">はじめる →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ MODE ══ -->
+    <section class="screen" id="screen-mode">
+      <button class="eg-btn-ghost" id="modeBack" type="button">← Unit一覧</button>
+      <div class="eg-mode-head">
+        <span class="eg-mode-emoji" id="modeEmoji"></span>
+        <div>
+          <div class="eg-eyebrow" id="modeEyebrow"></div>
+          <h1 class="eg-h1 eg-h1--sm" id="modeTitle"></h1>
+        </div>
+      </div>
+      <div class="eg-mode-grid" id="modeGrid"></div>
+    </section>
+
+    <!-- ══ QUIZ ══ -->
+    <section class="screen" id="screen-quiz">
+      <div class="eg-quiz-layout">
+        <div class="eg-quiz-main">
+          <div class="eg-quiz-top">
+            <button class="eg-btn-ghost" id="quizBack" type="button">← モードへ</button>
+            <span class="eg-quiz-score" id="quizScore">⭐ 0</span>
+          </div>
+          <div class="eg-progress-track"><div class="eg-progress-fill" id="quizFill"></div></div>
+          <div class="eg-quiz-counter" id="quizCounter"></div>
+
+          <div class="eg-q-card">
+            <span class="eg-q-badge" id="qLabel"></span>
+            <p class="eg-q-prompt" id="qPrompt"></p>
+            <p class="eg-q-hint" id="qHint"></p>
+          </div>
+
+          <div class="eg-choices" id="choicesGrid"></div>
+
+          <div class="eg-feedback-row hidden" id="feedbackRow">
+            <span class="eg-feedback-text" id="feedbackText"></span>
+            <button class="eg-btn-next" id="nextBtn" type="button">次へ →</button>
+          </div>
+        </div>
+
+        <aside class="eg-tracker" id="trackerPanel">
+          <div class="eg-tracker-head">進捗</div>
+          <div class="eg-tracker-grid" id="trackerGrid"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ══ REVIEW ══ -->
+    <section class="screen" id="screen-results">
+      <div class="eg-review">
+        <div class="eg-ring" id="resultRing">
+          <div class="eg-ring-inner">
+            <div class="eg-ring-pct" id="resultsPct">0%</div>
+            <div class="eg-ring-label">せいかい率</div>
+          </div>
+        </div>
+        <h2 class="eg-h2 eg-review-msg" id="resultsMsg"></h2>
+        <p class="eg-review-score" id="resultsScore"></p>
+        <div class="eg-sync" id="syncStatus"></div>
+        <div class="eg-wrong" id="wrongList"></div>
+        <button class="eg-btn-primary eg-btn-block" id="resultsMenu" type="button">メニューに戻る</button>
+        <button class="eg-btn-ghost eg-btn-block eg-btn-retry" id="resultsRetry" type="button">もう一度</button>
       </div>
     </section>
   </main>

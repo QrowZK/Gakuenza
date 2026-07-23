@@ -1,4 +1,7 @@
 // app.js — 外国語 5年 (eigo5) main application logic.
+// UI re-skinned 2026-07 to the Gakuenza satoyama design mockup; the quiz
+// engine, question generators (generators.js), content (data.js), TTS
+// (tts.js), and gradebook reporting (eigo5-report.js) are unchanged.
 'use strict';
 
 const $ = id => document.getElementById(id);
@@ -7,12 +10,17 @@ const esc = s => String(s == null ? '' : s)
 
 const SESSION_SIZE = 10;
 
-// Modes selectable per unit.
+// Modes selectable per unit. `accent` maps to the design mockup's per-mode
+// card top-border color.
 const MODES = [
-  { id: 'en2ja',    label: '英語 → 日本語', desc: '英語を見て意味を選ぼう', emoji: '🇬🇧' },
-  { id: 'ja2en',    label: '日本語 → 英語', desc: '意味を見て英語を選ぼう', emoji: '🇯🇵' },
-  { id: 'sentence', label: '文の練習',      desc: '文にあう語を選ぼう',   emoji: '📝' },
+  { id: 'en2ja',    label: '英語 → 日本語', desc: '英語を見て意味を選ぼう', emoji: '🇬🇧', accent: 'var(--moss)' },
+  { id: 'ja2en',    label: '日本語 → 英語', desc: '意味を見て英語を選ぼう', emoji: '🇯🇵', accent: 'var(--gold)' },
+  { id: 'sentence', label: '文の練習',      desc: '文にあう語を選ぼう',   emoji: '📝', accent: 'var(--clay)' },
 ];
+
+// Cycled accent colors for the unit-list rows (matches the mockup).
+const UNIT_ACCENTS = ['var(--moss-deep)', 'var(--gold-deep)', 'var(--clay)'];
+const LETTERS = ['A', 'B', 'C', 'D'];
 
 const state = {
   screen: 'menu',
@@ -21,6 +29,7 @@ const state = {
   questions: [],
   qIndex: 0,
   score: 0,
+  answered: false, // whether the current question has been answered
   results: [],     // { itemRef, category, prompt, correct, selectedAnswer, correctAnswer }
   focusUnits: null,
 };
@@ -60,68 +69,106 @@ function unitLabel(unitKey) {
   return m ? `Unit ${m.num}　${m.ja}` : unitKey;
 }
 
+// ── Local stats (client-side only) ──────────────────────────────────────────
+// Powers the "あなたの成績" card in the mockup with real numbers instead of
+// placeholders. Purely a localStorage convenience — the authoritative record
+// is always the gradebook (activity_results), written by eigo5-report.js.
+const STATS_KEY = 'eigo5-stats';
+function todayStamp() {
+  const d = new Date();
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+function loadStats() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STATS_KEY) || '{}');
+    return { correct: s.correct || 0, total: s.total || 0, lastDay: s.lastDay || null, streak: s.streak || 0 };
+  } catch (e) { return { correct: 0, total: 0, lastDay: null, streak: 0 }; }
+}
+function updateStats(score, total) {
+  const s = loadStats();
+  s.correct += score;
+  s.total += total;
+  const today = todayStamp();
+  if (s.lastDay !== today) {
+    // consecutive-calendar-day streak: +1 if yesterday, reset to 1 otherwise.
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yStamp = y.getFullYear() + '-' + (y.getMonth() + 1) + '-' + y.getDate();
+    s.streak = (s.lastDay === yStamp) ? (s.streak + 1) : 1;
+    s.lastDay = today;
+  } else if (!s.streak) {
+    s.streak = 1;
+  }
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
+}
+function renderStats() {
+  const s = loadStats();
+  if (!s.total) { $('statsCard').hidden = true; return; }
+  $('statsCard').hidden = false;
+  $('statAccuracy').innerHTML = Math.round(s.correct / s.total * 100) + '<span class="eg-stat-pct">%</span>';
+  $('statStreak').textContent = String(s.streak || 0);
+}
+
 // ── Menu ────────────────────────────────────────────────────────────────────
 function buildMenu() {
   const list = $('unitList');
   list.innerHTML = '';
+  $('focusNoteMount').innerHTML = '';
 
   // Respect focus_units when scoped: only show assigned units (fail soft to all).
   const focus = Array.isArray(state.focusUnits) && state.focusUnits.length
     ? new Set(state.focusUnits) : null;
   const units = window.EIGO5_UNITS.filter(u => !focus || focus.has(u.key));
 
+  $('unitCountLabel').textContent = '全' + units.length + 'ユニット';
+
   if (focus) {
     const note = document.createElement('p');
-    note.className = 'focus-note';
+    note.className = 'eg-focus-note';
     note.textContent = '先生が指定したUnitだけ表示しています。';
-    list.appendChild(note);
+    $('focusNoteMount').appendChild(note);
   }
 
-  // "All" card first (over the visible/allowed set).
-  const allCard = document.createElement('button');
-  allCard.className = 'unit-card unit-card--all';
-  allCard.type = 'button';
-  const allVocab = focus
-    ? window.EIGO5_VOCAB.filter(w => focus.has(w.unit)).length
-    : window.EIGO5_VOCAB.length;
-  allCard.innerHTML =
-    `<span class="unit-emoji">🎯</span>` +
-    `<span class="unit-title">すべてのUnit</span>` +
-    `<span class="unit-count">${allVocab}語</span>`;
-  allCard.onclick = () => openUnit('all');
-  list.appendChild(allCard);
-
-  units.forEach(u => {
+  units.forEach((u, i) => {
     const n = window.EIGO5_VOCAB.filter(w => w.unit === u.key).length;
-    const card = document.createElement('button');
-    card.className = 'unit-card';
-    card.type = 'button';
-    card.innerHTML =
-      `<span class="unit-emoji">${u.emoji}</span>` +
-      `<span class="unit-title">Unit ${u.num}　${esc(u.ja)}</span>` +
-      `<span class="unit-count">${n}語</span>`;
-    card.onclick = () => openUnit(u.key);
-    list.appendChild(card);
+    const accent = UNIT_ACCENTS[i % UNIT_ACCENTS.length];
+    const row = document.createElement('button');
+    row.className = 'eg-unit-row';
+    row.type = 'button';
+    row.innerHTML =
+      `<span class="eg-unit-emoji">${u.emoji}</span>` +
+      `<span class="eg-unit-num">Unit ${u.num}</span>` +
+      `<span class="eg-unit-ja">${esc(u.ja)}</span>` +
+      `<span class="eg-unit-count">${n}語</span>` +
+      `<span class="eg-unit-arrow" style="color:${accent}">→</span>`;
+    row.onclick = () => openUnit(u.key);
+    list.appendChild(row);
   });
+
+  renderStats();
 }
 
 // ── Mode select ─────────────────────────────────────────────────────────────
 function openUnit(unitKey) {
   state.unitKey = unitKey;
-  $('modeTitle').textContent = unitLabel(unitKey);
+  const m = unitMeta(unitKey);
+  $('modeEmoji').textContent = unitKey === 'all' ? '🎯' : (m ? m.emoji : '🎯');
+  $('modeEyebrow').textContent = unitKey === 'all' ? 'CHALLENGE' : ('UNIT ' + (m ? m.num : ''));
+  $('modeTitle').textContent = unitKey === 'all' ? 'すべてのUnit' : (m ? m.ja : unitKey);
+
   const grid = $('modeGrid');
   grid.innerHTML = '';
-  MODES.forEach(m => {
+  MODES.forEach(mode => {
     // Sentence mode only when the unit actually has sentence items.
-    if (m.id === 'sentence' && sentencesForUnit(unitKey).length === 0) return;
+    if (mode.id === 'sentence' && sentencesForUnit(unitKey).length === 0) return;
     const card = document.createElement('button');
-    card.className = 'mode-card';
+    card.className = 'eg-mode-card';
     card.type = 'button';
+    card.style.borderTopColor = mode.accent;
     card.innerHTML =
-      `<span class="mode-emoji">${m.emoji}</span>` +
-      `<span class="mode-label">${m.label}</span>` +
-      `<span class="mode-desc">${m.desc}</span>`;
-    card.onclick = () => startQuiz(m.id);
+      `<span class="eg-mode-emoji-lg">${mode.emoji}</span>` +
+      `<span class="eg-mode-label">${mode.label}</span>` +
+      `<span class="eg-mode-desc">${mode.desc}</span>`;
+    card.onclick = () => startQuiz(mode.id);
     grid.appendChild(card);
   });
   showScreen('screen-mode');
@@ -132,6 +179,7 @@ function startQuiz(mode) {
   state.mode = mode;
   state.qIndex = 0;
   state.score = 0;
+  state.answered = false;
   state.results = [];
   state.questions = buildQuestions(mode, state.unitKey);
   showScreen('screen-quiz');
@@ -152,10 +200,16 @@ function buildQuestions(mode, unitKey) {
   return chosen.map(w => Gen.buildVocabQuestion(w, pool, mode));
 }
 
+function modeBadge() {
+  const m = MODES.find(x => x.id === state.mode);
+  return m ? m.label : '';
+}
+
 function renderQuestion() {
   const q = state.questions[state.qIndex];
   if (!q) { finish(); return; }
   if (window.Eigo5TTS) Eigo5TTS.stop();
+  state.answered = false;
 
   const pct = (state.qIndex / state.questions.length) * 100;
   $('quizFill').style.width = pct + '%';
@@ -163,21 +217,18 @@ function renderQuestion() {
   $('quizScore').textContent = `⭐ ${state.score}`;
 
   const isSentence = state.mode === 'sentence';
-  $('qEmoji').textContent = isSentence ? '📝' : (q.emoji || '📖');
-  $('qEmoji').style.display = isSentence ? 'none' : '';
+  $('qLabel').textContent = modeBadge();
 
   if (isSentence) {
-    $('qLabel').textContent = '文にあう語を選ぼう';
     $('qPrompt').innerHTML = esc(q.text);
     $('qHint').textContent = q.hint || '';
+    $('qHint').style.display = q.hint ? '' : 'none';
   } else if (state.mode === 'en2ja') {
-    $('qLabel').textContent = '英語';
     $('qPrompt').innerHTML = `${esc(q.prompt)} ${ttsBtn(q.ttsText)}`;
-    $('qHint').textContent = '意味をえらんでね';
+    $('qHint').style.display = 'none';
   } else {
-    $('qLabel').textContent = '日本語';
     $('qPrompt').innerHTML = esc(q.prompt);
-    $('qHint').textContent = '英語をえらんでね';
+    $('qHint').style.display = 'none';
   }
 
   const grid = $('choicesGrid');
@@ -190,7 +241,9 @@ function renderQuestion() {
     btn.setAttribute('role', 'button');
     btn.tabIndex = 0;
     btn.dataset.idx = String(idx);
-    btn.innerHTML = `<span class="choice-text">${esc(choice)}</span>` +
+    btn.innerHTML =
+      `<span class="choice-letter">${LETTERS[idx] || ''}</span>` +
+      `<span class="choice-text">${esc(choice)}</span>` +
       (englishChoices ? ttsBtn(choice) : '');
     const select = (e) => {
       if (e.target.closest('.tts-btn')) return;
@@ -204,10 +257,30 @@ function renderQuestion() {
     grid.appendChild(btn);
   });
 
-  $('resultOverlay').classList.add('hidden');
+  $('feedbackRow').classList.add('hidden');
+  renderTracker();
+}
+
+function renderTracker() {
+  const grid = $('trackerGrid');
+  grid.innerHTML = '';
+  state.questions.forEach((_, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'eg-tracker-cell';
+    const done = i < state.qIndex || (i === state.qIndex && state.answered);
+    if (done && state.results[i]) {
+      cell.classList.add(state.results[i].correct ? 'is-correct' : 'is-wrong');
+    } else if (i === state.qIndex) {
+      cell.classList.add('is-current');
+    }
+    cell.textContent = String(i + 1);
+    grid.appendChild(cell);
+  });
 }
 
 function handleAnswer(idx, q) {
+  if (state.answered) return;
+  state.answered = true;
   const correct = idx === q.correctIndex;
   const grid = $('choicesGrid');
   grid.querySelectorAll('.choice-btn').forEach(b => b.classList.add('disabled'));
@@ -217,14 +290,13 @@ function handleAnswer(idx, q) {
   if (correct) {
     chosenBtn.classList.add('correct');
     state.score++;
-    showOverlay('✅', 'せいかい！');
   } else {
     chosenBtn.classList.add('wrong');
     if (correctBtn) correctBtn.classList.add('correct');
-    showOverlay('❌', `こたえ：${q.choices[q.correctIndex]}`);
   }
+  $('quizScore').textContent = `⭐ ${state.score}`;
 
-  // Record for gradebook per-item reporting.
+  // Record for gradebook per-item reporting (unchanged contract).
   const isSentence = state.mode === 'sentence';
   state.results.push({
     itemRef: (isSentence ? q.id : q.word.id) + '/' + state.mode + '/' + state.qIndex,
@@ -235,13 +307,17 @@ function handleAnswer(idx, q) {
     correctAnswer: q.choices[q.correctIndex],
   });
 
-  setTimeout(() => { state.qIndex++; renderQuestion(); }, 1150);
+  // Inline feedback + manual advance (mockup design).
+  const fb = $('feedbackText');
+  fb.textContent = correct ? '✅ せいかい！' : `❌ こたえ：${q.choices[q.correctIndex]}`;
+  fb.style.color = correct ? 'var(--moss-deep)' : 'var(--clay)';
+  $('feedbackRow').classList.remove('hidden');
+  renderTracker();
 }
 
-function showOverlay(icon, msg) {
-  $('resultOverlay').classList.remove('hidden');
-  $('resultIcon').textContent = icon;
-  $('resultMsg').textContent = msg;
+function nextQuestion() {
+  state.qIndex++;
+  renderQuestion();
 }
 
 // ── Finish / report ─────────────────────────────────────────────────────────
@@ -250,14 +326,33 @@ function finish() {
   const total = state.results.length;
   const pct = total ? Math.round(score / total * 100) : 0;
 
-  $('resultsEmoji').textContent = pct >= 80 ? '🎉' : pct >= 60 ? '😊' : '💪';
-  $('resultsScore').textContent = `${score} / ${total} 正解 (${pct}%)`;
-  $('resultsBar').style.width = pct + '%';
+  $('resultRing').style.background = `conic-gradient(var(--moss) ${pct}%, var(--paper-dim) ${pct}%)`;
+  $('resultsPct').textContent = pct + '%';
+  $('resultsScore').textContent = `${score} / ${total} 正解`;
   $('resultsMsg').textContent =
-    pct >= 80 ? 'すばらしい！よくできました！' :
+    pct >= 80 ? 'すばらしい！' :
     pct >= 60 ? 'よくがんばりました！' :
     'もう一度チャレンジしよう！';
   $('syncStatus').textContent = '';
+
+  // Wrong-answer review list.
+  const wrong = state.results.filter(r => !r.correct);
+  const wrapEl = $('wrongList');
+  if (wrong.length) {
+    wrapEl.innerHTML =
+      `<div class="eg-wrong-head">まちがえた問題</div>` +
+      wrong.map(w =>
+        `<div class="eg-wrong-item">` +
+        `<div class="eg-wrong-prompt">${esc(w.prompt)}</div>` +
+        `<div class="eg-wrong-ans">こたえ：${esc(w.correctAnswer)}</div>` +
+        `</div>`
+      ).join('');
+  } else {
+    wrapEl.innerHTML = '';
+  }
+
+  // Local stats (best-effort, client-side).
+  if (total) updateStats(score, total);
 
   // Gradebook reporting — best-effort, never blocks the child's flow.
   if (window.Eigo5Report) {
@@ -278,10 +373,12 @@ function finish() {
 }
 
 // ── Buttons / wiring ────────────────────────────────────────────────────────
+$('challengeBtn').onclick = () => openUnit('all');
 $('modeBack').onclick = () => showScreen('screen-menu');
 $('quizBack').onclick = () => { if (confirm('やめますか？')) showScreen('screen-mode'); };
+$('nextBtn').onclick = () => nextQuestion();
 $('resultsRetry').onclick = () => startQuiz(state.mode);
-$('resultsMenu').onclick = () => showScreen('screen-menu');
+$('resultsMenu').onclick = () => { buildMenu(); showScreen('screen-menu'); };
 
 // ── Account bubble + focus units ────────────────────────────────────────────
 async function initAccount() {
