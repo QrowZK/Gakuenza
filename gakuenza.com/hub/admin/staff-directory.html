@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スタッフ名簿 — がくえん座 管理</title>
+<link rel="stylesheet" href="../hub-shell.css">
+<link rel="stylesheet" href="admin.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ============================================================
+     Cross-school staff directory (roadmap #9, 2026-07-23).
+     Read-only aggregation of every staff school_members row the caller
+     can SELECT: a platform admin sees all schools; a scoped admin sees
+     only their own school(s). Groups rows by person so a coordinator
+     scoped to several schools shows their full footprint on one card.
+     Purely a read view — every row already passes members_read /
+     members_admin_write RLS, so no new policy or Edge Function is needed.
+     What it deliberately does NOT do: tell you whether an arbitrary
+     EMAIL already has an account. Emails live in auth.users, unreadable
+     from the anon key; that check needs a service_role lookup and is
+     specced separately (SPEC_admin_staff_management.md, gap #4b).
+     ============================================================ -->
+<div class="page-frame" id="app-root">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="ac-page-head">
+      <h1 class="ac-page-title">スタッフ名簿</h1>
+    </div>
+    <p style="font-size:0.85rem;color:var(--ink-soft);margin:-8px 0 20px;max-width:640px;">
+      あなたが閲覧できるすべての学校の教職員を、担当校ごとにまとめた一覧です。
+      同じ人が複数の学校を担当している場合は、1枚のカードにまとめて表示されます。
+    </p>
+
+    <div class="ac-card" style="margin-bottom:20px;">
+      <div class="ac-field" style="margin-bottom:0;max-width:360px;">
+        <label class="ac-field-label" for="dir-search">名前・学校名で検索</label>
+        <input id="dir-search" type="search" autocomplete="off" placeholder="例：田中 / 瑞穂小学校">
+      </div>
+    </div>
+
+    <div id="dir-summary" style="font-size:0.8rem;color:var(--ink-soft);margin:0 0 14px;"></div>
+
+    <div id="dir-list" style="display:flex;flex-direction:column;gap:10px;max-width:760px;">
+      <div class="ac-card ac-skel" style="height:64px;"></div>
+      <div class="ac-card ac-skel" style="height:64px;"></div>
+      <div class="ac-card ac-skel" style="height:64px;"></div>
+    </div>
+  </main>
+</div>
+
+<script src="../supabase.js"></script>
+<script src="../config.js"></script>
+<script src="../hub-common.js"></script>
+<script src="admin-common.js"></script>
+<script>
+(async function () {
+  const H = window.HubCommon;
+  const AC = window.AdminCommon;
+  const cfg = window.GAKUENZA_CONFIG;
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+  const session = await H.requireSession(sb, '../login.html');
+  if (!session) return;
+  const userId = session.user.id;
+
+  const admin = await AC.requireAdminAccess(sb, userId);
+  if (!admin) return;
+
+  const { data: profile } = await sb.from('profiles').select('display_name').eq('id', userId).maybeSingle();
+  AC.renderAdminSidebar(sb, profile, 'staff-directory', admin);
+
+  const ROLE_LABEL = { school_admin: '管理者', coordinator: 'コーディネーター', educator: '教員' };
+  const ROLE_RANK = { school_admin: 0, coordinator: 1, educator: 2 };
+  const listEl = document.getElementById('dir-list');
+  const summaryEl = document.getElementById('dir-summary');
+  const searchEl = document.getElementById('dir-search');
+
+  // people: user_id -> { name, memberships: [{schoolName, role}] }
+  let people = [];
+
+  async function load() {
+    // RLS returns exactly the staff rows this caller may see: all schools
+    // for a platform admin, own school(s) for a scoped admin. No school
+    // filter here on purpose — the whole point is the cross-school view.
+    const { data, error } = await sb
+      .from('school_members')
+      .select('user_id, school_id, role, profiles(display_name), schools(name)')
+      .in('role', ['school_admin', 'coordinator', 'educator']);
+
+    if (error) {
+      listEl.innerHTML = '<p class="ac-calm-msg">読み込めませんでした</p>';
+      return;
+    }
+    if (!data || data.length === 0) {
+      listEl.innerHTML = '<p class="ac-calm-msg">表示できる教職員がいません。</p>';
+      summaryEl.textContent = '';
+      return;
+    }
+
+    const byUser = new Map();
+    for (const row of data) {
+      let p = byUser.get(row.user_id);
+      if (!p) {
+        p = { userId: row.user_id, name: row.profiles?.display_name || '(表示名未設定)', memberships: [] };
+        byUser.set(row.user_id, p);
+      }
+      p.memberships.push({ schoolName: row.schools?.name || '(不明な学校)', role: row.role });
+    }
+    people = [...byUser.values()].map(p => {
+      p.memberships.sort((a, b) =>
+        (ROLE_RANK[a.role] - ROLE_RANK[b.role]) || a.schoolName.localeCompare(b.schoolName, 'ja'));
+      return p;
+    }).sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+
+    render(people);
+  }
+
+  function render(rows) {
+    const totalSchools = new Set(rows.flatMap(p => p.memberships.map(m => m.schoolName))).size;
+    const multi = rows.filter(p => new Set(p.memberships.map(m => m.schoolName)).size > 1).length;
+    summaryEl.textContent =
+      `教職員 ${rows.length}名 ・ ${totalSchools}校` + (multi ? ` ・ 複数校を担当 ${multi}名` : '');
+
+    if (!rows.length) {
+      listEl.innerHTML = '<p class="ac-calm-msg">条件に一致する教職員が見つかりません。</p>';
+      return;
+    }
+
+    listEl.innerHTML = rows.map(p => {
+      const given = H.givenName(p.name);
+      const schoolCount = new Set(p.memberships.map(m => m.schoolName)).size;
+      const footprint = p.memberships.map(m => `
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--ink-soft);white-space:nowrap;">
+          <span class="ac-badge ${m.role === 'school_admin' ? 'ac-badge-gold' : 'ac-badge-moss'}">${ROLE_LABEL[m.role] || m.role}</span>
+          ${H.escapeHtml(m.schoolName)}
+        </span>`).join('');
+      const multiBadge = schoolCount > 1
+        ? `<span class="ac-badge ac-badge-gold" title="複数校を担当">${schoolCount}校</span>`
+        : '';
+      return `
+        <div class="ac-card ac-person-card" style="align-items:flex-start;">
+          <div class="ac-avatar-sm">${H.escapeHtml(given.slice(0, 2) || '?')}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="ac-roster-name" title="${H.escapeHtml(p.name)}">${H.escapeHtml(p.name)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:8px;">${footprint}</div>
+          </div>
+          ${multiBadge}
+        </div>`;
+    }).join('');
+  }
+
+  searchEl.addEventListener('input', () => {
+    const q = searchEl.value.trim().toLowerCase();
+    if (!q) { render(people); return; }
+    const filtered = people.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.memberships.some(m => m.schoolName.toLowerCase().includes(q)));
+    render(filtered);
+  });
+
+  await load();
+})();
+</script>
+</body>
+</html>
