@@ -319,7 +319,7 @@
           </div>`;
         }).join('')}</div>`;
         document.getElementById('kadaiban-section').style.display = '';
-        document.querySelectorAll('.kbh-card').forEach(c => c.addEventListener('click', () => { window.location.href = 'kadaiban.html?a=' + encodeURIComponent(c.dataset.a); }));
+        document.querySelectorAll('#kadaiban-list .kbh-card').forEach(c => c.addEventListener('click', () => { window.location.href = 'kadaiban.html?a=' + encodeURIComponent(c.dataset.a); }));
       }
     } catch (e) { console.error('[hub] kadaiban surfacing failed', e); }
   }
