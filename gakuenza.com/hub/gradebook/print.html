@@ -43,7 +43,7 @@
         <div class="gb-card">
           <h2 class="gb-card-head">3. 出題の重み <span class="gb-badge gb-badge-gold">弱点から自動提案</span></h2>
           <div id="gb-weights"><div class="gb-skel" style="height:120px;"></div></div>
-          <p class="gb-section-note" style="margin-top:8px;">activity_result_items の設問単位の正答から、弱い順に初期値を設定。スライダーで調整できます。</p>
+          <p class="gb-section-note" style="margin-top:8px;">設問ごとの正答状況から、苦手な分野ほど多めになるよう割合の初期値を設定しています。スライダーで調整できます（合計は常に100%）。</p>
         </div>
 
         <div class="gb-card">
@@ -214,11 +214,42 @@
       </div>`).join('');
     document.querySelectorAll('#gb-weights input[type=range]').forEach(sl => {
       sl.addEventListener('input', () => {
-        const i = Number(sl.dataset.i);
-        weights[i].weight = Number(sl.value);
-        document.querySelector(`[data-val="${i}"]`).textContent = sl.value + '%';
+        rebalanceWeights(Number(sl.dataset.i), Number(sl.value));
+        syncWeightControls();
         renderPreview();
       });
+    });
+  }
+
+  // The weights are a proportional split of one worksheet, so they must always
+  // sum to 100%. When slider i is dragged to newVal, spread the remaining
+  // (100 − newVal) across the other categories in proportion to their current
+  // weights (evenly if they're all at zero). This is why you can't push every
+  // slider to 100 — raising one lowers the others (issue #180).
+  function rebalanceWeights(i, newVal) {
+    newVal = Math.max(0, Math.min(100, newVal));
+    weights[i].weight = newVal;
+    const others = weights.map((_, j) => j).filter(j => j !== i);
+    if (!others.length) { weights[i].weight = 100; return; }
+    const remaining = 100 - newVal;
+    const otherSum = others.reduce((s, j) => s + weights[j].weight, 0);
+    let acc = 0;
+    others.forEach((j, k) => {
+      let v;
+      if (k === others.length - 1) v = remaining - acc;               // absorb rounding
+      else if (otherSum <= 0) v = Math.floor(remaining / others.length);
+      else v = Math.round(remaining * weights[j].weight / otherSum);
+      weights[j].weight = Math.max(0, v);
+      acc += weights[j].weight;
+    });
+  }
+
+  function syncWeightControls() {
+    weights.forEach((w, i) => {
+      const sl = document.querySelector(`#gb-weights input[data-i="${i}"]`);
+      const val = document.querySelector(`[data-val="${i}"]`);
+      if (sl) sl.value = w.weight;
+      if (val) val.textContent = w.weight + '%';
     });
   }
 
