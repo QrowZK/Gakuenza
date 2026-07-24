@@ -4,8 +4,12 @@
 dashboard) in `planning/FEATURE_BACKLOG.md` — this is the *authoring* model F1
 assumes but that doesn't exist yet.
 **Origin:** user-report **#176** (gradebook `assign.html`).
-**Status:** scoping only — design agreed, **no build** this session (owner
-decision 2026-07-24). Decisions needed before implementation (see end).
+**Status:** **Phase 1 (MVP) BUILT 2026-07-24** (owner: "build it"). Migration
+`20260724024845_module_assignments` (applied live + RLS-verified), shared
+`ModuleAssign` helpers, gradebook authoring (`assign.html` "出した課題" card with
+inferred completion), and the student-hub "課題" section. The five open decisions
+were resolved with the recommended defaults (see below). Phase 2 (exact
+completion, edit/archive, reminders) remains open.
 **Written:** 2026-07-24.
 
 > **Placement note (read first).** Lives in `docs/specs/`, **not**
@@ -167,7 +171,17 @@ attempt can't be tied to a specific assignment.
 - **Phase 2:** `activity_results.assignment_id` for exact completion; assignment
   edit/archive; per-student drill-down; optional due-date reminders.
 
-## Open decisions (owner) — needed before build
+## Open decisions (owner) — resolved for Phase 1
+
+> **Resolved 2026-07-24 with the recommended defaults** when the owner said
+> "build it": (1) **inferred** completion; (2) the new authoring UI does **not**
+> write `class_modules.due_date`/`total_items` — those stay on the old enablement
+> surface, and `module_assignments` owns due/target; (3) creating an assignment
+> **auto-enables** the module for the class (`assignModuleIfAbsent`) so children
+> can launch it; (4) **both** whole-module and unit-scoped assignments
+> (`focus_units` null = whole); (5) the hub keeps **both** the 課題 to-do list and
+> the availability list. Revisit any of these as real classroom use dictates.
+> The original reasoning is kept below.
 
 1. **Completion for MVP: inferred (A) or exact (B)?** Recommend **A** first
    (no reporting-path risk); upgrade to B only if inference reads as too fuzzy.

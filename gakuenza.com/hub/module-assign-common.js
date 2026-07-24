@@ -127,6 +127,42 @@
     return Array.from(new Set(keys));
   }
 
+  // ---- data operations on module_assignments (#176 — discrete tasks) --------
+  // A module_assignment is a discrete task a teacher hands out (module + optional
+  // units + target + due), distinct from class_modules "enablement". Multiple per
+  // class, attributed to the creator. RLS: read = student/teacher/staff of the
+  // class; write = teacher/staff, self-attributed. See migration
+  // 20260724024845 and SPEC_teacher_assignment_workflow.md.
+
+  // Assignments for a class (or array of class_ids, for the multi-class student
+  // hub), soonest-due first, with joined module info.
+  function loadModuleAssignments(sb, classId) {
+    var q = sb.from('module_assignments')
+      .select('id, class_id, module_id, created_by, title, focus_units, target_items, due_date, created_at, modules(id, key, name, subject, launch_url)')
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false });
+    return Array.isArray(classId) ? q.in('class_id', classId) : q.eq('class_id', classId);
+  }
+
+  // Create a discrete assignment. createdBy MUST be the caller's own user id —
+  // RLS enforces created_by = auth.uid() on insert (self-attribution).
+  function createModuleAssignment(sb, opts) {
+    return sb.from('module_assignments').insert({
+      class_id: opts.classId,
+      module_id: opts.moduleId,
+      created_by: opts.createdBy,
+      title: opts.title || null,
+      focus_units: normalizeFocus(opts.focusUnits),
+      target_items: opts.targetItems != null ? opts.targetItems : null,
+      due_date: opts.dueDate || null,
+      instructions: opts.instructions || null,
+    });
+  }
+
+  function deleteModuleAssignment(sb, id) {
+    return sb.from('module_assignments').delete().eq('id', id);
+  }
+
   // ---- soft grade-mismatch warning ------------------------------------------
 
   // recommendedGrades = modules.recommended_grades (int[] or null); classYear =
@@ -239,6 +275,9 @@
     assignModuleIfAbsent: assignModuleIfAbsent,
     unassignModule: unassignModule,
     updateAssignment: updateAssignment,
+    loadModuleAssignments: loadModuleAssignments,
+    createModuleAssignment: createModuleAssignment,
+    deleteModuleAssignment: deleteModuleAssignment,
     gradeMismatch: gradeMismatch,
     gradeMismatchMessage: gradeMismatchMessage,
     focusUnitsFieldHtml: focusUnitsFieldHtml,
