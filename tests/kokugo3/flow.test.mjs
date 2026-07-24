@@ -72,7 +72,9 @@ async function runMode(page, label, openSteps, expect) {
   await page.waitForSelector('#btn-mode-kanji');
   await openSteps(page);
   // Answer questions until the result view appears (unit length varies: kanji
-  // & daizu = 10, other reading units = 8, grammar = 10).
+  // = 10, reading units = 10–11 after the depth pass, grammar = 10). The loop
+  // is length-agnostic (stops when #view-result shows), so exact counts don't
+  // matter here.
   let answered = 0;
   while (answered < 40) {
     const done = await page.evaluate(() => document.getElementById('view-result').style.display === 'block');
