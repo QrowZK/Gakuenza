@@ -150,8 +150,12 @@
     const classOrder = classesForSchool.filter(c => byClass[c.id]);
 
     listEl.innerHTML = classOrder.map(c => {
-      const rows = (byClass[c.id] || []).sort((a, b) =>
-        (a.profiles?.student_number || '').localeCompare(b.profiles?.student_number || ''));
+      const rows = (byClass[c.id] || []).sort((a, b) => {
+        const na = parseInt(a.profiles?.student_number || '', 10);
+        const nb = parseInt(b.profiles?.student_number || '', 10);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return 0;
+      });
       return `
         <div class="ac-subject-group">
           <div class="ac-subject-label"><span>${H.escapeHtml(c.name)}</span><span style="color:var(--ink-soft);font-weight:400;">（${rows.length}名）</span></div>
