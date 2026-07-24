@@ -21,6 +21,13 @@ window.HubCommon = (function () {
   }
   const subjectVar = (s) => `var(--subject-${s || 'misc'}, var(--border))`;
   const subjectLabel = (s) => `${SUBJECT_LABEL_JA[s] || s} · ${SUBJECT_LABEL_EN[s] || s}`;
+  // activity_result_items.category is mostly already Japanese (modules author
+  // their own category strings), but eiken uses internal English codes
+  // (VOCAB/GRAMMAR/CONVERSATION/ORDER — see modules/eiken/app.js CAT_LABEL)
+  // that leaked, untranslated, into teacher-facing gradebook views (#178).
+  // Falls back to the raw string for every category that's already Japanese.
+  const CATEGORY_LABEL_JA = { VOCAB: '語い', GRAMMAR: '文法', CONVERSATION: '会話', ORDER: '語順' };
+  const categoryLabel = (c) => CATEGORY_LABEL_JA[c] || c;
   // Sorts the keys of a {subject: [...]} grouping object into
   // SUBJECT_ORDER, with any unrecognized subject value pushed to the end
   // rather than dropped — a module with a typo'd/legacy subject should
@@ -280,7 +287,7 @@ window.HubCommon = (function () {
 
   return {
     escapeHtml,
-    subjectVar, subjectLabel, sortedSubjectKeys, givenName, formatGreetingDate, formatDueDate,
+    subjectVar, subjectLabel, categoryLabel, sortedSubjectKeys, givenName, formatGreetingDate, formatDueDate,
     relativeTime, progressBar, requireSession, renderSidebar, reportActivityWithItems,
     assignmentKeyFromRef, assignmentLabel, mountModuleAccount,
   };

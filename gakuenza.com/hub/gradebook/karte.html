@@ -41,6 +41,7 @@
 <script>
 (async function () {
   const GB = window.Gradebook;
+  const H = window.HubCommon;
   const esc = GB.esc;
   const cfg = window.GAKUENZA_CONFIG;
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
@@ -309,7 +310,7 @@
     const entries = Object.entries(byCat).map(([cat, d]) => ({ cat, pct: GB.pct(d.c, d.t) })).sort((a, b) => b.pct - a.pct);
     el.innerHTML = `<h2 class="gb-card-head">カテゴリ別のようす</h2>` + (entries.length
       ? entries.map(e => `<div class="gb-bar-row">
-          <div style="flex:1;font-weight:600;">${esc(e.cat)}</div>
+          <div style="flex:1;font-weight:600;">${esc(H.categoryLabel(e.cat))}</div>
           <div class="gb-bar-track" style="max-width:120px;"><div class="gb-bar-fill" style="width:${e.pct}%;${e.pct < 62 ? 'background:var(--gold);' : ''}"></div></div>
           <div class="gb-bar-pct">${e.pct}%</div>
         </div>`).join('')
