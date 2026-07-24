@@ -59,84 +59,99 @@
 
     /* ── Signature motifs ── */
     .eyebrow { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: .09em; color: var(--gold-deep, #A8843A); text-transform: uppercase; }
-    .dot-rule { border-bottom: 2px dotted var(--gold); margin: 12px 0 16px; }
+    .dot-rule { border-bottom: 3px dotted var(--gold); width: 120px; margin: 12px auto 10px; }
 
-    /* ── Header ── */
-    .header { text-align: center; padding: 18px 0 12px; }
-    .header-icon { display: inline-block; color: #fff; border-radius: 10px; padding: 7px 18px; font-size: 20px; font-weight: 700; letter-spacing: 2px; margin: 6px 0; background: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
-    .header h1 { font-size: 23px; font-weight: 700; margin: 5px 0 0; font-family: 'Zen Maru Gothic', sans-serif; }
-    .header p { font-size: 13px; color: var(--text3); margin: 3px 0 0; }
+    /* ── Home header ── */
+    .lt-header { text-align: center; padding: 20px 0 4px; }
+    .lt-title { font-size: 28px; font-weight: 700; margin: 8px 0 0; font-family: 'Zen Maru Gothic', sans-serif; color: var(--text); line-height: 1.3; }
+    .lt-sub { font-size: 14px; color: var(--text3); margin: 4px 0 0; }
 
-    .top-controls { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 12px; }
+    /* ── Unit toolbar (all-units + theme) ── */
+    .unit-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 16px; }
     .theme-btn { padding: 8px 11px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); cursor: pointer; font-size: 16px; color: var(--text2); transition: all .15s; }
     .theme-btn:hover { border-color: var(--text2); }
-
-    /* ── Unit tabs ── */
-    .unit-tabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
-    .unit-tab {
-      flex: 1; min-width: 60px; padding: 8px 4px; text-align: center;
-      border: 2px solid var(--border); border-radius: 8px; background: var(--surface);
-      cursor: pointer; font-weight: 700; font-size: 12px; color: var(--text2);
-      transition: all .15s; font-family: 'Zen Maru Gothic', sans-serif;
+    .all-units-btn {
+      padding: 9px 18px; border-radius: 999px; border: 2px solid var(--border);
+      background: var(--surface); cursor: pointer; font-weight: 700; font-size: 13px;
+      color: var(--text2); font-family: 'Zen Maru Gothic', sans-serif; transition: all .15s;
     }
-    .unit-tab.active { color: #fff; border-color: transparent; background: #4A6B4F; }
-    .unit-tab:hover:not(.active) { border-color: var(--gold); }
+    .all-units-btn:hover { border-color: var(--gold); }
+    .all-units-btn.active { background: #4A6B4F; border-color: transparent; color: #fff; }
 
-    /* ── Unit banner ── */
-    .unit-banner {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-      padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 6px var(--shadow);
-      border-left: 4px solid;
+    /* ── Unit cards grid ── */
+    .unit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .unit-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-top: 6px solid var(--uc-accent, #4A6B4F); border-radius: 18px;
+      padding: 18px; display: flex; flex-direction: column; gap: 7px; text-align: left;
+      cursor: pointer; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10);
+      transition: transform .1s, box-shadow .15s; font-family: inherit; color: var(--text); width: 100%;
     }
-    .unit-banner h2 { font-size: 16px; font-weight: 700; margin-bottom: 3px; font-family: 'Zen Maru Gothic', sans-serif; }
-    .unit-banner p { font-size: 13px; color: var(--text2); }
-
-    /* ── Activity grid ── */
-    .act-grid { display: flex; flex-direction: column; gap: 9px; }
-    .act-card {
-      display: flex; align-items: center; gap: 12px; padding: 13px 15px;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      cursor: pointer; text-align: left; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10);
-      transition: box-shadow .15s, transform .1s; font-family: inherit; color: var(--text); width: 100%;
+    .unit-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(28,37,48,.18); }
+    .unit-card.selected {
+      border: 2px solid var(--gold); border-top: 6px solid var(--gold);
+      box-shadow: 0 0 0 2px var(--gold), 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10);
     }
-    .act-card:hover { box-shadow: 0 4px 16px rgba(28,37,48,.18); transform: translateY(-2px); }
-    .act-icon { font-size: 26px; flex-shrink: 0; }
-    .act-label { font-size: 15px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; }
-    .act-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
-    .act-badge { margin-left: auto; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; flex-shrink: 0; }
+    .uc-num { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 13px; color: var(--text3); }
+    .uc-title { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 18px; line-height: 1.25; color: var(--uc-accent, #4A6B4F); }
+    .uc-sub { font-size: 12px; color: var(--text2); line-height: 1.4; }
+    .uc-bar { height: 9px; background: var(--surface2); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+    .uc-fill { height: 100%; border-radius: 999px; background: var(--uc-accent, #4A6B4F); transition: width .3s; }
+    .uc-count { font-family: 'Zen Maru Gothic', sans-serif; font-size: 12px; font-weight: 700; color: var(--uc-accent, #4A6B4F); }
+    @media (max-width: 520px) { .unit-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
 
-    /* ── Section label ── */
-    .section-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin: 18px 0 8px; }
+    /* ── Mode picker panel ── */
+    .mode-panel { background: var(--surface2); border-radius: 20px; padding: 20px 22px; border-left: 6px solid var(--gold); box-shadow: 0 2px 8px var(--shadow); }
+    .mode-panel-title { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 18px; color: var(--gold-deep); line-height: 1.35; }
+    .mode-panel-sub { font-size: 13px; color: var(--text2); margin-top: 3px; }
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+    .mode-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 14px;
+      background: var(--surface); border: none; border-radius: 18px; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10);
+      font-family: inherit; color: var(--text); transition: transform .1s, box-shadow .15s;
+    }
+    .mode-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(28,37,48,.18); }
+    .mode-emoji { font-size: 40px; line-height: 1; }
+    .mode-label { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 16px; }
+    .mode-desc { font-size: 12px; color: var(--text3); text-align: center; }
 
     /* ── Generic top bar ── */
     .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .back-btn {
-      display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
-      background: none; border: 1.5px solid var(--border); border-radius: 8px;
+      display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px;
+      background: none; border: 1.5px solid var(--border); border-radius: 10px;
       font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer;
       font-family: inherit; transition: all .15s;
     }
     .back-btn:hover { border-color: #B5572E; color: #B5572E; background: #F7E8E1; }
-    .progress-text { font-size: 13px; color: var(--text3); }
+    .progress-text { font-size: 13px; font-weight: 600; color: var(--text3); }
 
     /* ── Progress bar ── */
-    .progress-wrap { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
-    .progress-bar { height: 100%; border-radius: 3px; transition: width .3s; background: #4A6B4F; }
+    .progress-wrap { height: 10px; background: var(--surface2); border-radius: 999px; overflow: hidden; margin-bottom: 18px; }
+    .progress-bar { height: 100%; border-radius: 999px; transition: width .3s; background: var(--gold); }
 
     /* ── Question card ── */
     .q-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10); }
-    .q-badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 10px; margin-bottom: 8px; background: #E8EDE6; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
+    .q-badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 8px; padding: 4px 12px; margin-bottom: 8px; background: #E8EDE6; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
     body.dark .q-badge { background: #24302A; color: #8FBE95; }
     .q-text { font-size: 18px; line-height: 1.65; color: var(--text); font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .q-sub { font-size: 14px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
 
-    /* ── Options ── */
-    .opts { display: flex; flex-direction: column; gap: 8px; }
+    /* ── Quiz question card (centered, mockup) ── */
+    #quiz-screen .q-card { text-align: center; border-radius: 22px; padding: 36px 20px; }
+    #quiz-screen .q-badge { margin-bottom: 12px; }
+    .q-emoji { font-size: 64px; line-height: 1; margin: 4px 0 2px; }
+    #quiz-screen .q-text { font-size: 28px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; justify-content: center; margin-top: 8px; }
+    #quiz-screen .q-sub { font-size: 14px; color: var(--text3); margin-top: 8px; }
+
+    /* ── Options (2×2, thick border, mockup) ── */
+    .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
     .opt-btn {
-      display: flex; align-items: center; gap: 10px; padding: 12px 14px;
-      border-radius: 10px; border: 2px solid var(--border); cursor: pointer;
-      font-size: 15px; font-weight: 500; text-align: left; background: var(--surface);
-      transition: all .15s; font-family: inherit; color: var(--text);
+      display: flex; align-items: center; justify-content: center; gap: 6px; padding: 22px 14px;
+      border-radius: 18px; border: 3px solid var(--border); cursor: pointer;
+      font-size: 18px; font-weight: 700; text-align: center; background: var(--surface);
+      transition: all .15s; font-family: 'Zen Maru Gothic', sans-serif; color: var(--text);
     }
     .opt-btn:hover:not(.locked) { border-color: var(--gold); background: var(--surface2); }
     .opt-letter {
@@ -164,12 +179,20 @@
     .hint-box { background: #FBF3E1; border: 1px solid var(--gold); border-radius: 10px; padding: 11px 13px; margin-top: 10px; font-size: 14px; line-height: 1.6; color: #A8843A; }
     body.dark .hint-box { background: #2E2600; border-color: #7C6C00; color: #E8C976; }
 
-    /* ── Score circle ── */
+    /* ── Score donut (conic-gradient, mockup) ── */
     .review-header { text-align: center; padding: 20px 0 10px; }
-    .score-circle { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; height: 120px; border-radius: 50%; border: 5px solid #4A6B4F; margin-bottom: 10px; }
-    .score-pct { font-size: 31px; font-weight: 800; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
-    .score-lbl { font-size: 13px; color: var(--text3); }
-    .grade-text { font-size: 20px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; }
+    .score-donut {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 170px; height: 170px; border-radius: 50%; margin-bottom: 8px;
+      background: conic-gradient(#4A6B4F 0% 0%, var(--surface2) 0% 100%);
+    }
+    .score-donut-inner {
+      width: 134px; height: 134px; border-radius: 50%; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .score-pct { font-size: 36px; font-weight: 800; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
+    .score-lbl { font-size: 12px; color: var(--text3); }
+    .grade-text { font-size: 24px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; margin-top: 8px; }
 
     /* ── Result detail ── */
     .result-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
@@ -217,13 +240,15 @@
 
     /* ── Primary / action btns ── */
     .primary-btn {
-      display: block; width: 100%; padding: 13px; background: #3A4555; color: #fff;
-      border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
-      margin-top: 14px; font-family: 'Zen Maru Gothic', sans-serif; transition: background .15s;
+      display: block; width: 100%; padding: 17px; background: #3A4555; color: #fff;
+      border: none; border-radius: 16px; font-size: 17px; font-weight: 700; cursor: pointer;
+      margin-top: 12px; font-family: 'Zen Maru Gothic', sans-serif; transition: background .15s, border-color .15s;
     }
     .primary-btn:hover { background: #1C2530; }
     .primary-btn.blue { background: #4A6B4F; }
     .primary-btn.blue:hover { background: #34503A; }
+    .primary-btn.ghost { background: var(--surface); border: 2px solid var(--border); color: var(--text2); }
+    .primary-btn.ghost:hover { background: var(--surface2); border-color: var(--text3); }
     .check-btn {
       display: block; width: 100%; padding: 13px; background: #4A6B4F; color: #fff;
       border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
@@ -302,10 +327,13 @@
     .hidden { display: none !important; }
 
     /* ── Stat card ── */
-    .stat-row { display: flex; gap: 12px; margin-bottom: 14px; }
-    .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; box-shadow: 0 1px 3px var(--shadow); }
-    .stat-num { font-size: 26px; font-weight: 800; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
+    .stat-row { display: flex; gap: 14px; margin: 18px 0 14px; }
+    .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 2px 8px var(--shadow); }
+    .stat-num { font-size: 28px; font-weight: 800; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
     .stat-lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .stat-card.correct .stat-num { color: #4A6B4F; }
+    .stat-card.wrong .stat-num { color: #B5572E; }
+    .stat-card.total .stat-num { color: var(--text); }
 
     /* ── Footer nav ── */
     .footer-nav { text-align: center; color: var(--text3); font-size: 13px; margin-top: 20px; }
@@ -334,40 +362,25 @@
 
   <!-- ══════════════════════════════════════════ HOME ══ -->
   <div id="home-screen">
-    <div class="header">
-      <div class="eyebrow">LET'S TRY</div>
-      <div class="header-icon">Let's Try!</div>
-      <h1>Let's Try 2 練習</h1>
-      <div class="dot-rule" style="width:120px;margin:12px auto 16px;"></div>
-      <p>Unit 1–9 · 小学校4年生向け · 自主練習ツール</p>
+    <div class="lt-header">
+      <div class="eyebrow">LET'S TRY 2</div>
+      <h1 class="lt-title">どのユニットをれんしゅうする？</h1>
+      <div class="dot-rule"></div>
+      <p class="lt-sub">Unit 1〜9 · 小学校4年生向け</p>
     </div>
 
-    <div class="top-controls">
+    <div class="unit-toolbar">
+      <button class="all-units-btn" id="all-units-btn" data-unit="0">全ユニット</button>
       <button class="theme-btn" id="theme-btn">🌙</button>
     </div>
 
-    <div class="unit-tabs" id="unit-tabs">
-      <button class="unit-tab active" data-unit="0">全</button>
-      <button class="unit-tab" data-unit="1">U1</button>
-      <button class="unit-tab" data-unit="2">U2</button>
-      <button class="unit-tab" data-unit="3">U3</button>
-      <button class="unit-tab" data-unit="4">U4</button>
-      <button class="unit-tab" data-unit="5">U5</button>
-      <button class="unit-tab" data-unit="6">U6</button>
-      <button class="unit-tab" data-unit="7">U7</button>
-      <button class="unit-tab" data-unit="8">U8</button>
-      <button class="unit-tab" data-unit="9">U9</button>
+    <div class="unit-grid" id="unit-grid"></div>
+
+    <div class="mode-panel" id="mode-panel">
+      <div class="mode-panel-title" id="mode-panel-title"></div>
+      <div class="mode-panel-sub" id="mode-panel-sub"></div>
+      <div class="mode-grid" id="mode-grid"></div>
     </div>
-
-    <div id="unit-banner" class="unit-banner hidden">
-      <h2 id="banner-title"></h2>
-      <p id="banner-sub"></p>
-    </div>
-
-    <p class="section-label">🎯 練習メニュー</p>
-    <div class="act-grid" id="act-grid"></div>
-
-
   </div>
 
   <!-- ══════════════════════════════════════════ VOCAB QUIZ ══ -->
@@ -380,6 +393,7 @@
 
     <div class="q-card">
       <span class="q-badge" id="quiz-badge"></span>
+      <div class="q-emoji" id="quiz-emoji"></div>
       <div class="q-text" id="quiz-q"></div>
       <div class="q-sub" id="quiz-sub"></div>
     </div>
@@ -472,9 +486,11 @@
   <!-- ══════════════════════════════════════════ REVIEW (results) ══ -->
   <div id="review-screen" class="hidden">
     <div class="review-header">
-      <div class="score-circle">
-        <div class="score-pct" id="rv-pct"></div>
-        <div class="score-lbl">正解率</div>
+      <div class="score-donut" id="rv-donut">
+        <div class="score-donut-inner">
+          <div class="score-pct" id="rv-pct"></div>
+          <div class="score-lbl">せいかいりつ</div>
+        </div>
       </div>
       <h2 class="grade-text" id="rv-grade"></h2>
     </div>
@@ -482,14 +498,14 @@
     <div class="results-sync" id="rv-sync"></div>
 
     <div class="stat-row">
-      <div class="stat-card"><div class="stat-num" id="rv-correct"></div><div class="stat-lbl">正解</div></div>
-      <div class="stat-card"><div class="stat-num" id="rv-wrong"></div><div class="stat-lbl">不正解</div></div>
-      <div class="stat-card"><div class="stat-num" id="rv-total"></div><div class="stat-lbl">合計</div></div>
+      <div class="stat-card correct"><div class="stat-num" id="rv-correct"></div><div class="stat-lbl">正解</div></div>
+      <div class="stat-card wrong"><div class="stat-num" id="rv-wrong"></div><div class="stat-lbl">不正解</div></div>
+      <div class="stat-card total"><div class="stat-num" id="rv-total"></div><div class="stat-lbl">合計</div></div>
     </div>
 
     <div class="result-list" id="rv-list"></div>
     <button class="primary-btn blue" id="rv-retry">🔄 もう一度</button>
-    <button class="primary-btn" id="rv-menu">メニューに戻る</button>
+    <button class="primary-btn ghost" id="rv-menu">メニューに戻る</button>
   </div>
 
 </div><!-- end main-col -->
@@ -835,90 +851,102 @@ themeBtn.addEventListener("click", () => {
 const screens = ["home-screen","quiz-screen","flash-screen","match-screen","build-screen","review-screen"];
 function showScreen(id) {
   screens.forEach(s => document.getElementById(s).classList.toggle("hidden", s !== id));
+  if (id === "home-screen") renderHome(); // refresh unit-card progress on return
   if (window.NHTTS) NHTTS.stop();
+}
+
+// ── Lightweight per-unit practice progress (localStorage; presentation-only,
+// fails soft). Drives the unit-card progress bars / "X/Y かんりょう" label.
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem("lt2-progress") || "{}"); }
+  catch (e) { return {}; }
+}
+function markProgress(unitId, type) {
+  if (!unitId) return;
+  try {
+    const p = loadProgress();
+    (p[unitId] = p[unitId] || {})[type] = true;
+    localStorage.setItem("lt2-progress", JSON.stringify(p));
+  } catch (e) { /* ignore quota/serialization errors */ }
 }
 
 // ══════════════════════════════════════════════════════════
 // HOME SCREEN
 // ══════════════════════════════════════════════════════════
-document.getElementById("unit-tabs").addEventListener("click", e => {
-  const tab = e.target.closest(".unit-tab");
-  if (!tab) return;
-  currentUnit = parseInt(tab.dataset.unit);
-  document.querySelectorAll(".unit-tab").forEach(t => t.classList.remove("active"));
-  tab.classList.add("active");
+// "全ユニット" toggle — practice across all units (currentUnit === 0).
+document.getElementById("all-units-btn").addEventListener("click", () => {
+  currentUnit = 0;
   renderHome();
 });
 
-function getUnitsToShow() {
-  if (currentUnit === 0) return UNITS.filter(Boolean);
-  return [UNITS[currentUnit]].filter(Boolean);
-}
-
 function renderHome() {
-  const units = getUnitsToShow();
-  const banner = document.getElementById("unit-banner");
-  const bannerTitle = document.getElementById("banner-title");
-  const bannerSub = document.getElementById("banner-sub");
+  const progress = loadProgress();
 
-  if (currentUnit !== 0 && units.length) {
-    const u = units[0];
-    banner.classList.remove("hidden");
-    banner.style.borderColor = u.color;
-    bannerTitle.textContent = `Unit ${u.id}: ${u.title}`;
-    bannerTitle.style.color = u.color;
-    bannerSub.textContent = u.titleJp;
-  } else {
-    banner.classList.add("hidden");
-  }
-
-  const grid = document.getElementById("act-grid");
+  // ── Unit cards ──
+  const grid = document.getElementById("unit-grid");
   grid.innerHTML = "";
+  UNITS.filter(Boolean).forEach(u => {
+    const card = document.createElement("button");
+    card.className = "unit-card" + (currentUnit === u.id ? " selected" : "");
+    card.style.setProperty("--uc-accent", u.color);
+    const acts = u.activities || [];
+    const done = acts.filter(a => progress[u.id] && progress[u.id][a]).length;
+    const total = acts.length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    card.innerHTML = `
+      <div class="uc-num">UNIT ${u.id}</div>
+      <div class="uc-title">${esc(u.title)}</div>
+      <div class="uc-sub">${esc(u.titleJp)}</div>
+      <div class="uc-bar"><div class="uc-fill" style="width:${pct}%"></div></div>
+      <div class="uc-count">${done}/${total} かんりょう</div>
+    `;
+    card.addEventListener("click", () => {
+      currentUnit = u.id;
+      renderHome();
+      document.getElementById("mode-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+    grid.appendChild(card);
+  });
 
-  if (currentUnit === 0) {
-    // Show all activity types across all units
-    Object.entries(ACTIVITY_DEFS).forEach(([key, def]) => {
-      const btn = document.createElement("button");
-      btn.className = "act-card";
-      const unitCount = UNITS.filter(Boolean).filter(u => u.activities.includes(key)).length;
-      btn.innerHTML = `
-        <span class="act-icon">${def.icon}</span>
-        <div>
-          <div class="act-label">${def.label}</div>
-          <div class="act-desc">${def.desc}</div>
-        </div>
-        <span class="act-badge" style="background:#E8EDE6;color:#4A6B4F">${unitCount} Units</span>
-      `;
-      btn.addEventListener("click", () => launchActivity(key, null));
-      grid.appendChild(btn);
-    });
+  document.getElementById("all-units-btn").classList.toggle("active", currentUnit === 0);
+
+  // ── Mode picker panel ──
+  const titleEl = document.getElementById("mode-panel-title");
+  const subEl = document.getElementById("mode-panel-sub");
+  const modeGrid = document.getElementById("mode-grid");
+  modeGrid.innerHTML = "";
+
+  let unitData = null, keys;
+  if (currentUnit !== 0 && UNITS[currentUnit]) {
+    unitData = UNITS[currentUnit];
+    titleEl.textContent = `Unit ${unitData.id}: ${unitData.title} をれんしゅうしよう`;
+    subEl.textContent = unitData.titleJp;
+    keys = unitData.activities;
   } else {
-    const u = units[0];
-    u.activities.forEach(key => {
-      const def = ACTIVITY_DEFS[key];
-      const btn = document.createElement("button");
-      btn.className = "act-card";
-      const count = key === "vocab" ? u.vocab.length :
-                    key === "flash" ? u.vocab.length :
-                    key === "match" ? Math.floor(u.matchPairs.length/2)*2 :
-                    u.sentences.length;
-      btn.innerHTML = `
-        <span class="act-icon">${def.icon}</span>
-        <div>
-          <div class="act-label">${def.label}</div>
-          <div class="act-desc">${def.desc}</div>
-        </div>
-        <span class="act-badge" style="background:#E8EDE6;color:#4A6B4F">${count}問</span>
-      `;
-      btn.addEventListener("click", () => launchActivity(key, u));
-      grid.appendChild(btn);
-    });
+    titleEl.textContent = "全ユニットをまとめて練習";
+    subEl.textContent = "Unit 1〜9 の内容からランダムに出題します";
+    keys = Object.keys(ACTIVITY_DEFS);
   }
+
+  keys.forEach(key => {
+    const def = ACTIVITY_DEFS[key];
+    if (!def) return;
+    const btn = document.createElement("button");
+    btn.className = "mode-btn";
+    btn.innerHTML = `
+      <span class="mode-emoji">${def.icon}</span>
+      <span class="mode-label">${def.label}</span>
+      <span class="mode-desc">${def.desc}</span>
+    `;
+    btn.addEventListener("click", () => launchActivity(key, unitData));
+    modeGrid.appendChild(btn);
+  });
 }
 
 function launchActivity(type, unitData) {
   currentActivity = type;
   currentUnitData = unitData;
+  if (unitData) markProgress(unitData.id, type);
   if (type === "vocab")  startQuiz(unitData);
   if (type === "flash")  startFlash(unitData);
   if (type === "match")  startMatch(unitData);
@@ -956,10 +984,11 @@ function renderQuizQ() {
   document.getElementById("quiz-badge").textContent = `Unit ${item.unit} · ${item.unitTitle}`;
   document.getElementById("quiz-badge").style.background = item.unitColor + "22";
   document.getElementById("quiz-badge").style.color = item.unitColor;
+  document.getElementById("quiz-emoji").textContent = item.emoji;
   // quiz-q is the English prompt — gets a speaker button. (The four choices
   // below are Japanese, so they don't.)
-  document.getElementById("quiz-q").innerHTML = `<span>${item.emoji}</span> <span>${esc(item.en)}</span>${ttsBtn(item.en, 'qword-tts')}`;
-  document.getElementById("quiz-sub").textContent = item.hint;
+  document.getElementById("quiz-q").innerHTML = `<span>${esc(item.en)}</span>${ttsBtn(item.en, 'qword-tts')}`;
+  document.getElementById("quiz-sub").textContent = "日本語の意味は？";
   document.getElementById("quiz-prog-text").textContent = `${qIdx + 1} / ${total}`;
   document.getElementById("quiz-prog-bar").style.width = `${((qIdx) / total) * 100}%`;
   document.getElementById("quiz-hint").classList.add("hidden");
@@ -968,11 +997,10 @@ function renderQuizQ() {
 
   const opts = document.getElementById("quiz-opts");
   opts.innerHTML = "";
-  const letters = ["A","B","C","D"];
-  item.choices.forEach((ch, i) => {
+  item.choices.forEach((ch) => {
     const btn = document.createElement("button");
     btn.className = "opt-btn";
-    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span> ${ch}`;
+    btn.textContent = ch;
     btn.addEventListener("click", () => chooseQuizOpt(btn, ch, item));
     opts.appendChild(btn);
   });
@@ -1279,6 +1307,8 @@ async function showReview(from) {
   const pct = total ? Math.round((correct / total) * 100) : 0;
 
   document.getElementById("rv-pct").textContent = pct + "%";
+  document.getElementById("rv-donut").style.background =
+    `conic-gradient(#4A6B4F 0% ${pct}%, var(--surface2) ${pct}% 100%)`;
   document.getElementById("rv-correct").textContent = correct;
   document.getElementById("rv-wrong").textContent = total - correct;
   document.getElementById("rv-total").textContent = total;
