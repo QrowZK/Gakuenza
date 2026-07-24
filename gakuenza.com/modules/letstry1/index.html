@@ -10,7 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-.module-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #1C2530; border-bottom: none; }
+.zen { font-family: 'Zen Maru Gothic', sans-serif; }
+.module-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 20px; background: #1C2530; border-bottom: none; }
 .module-back { font-size: 13px; font-weight: 600; color: #C9CFD8; text-decoration: none; white-space: nowrap; }
 .module-back:hover { color: #F7F3EA; }
 .module-name { font-size: 13px; color: #7A8294; }
@@ -25,238 +26,269 @@
 .module-account-signout { display: block; width: 100%; padding: 10px 14px; background: none; border: none; text-align: left; font-size: 13px; font-family: inherit; color: #a23b2e; cursor: pointer; }
 .module-account-signout:hover { background: #fdecea; }
 
+/* ── Design tokens (copied literally — self-contained, no shared style.css) ── */
 :root {
-  --bg: #F7F3EA; --surface: #FFFFFF; --surface2: #EFE9DB; --border: #E4E0D4;
-  --text: #1C2530; --text2: #3A4555; --text3: #7A8294; --shadow: rgba(28,37,48,.08);
-  --accent: #4A6B4F; --accent2: #EFE9DB;
+  --bg: #F7F3EA; --surface: #FFFFFF; --surface2: #EFE9DB; --cream: #EFE9DB;
+  --border: #E4E0D4;
+  --text: #1C2530; --text2: #3A4555; --text3: #7A8294;
+  --shadow: rgba(28,37,48,.08);
+  --card-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10);
+  --card-shadow-hover: 0 6px 20px rgba(28,37,48,.16);
+  --shadow-sm: 0 2px 8px rgba(28,37,48,.08);
+  --accent: #4A6B4F; --accent2: #E8EDE6;
+  --moss: #4A6B4F; --moss-deep: #34503A; --moss-tint: #E8EDE6;
   --gold: #C9A24B; --gold-deep: #A8843A;
+  --clay: #B5572E;
 }
 body.dark {
-  --bg: #1C1A16; --surface: #2A2620; --surface2: #332F27; --border: #4A453A;
-  --text: #F2EDE0; --text2: #C9C2AC; --text3: #8F8874; --shadow: rgba(0,0,0,.3);
-  --accent2: #332F27;
+  --bg: #1C1A16; --surface: #2A2620; --surface2: #332F27; --cream: #332F27;
+  --border: #4A453A;
+  --text: #F2EDE0; --text2: #C9C2AC; --text3: #8F8874;
+  --shadow: rgba(0,0,0,.3);
+  --card-shadow: 0 2px 8px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  --card-shadow-hover: 0 6px 20px rgba(0,0,0,.45);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,.3);
+  --accent2: #24302A; --moss-tint: #24302A;
 }
 html, body { height: 100%; }
 body { font-family: 'Noto Sans JP', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background .2s, color .2s; }
-.main-col { padding: 14px 14px 60px; max-width: 640px; margin: 0 auto; }
+.main-col { padding: 30px 24px 64px; max-width: 900px; margin: 0 auto; }
+@media (max-width: 560px) { .main-col { padding: 20px 14px 60px; } }
 
 /* ── Signature motifs ── */
-.eyebrow { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: .09em; color: var(--gold-deep, #A8843A); text-transform: uppercase; }
-.dot-rule { border-bottom: 2px dotted var(--gold); margin: 12px 0 16px; }
+.eyebrow { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: .09em; color: var(--gold-deep); text-transform: uppercase; }
+.dot-rule { border-bottom: 3px dotted var(--gold); width: 120px; margin: 0 auto 10px; }
 
-/* ── Header ── */
-.header { text-align: center; padding: 18px 0 12px; }
-.header-icon { display: inline-block; color: #fff; border-radius: 10px; padding: 7px 18px; font-size: 20px; font-weight: 700; letter-spacing: 2px; margin-bottom: 6px; background: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
-.header h1 { font-size: 23px; font-weight: 700; margin: 5px 0 0; font-family: 'Zen Maru Gothic', sans-serif; }
-.header p { font-size: 13px; color: var(--text3); margin: 3px 0 0; }
-.top-controls { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 12px; }
+/* ── Hero ── */
+.lt-hero { text-align: center; margin-bottom: 26px; }
+.lt-title { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 30px; margin: 8px 0 12px; color: var(--text); line-height: 1.25; }
+@media (max-width: 560px) { .lt-title { font-size: 22px; } }
+.lt-sub { font-size: 14px; color: var(--text3); }
+
+/* ── Top controls (theme toggle) ── */
+.top-controls { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 4px; }
 .top-controls-right { display: flex; gap: 8px; align-items: center; }
-.theme-btn { padding: 8px 11px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); cursor: pointer; font-size: 16px; color: var(--text2); transition: all .15s; }
+.theme-btn { padding: 8px 11px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; font-size: 16px; color: var(--text2); transition: all .15s; font-family: inherit; }
 .theme-btn:hover { border-color: var(--text2); }
-.auth-btn { padding: 7px 14px; border-radius: 8px; border: 2px solid #4A6B4F; background: transparent; cursor: pointer; font-size: 13px; font-weight: 600; color: #4A6B4F; transition: all .15s; font-family: inherit; }
-.auth-btn:hover { background: var(--accent2); }
-.auth-btn.logged-in { background: #4A6B4F; color: #fff; border-color: #4A6B4F; }
 
-/* ── Unit tabs ── */
-.unit-tabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
-.unit-tab {
-  flex: 1; min-width: 56px; padding: 8px 4px; text-align: center;
-  border: 2px solid var(--border); border-radius: 8px; background: var(--surface);
-  cursor: pointer; font-weight: 700; font-size: 12px; color: var(--text2);
-  transition: all .15s; font-family: 'Zen Maru Gothic', sans-serif;
+/* ── Unit grid ── */
+.unit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 720px) { .unit-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 430px) { .unit-grid { grid-template-columns: 1fr; } }
+.unit-card {
+  background: var(--surface); border: 1px solid var(--border); border-top: 6px solid var(--u, #B5572E);
+  border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 8px;
+  box-shadow: var(--card-shadow); cursor: pointer; text-align: left; width: 100%;
+  font-family: inherit; color: var(--text); transition: transform .1s, box-shadow .15s, border-color .15s;
 }
-.unit-tab.active { color: #fff; border-color: transparent; background: #4A6B4F; }
-.unit-tab:hover:not(.active) { border-color: var(--gold); }
-
-/* ── Unit banner ── */
-.unit-banner {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-  padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10);
-  border-left: 4px solid;
+.unit-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-hover); }
+.unit-card.selected {
+  border: 2px solid var(--gold); border-top: 6px solid var(--gold);
+  box-shadow: 0 0 0 2px var(--gold), var(--card-shadow);
 }
-.unit-banner h2 { font-size: 16px; font-weight: 700; margin-bottom: 3px; font-family: 'Zen Maru Gothic', sans-serif; }
-.unit-banner p { font-size: 13px; color: var(--text2); }
+.unit-card__no { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 14px; color: var(--text3); }
+.unit-card__title { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 20px; color: var(--u, #B5572E); line-height: 1.2; }
+.unit-card__sub { font-size: 12.5px; color: var(--text2); line-height: 1.4; flex: 1; }
+.unit-card__bar { height: 9px; background: var(--surface2); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+.unit-card__fill { height: 100%; background: var(--u, #B5572E); border-radius: 999px; transition: width .3s; }
+.unit-card__done { font-family: 'Zen Maru Gothic', sans-serif; font-size: 12px; font-weight: 700; }
+.unit-card.selected .unit-card__no,
+.unit-card.selected .unit-card__title { color: var(--gold-deep); }
 
-/* ── Activity grid ── */
-.act-grid { display: flex; flex-direction: column; gap: 9px; }
-.act-card {
-  display: flex; align-items: center; gap: 12px; padding: 13px 15px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-  cursor: pointer; text-align: left; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10);
-  transition: box-shadow .15s, transform .1s, border-color .15s; font-family: inherit; color: var(--text); width: 100%;
+/* ── All-units button ── */
+.all-units-btn {
+  display: block; width: 100%; margin-top: 16px; padding: 14px; text-align: center;
+  background: var(--surface); border: 1.5px dashed var(--border); border-radius: 16px;
+  cursor: pointer; font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 14px;
+  color: var(--text2); transition: all .15s;
 }
-.act-card:hover { box-shadow: 0 4px 16px rgba(28,37,48,.18); transform: translateY(-2px); border-color: var(--gold); }
-.act-icon { font-size: 26px; flex-shrink: 0; }
-.act-label { font-size: 15px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; }
-.act-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
-.act-badge { margin-left: auto; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; flex-shrink: 0; }
+.all-units-btn:hover { border-color: var(--gold); color: var(--gold-deep); }
+.all-units-btn.selected { border-style: solid; border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); color: var(--gold-deep); }
 
-/* ── Section label ── */
-.section-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin: 18px 0 8px; font-family: 'Zen Maru Gothic', sans-serif; }
+/* ── Mode picker ── */
+.mode-picker { margin-top: 26px; background: var(--cream); border-radius: 20px; padding: 22px 24px; border-left: 6px solid var(--gold); }
+.mode-picker__title { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 19px; color: var(--gold-deep); line-height: 1.3; }
+.mode-picker__sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 18px; }
+@media (max-width: 430px) { .mode-grid { grid-template-columns: 1fr; } }
+.mode-card {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 26px 16px;
+  background: var(--surface); border: none; border-radius: 18px; box-shadow: var(--card-shadow);
+  cursor: pointer; font-family: inherit; color: var(--text); transition: transform .1s, box-shadow .15s;
+}
+.mode-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow-hover); }
+.mode-card__icon { font-size: 44px; line-height: 1; }
+.mode-card__label { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 17px; }
+.mode-card__desc { font-size: 12px; color: var(--text3); text-align: center; }
+
+/* ── Practice column (quiz/flash/match/build/review) ── */
+#quiz-screen, #flash-screen, #match-screen, #build-screen, #review-screen { max-width: 560px; margin: 0 auto; }
 
 /* ── Stats ── */
-.stats-row { display: flex; gap: 10px; margin-bottom: 14px; }
-.stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px; text-align: center; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10); }
-.stat-num { font-size: 24px; font-weight: 800; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
+.stats-row { display: flex; gap: 14px; margin: 22px auto 0; max-width: 520px; }
+.stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+.stat-num { font-size: 28px; font-weight: 800; color: var(--moss); font-family: 'Zen Maru Gothic', sans-serif; }
 .stat-lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
 
 /* ── Generic top bar ── */
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .back-btn {
-  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
-  background: none; border: 1.5px solid var(--border); border-radius: 8px;
+  display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px;
+  background: none; border: 1.5px solid var(--border); border-radius: 10px;
   font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer;
   font-family: inherit; transition: all .15s;
 }
-.back-btn:hover { border-color: #B5572E; color: #B5572E; background: #F7E8E1; }
-.progress-text { font-size: 13px; color: var(--text3); }
+.back-btn:hover { border-color: var(--clay); color: var(--clay); background: #F7E8E1; }
+body.dark .back-btn:hover { background: #2F241E; }
+.progress-text { font-size: 13px; font-weight: 600; color: var(--text3); }
 
 /* ── Progress bar ── */
-.progress-wrap { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
-.progress-bar { height: 100%; border-radius: 3px; transition: width .3s; background: #4A6B4F; }
+.progress-wrap { height: 10px; background: var(--surface2); border-radius: 999px; overflow: hidden; margin-bottom: 22px; }
+.progress-bar { height: 100%; border-radius: 999px; transition: width .3s; background: var(--gold); }
 
 /* ── Question card ── */
-.q-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(28,37,48,.08), 0 8px 24px rgba(28,37,48,.10); }
-.q-badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 10px; margin-bottom: 8px; background: #FBF3E1; color: #A8843A; font-family: 'Zen Maru Gothic', sans-serif; }
+.q-card { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 34px 20px; margin-bottom: 20px; box-shadow: var(--card-shadow); }
+.q-badge { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 4px 12px; margin-bottom: 14px; background: #FBF3E1; color: var(--gold-deep); font-family: 'Zen Maru Gothic', sans-serif; }
 body.dark .q-badge { background: #2E2600; color: #E8C976; }
-.q-text { font-size: 18px; line-height: 1.65; color: var(--text); font-weight: 600; font-family: 'Zen Maru Gothic', sans-serif; }
-.q-sub { font-size: 14px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
+.q-emoji { font-size: 68px; line-height: 1; margin-bottom: 6px; }
+.q-text { font-size: 30px; line-height: 1.3; color: var(--text); font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; }
+.q-sub { font-size: 14px; color: var(--text3); margin-top: 6px; line-height: 1.5; }
 
 /* ── Options ── */
-.opts { display: flex; flex-direction: column; gap: 8px; }
+.opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+@media (max-width: 430px) { .opts { grid-template-columns: 1fr; } }
 .opt-btn {
-  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
-  border-radius: 10px; border: 2px solid var(--border); cursor: pointer;
-  font-size: 15px; font-weight: 500; text-align: left; background: var(--surface);
-  transition: all .15s; font-family: inherit; color: var(--text);
+  padding: 22px 16px; border-radius: 18px; border: 3px solid var(--border); cursor: pointer;
+  font-size: 19px; font-weight: 700; text-align: center; background: var(--surface);
+  transition: all .15s; font-family: 'Zen Maru Gothic', sans-serif; color: var(--text);
 }
 .opt-btn:hover:not(.locked) { border-color: var(--gold); background: var(--surface2); }
-.opt-letter {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 7px; background: var(--surface2);
-  font-weight: 700; font-size: 13px; flex-shrink: 0; font-family: 'Zen Maru Gothic', sans-serif;
-}
-.opt-btn.correct { background: #E8EDE6; border-color: #4A6B4F; color: #34503A; }
-.opt-btn.wrong { background: #F7E8E1; border-color: #B5572E; color: #96471F; }
+.opt-btn.correct { background: var(--moss-tint); border-color: var(--moss); color: var(--moss-deep); }
+.opt-btn.wrong { background: #F7E8E1; border-color: var(--clay); color: #96471F; }
 body.dark .opt-btn.correct { background: #24302A; color: #8FBE95; }
 body.dark .opt-btn.wrong { background: #2F241E; color: #D68C6A; }
 .opt-btn.locked { cursor: default; }
 
 /* ── Feedback ── */
-.feedback-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; flex-wrap: wrap; gap: 8px; }
-.fb-text { font-size: 18px; }
+.feedback-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; flex-wrap: wrap; gap: 8px; }
+.fb-text { font-size: 18px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; }
 .next-btn {
-  padding: 10px 22px; color: #fff; border: none; border-radius: 8px;
-  font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'Zen Maru Gothic', sans-serif;
-  background: #4A6B4F; transition: background .15s;
+  padding: 12px 24px; color: #fff; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Zen Maru Gothic', sans-serif;
+  background: var(--moss); transition: background .15s;
 }
-.next-btn:hover { background: #34503A; }
+.next-btn:hover { background: var(--moss-deep); }
 
 /* ── Hint box ── */
-.hint-box { background: #FBF3E1; border: 1px solid var(--gold); border-radius: 10px; padding: 11px 13px; margin-top: 10px; font-size: 14px; line-height: 1.6; color: #A8843A; }
+.hint-box { background: #FBF3E1; border: 1px solid var(--gold); border-radius: 12px; padding: 12px 14px; margin-top: 14px; font-size: 14px; line-height: 1.6; color: var(--gold-deep); }
 body.dark .hint-box { background: #2E2600; border-color: #7C6C00; color: #E8C976; }
 
-/* ── Score circle ── */
-.review-header { text-align: center; padding: 20px 0 10px; }
-.score-circle { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; height: 120px; border-radius: 50%; border: 5px solid #4A6B4F; margin-bottom: 10px; }
-.score-pct { font-size: 31px; font-weight: 800; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
-.score-lbl { font-size: 13px; color: var(--text3); }
-.grade-text { font-size: 20px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; }
+/* ── Run score line ── */
+.run-score { text-align: center; font-size: 13px; color: var(--text3); margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* ── Score donut ── */
+.review-header { text-align: center; padding: 8px 0 4px; }
+.score-donut { display: inline-flex; align-items: center; justify-content: center; width: 170px; height: 170px; border-radius: 50%; background: conic-gradient(var(--moss) 0% 0%, var(--surface2) 0% 100%); }
+.score-donut__inner { width: 134px; height: 134px; border-radius: 50%; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.score-pct { font-size: 36px; font-weight: 800; color: var(--moss); font-family: 'Zen Maru Gothic', sans-serif; }
+.score-lbl { font-size: 12px; color: var(--text3); }
+.grade-text { font-size: 24px; font-weight: 700; margin-top: 10px; font-family: 'Zen Maru Gothic', sans-serif; }
 
 /* ── Result detail ── */
-.result-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
-.result-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.result-list { display: flex; flex-direction: column; gap: 8px; margin: 16px auto 0; max-width: 520px; text-align: left; }
+.result-row { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
 .result-q { font-size: 13px; font-weight: 600; color: var(--text2); }
 .result-ans { font-size: 14px; margin-top: 3px; }
+
+/* ── Review actions ── */
+.rv-actions { max-width: 520px; margin: 24px auto 0; }
 
 /* ── Matching activity ── */
 .match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
 .match-col { display: flex; flex-direction: column; gap: 8px; }
 .match-item {
-  padding: 10px 12px; border-radius: 10px; border: 2px solid var(--border);
+  padding: 12px 14px; border-radius: 12px; border: 2px solid var(--border);
   background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 600;
   text-align: center; transition: all .15s; font-family: inherit; color: var(--text);
 }
 .match-item:hover:not(.matched):not(.locked) { border-color: var(--gold); background: var(--surface2); }
-.match-item.selected { border-color: #4A6B4F; background: #E8EDE6; color: #34503A; }
-.match-item.matched { border-color: #4A6B4F; background: #E8EDE6; color: #34503A; cursor: default; }
-.match-item.wrong-flash { border-color: #B5572E; background: #F7E8E1; }
-body.dark .match-item.selected { background: #24302A; color: #8FBE95; }
-body.dark .match-item.matched { background: #24302A; color: #8FBE95; }
+.match-item.selected { border-color: var(--moss); background: var(--moss-tint); color: var(--moss-deep); }
+.match-item.matched { border-color: var(--moss); background: var(--moss-tint); color: var(--moss-deep); cursor: default; }
+.match-item.wrong-flash { border-color: var(--clay); background: #F7E8E1; }
+body.dark .match-item.selected { color: #8FBE95; }
+body.dark .match-item.matched { color: #8FBE95; }
 body.dark .match-item.wrong-flash { background: #2F241E; }
 
 /* ── Word Arrange ── */
-.word-bank { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; min-height: 44px; padding: 8px; background: var(--surface2); border-radius: 10px; }
+.word-bank { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; min-height: 44px; padding: 10px; background: var(--surface2); border-radius: 12px; }
 .word-chip {
-  padding: 8px 14px; border-radius: 8px; border: 2px solid var(--border);
+  padding: 10px 16px; border-radius: 10px; border: 2px solid var(--border);
   background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 600;
   transition: all .15s; font-family: inherit; color: var(--text);
 }
-.word-chip:hover { border-color: var(--gold); background: #E8EDE6; }
-body.dark .word-chip:hover { background: #24302A; }
+.word-chip:hover { border-color: var(--gold); background: var(--moss-tint); }
 .word-chip.used { opacity: 0.3; cursor: default; pointer-events: none; }
-.answer-row { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; padding: 8px; background: var(--surface); border: 2px dashed var(--border); border-radius: 10px; margin-bottom: 10px; align-items: center; }
+.answer-row { display: flex; flex-wrap: wrap; gap: 8px; min-height: 48px; padding: 10px; background: var(--surface); border: 2px dashed var(--border); border-radius: 12px; margin-bottom: 12px; align-items: center; }
 .answer-row[data-empty="true"]::before { content: "単語をタップして並べよう"; color: var(--text3); font-size: 14px; font-style: italic; }
 .answer-chip {
-  padding: 8px 14px; border-radius: 8px; border: 2px solid #4A6B4F;
-  background: #E8EDE6; cursor: pointer; font-size: 15px; font-weight: 600;
-  color: #34503A; font-family: inherit;
+  padding: 10px 16px; border-radius: 10px; border: 2px solid var(--moss);
+  background: var(--moss-tint); cursor: pointer; font-size: 15px; font-weight: 600;
+  color: var(--moss-deep); font-family: inherit;
 }
-.answer-chip:hover { background: #D8E2D6; }
-body.dark .answer-chip { background: #24302A; color: #8FBE95; }
-body.dark .answer-chip:hover { background: #2C3A31; }
+body.dark .answer-chip { color: #8FBE95; }
 
 /* ── Primary / action btns ── */
 .primary-btn {
-  display: block; width: 100%; padding: 13px; background: #4A6B4F; color: #fff;
-  border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
-  margin-top: 14px; font-family: 'Zen Maru Gothic', sans-serif; transition: background .15s;
+  display: block; width: 100%; padding: 18px; background: var(--moss); color: #fff;
+  border: none; border-radius: 16px; font-size: 18px; font-weight: 700; cursor: pointer;
+  margin-top: 12px; font-family: 'Zen Maru Gothic', sans-serif; transition: background .15s;
 }
-.primary-btn:hover { background: #34503A; }
-.primary-btn.pink { background: #B5572E; }
+.primary-btn:hover { background: var(--moss-deep); }
+.primary-btn.pink { background: var(--clay); }
 .primary-btn.pink:hover { background: #96471F; }
+.primary-btn.outline { background: var(--surface); border: 2px solid var(--border); color: var(--text2); }
+.primary-btn.outline:hover { background: var(--surface2); }
 .check-btn {
-  display: block; width: 100%; padding: 13px; background: #4A6B4F; color: #fff;
-  border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
-  margin-top: 10px; font-family: 'Zen Maru Gothic', sans-serif; transition: background .15s;
+  display: block; width: 100%; padding: 15px; background: var(--moss); color: #fff;
+  border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer;
+  margin-top: 12px; font-family: 'Zen Maru Gothic', sans-serif; transition: background .15s;
 }
-.check-btn:hover { background: #34503A; }
+.check-btn:hover { background: var(--moss-deep); }
 .check-btn:disabled { background: var(--border); color: var(--text3); cursor: default; }
 
 /* ── Flashcard ── */
 .flashcard-wrap { perspective: 1000px; margin: 20px auto; max-width: 400px; }
 .flashcard {
-  width: 100%; height: 180px; position: relative; transform-style: preserve-3d;
-  transition: transform .5s; cursor: pointer; border-radius: 16px;
+  width: 100%; height: 200px; position: relative; transform-style: preserve-3d;
+  transition: transform .5s; cursor: pointer; border-radius: 18px;
 }
 .flashcard.flipped { transform: rotateY(180deg); }
 .fc-face {
-  position: absolute; inset: 0; border-radius: 16px;
+  position: absolute; inset: 0; border-radius: 18px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   backface-visibility: hidden; padding: 20px;
-  border: 2px solid var(--border); box-shadow: 0 4px 16px var(--shadow);
+  border: 1px solid var(--border); box-shadow: var(--card-shadow);
 }
 .fc-front { background: var(--surface); }
-.fc-back { background: #E8EDE6; transform: rotateY(180deg); }
-body.dark .fc-back { background: #24302A; }
-.fc-emoji { font-size: 42px; margin-bottom: 8px; }
-.fc-word { font-size: 22px; font-weight: 800; color: var(--text); font-family: 'Zen Maru Gothic', sans-serif; }
+.fc-back { background: var(--moss-tint); transform: rotateY(180deg); }
+.fc-emoji { font-size: 48px; margin-bottom: 8px; }
+.fc-word { font-size: 24px; font-weight: 800; color: var(--text); font-family: 'Zen Maru Gothic', sans-serif; }
 .fc-hint { font-size: 13px; color: var(--text3); margin-top: 4px; }
-.fc-translation { font-size: 20px; font-weight: 700; color: #4A6B4F; font-family: 'Zen Maru Gothic', sans-serif; }
+.fc-translation { font-size: 22px; font-weight: 700; color: var(--moss); font-family: 'Zen Maru Gothic', sans-serif; }
 body.dark .fc-translation { color: #8FBE95; }
 .fc-nav { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 12px; }
 .fc-nav-btn {
-  padding: 8px 18px; border-radius: 8px; border: 2px solid var(--border);
+  padding: 10px 20px; border-radius: 10px; border: 2px solid var(--border);
   background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 600;
   font-family: inherit; color: var(--text2); transition: all .15s;
 }
-.fc-nav-btn:hover { border-color: #4A6B4F; color: #4A6B4F; }
+.fc-nav-btn:hover { border-color: var(--moss); color: var(--moss); }
 .fc-counter { font-size: 14px; color: var(--text3); min-width: 60px; text-align: center; }
 
 /* ── Result sync banner ── */
-.sync-banner { background: #E8EDE6; border: 1px solid #4A6B4F; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #4A6B4F; margin-top: 12px; display: flex; align-items: center; gap: 8px; }
-.sync-banner.error { background: #FBF3E1; border-color: var(--gold); color: #A8843A; }
-body.dark .sync-banner { background: #24302A; border-color: #4A6B4F; color: #8FBE95; }
+.sync-banner { background: var(--moss-tint); border: 1px solid var(--moss); border-radius: 12px; padding: 10px 14px; font-size: 13px; color: var(--moss); margin: 14px auto 0; max-width: 520px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.sync-banner.error { background: #FBF3E1; border-color: var(--gold); color: var(--gold-deep); }
+body.dark .sync-banner { color: #8FBE95; }
 body.dark .sync-banner.error { background: #2E2600; border-color: #7C6C00; color: #E8C976; }
 
 .hidden { display: none !important; }
@@ -276,40 +308,28 @@ body.dark .sync-banner.error { background: #2E2600; border-color: #7C6C00; color
 
   <!-- ══════════════════ HOME ══════════════════ -->
   <div id="home-screen">
-    <div class="header">
-      <div class="eyebrow">LET'S TRY</div>
-      <div class="header-icon">Let's Try!</div>
-      <h1>Let's Try 1 練習</h1>
-      <div class="dot-rule" style="width:120px;margin-left:auto;margin-right:auto;"></div>
-      <p>Unit 1–9 · 小学校3年生向け · 自主練習ツール</p>
-    </div>
-
     <div class="top-controls">
       <div class="top-controls-right">
         <button class="theme-btn" id="theme-btn">🌙</button>
       </div>
     </div>
 
-    <div class="unit-tabs" id="unit-tabs">
-      <button class="unit-tab active" data-unit="0">全</button>
-      <button class="unit-tab" data-unit="1">U1</button>
-      <button class="unit-tab" data-unit="2">U2</button>
-      <button class="unit-tab" data-unit="3">U3</button>
-      <button class="unit-tab" data-unit="4">U4</button>
-      <button class="unit-tab" data-unit="5">U5</button>
-      <button class="unit-tab" data-unit="6">U6</button>
-      <button class="unit-tab" data-unit="7">U7</button>
-      <button class="unit-tab" data-unit="8">U8</button>
-      <button class="unit-tab" data-unit="9">U9</button>
+    <div class="lt-hero">
+      <div class="eyebrow">LET'S TRY 1</div>
+      <h1 class="lt-title">どのユニットをれんしゅうする？</h1>
+      <div class="dot-rule"></div>
+      <p class="lt-sub">小学校3年</p>
     </div>
 
-    <div id="unit-banner" class="unit-banner hidden">
-      <h2 id="banner-title"></h2>
-      <p id="banner-sub"></p>
-    </div>
+    <div class="unit-grid" id="unit-grid"></div>
 
-    <p class="section-label">🎯 練習メニュー</p>
-    <div class="act-grid" id="act-grid"></div>
+    <button class="all-units-btn" id="all-units-btn">🎲 すべてのユニットからランダムに練習</button>
+
+    <div class="mode-picker hidden" id="mode-picker">
+      <div class="mode-picker__title" id="mp-title"></div>
+      <div class="mode-picker__sub" id="mp-sub"></div>
+      <div class="mode-grid" id="act-grid"></div>
+    </div>
   </div>
 
   <!-- ══════════════════ VOCAB QUIZ ══════════════════ -->
@@ -321,8 +341,9 @@ body.dark .sync-banner.error { background: #2E2600; border-color: #7C6C00; color
     <div class="progress-wrap"><div class="progress-bar" id="quiz-prog-bar"></div></div>
     <div class="q-card">
       <span class="q-badge" id="quiz-badge"></span>
+      <div class="q-emoji" id="quiz-emoji"></div>
       <div class="q-text" id="quiz-q"></div>
-      <div class="q-sub" id="quiz-sub"></div>
+      <div class="q-sub">日本語の意味は？</div>
     </div>
     <div class="opts" id="quiz-opts"></div>
     <div class="hint-box hidden" id="quiz-hint"></div>
@@ -330,7 +351,7 @@ body.dark .sync-banner.error { background: #2E2600; border-color: #7C6C00; color
       <span class="fb-text" id="quiz-fb-icon"></span>
       <button class="next-btn" id="quiz-next">次へ →</button>
     </div>
-    <div style="text-align:center;font-size:13px;color:var(--text3);margin-top:14px;padding-top:10px;border-top:1px solid var(--border)" id="quiz-run-score"></div>
+    <div class="run-score" id="quiz-run-score"></div>
   </div>
 
   <!-- ══════════════════ FLASHCARDS ══════════════════ -->
@@ -402,21 +423,25 @@ body.dark .sync-banner.error { background: #2E2600; border-color: #7C6C00; color
   <!-- ══════════════════ REVIEW ══════════════════ -->
   <div id="review-screen" class="hidden">
     <div class="review-header">
-      <div class="score-circle">
-        <div class="score-pct" id="rv-pct"></div>
-        <div class="score-lbl">正解率</div>
+      <div class="score-donut" id="rv-donut">
+        <div class="score-donut__inner">
+          <div class="score-pct" id="rv-pct"></div>
+          <div class="score-lbl">せいかいりつ</div>
+        </div>
       </div>
       <h2 class="grade-text" id="rv-grade"></h2>
     </div>
     <div class="stats-row">
       <div class="stat-card"><div class="stat-num" id="rv-correct"></div><div class="stat-lbl">正解</div></div>
-      <div class="stat-card"><div class="stat-num" id="rv-wrong"></div><div class="stat-lbl">不正解</div></div>
-      <div class="stat-card"><div class="stat-num" id="rv-total"></div><div class="stat-lbl">合計</div></div>
+      <div class="stat-card"><div class="stat-num" id="rv-wrong" style="color:var(--clay)"></div><div class="stat-lbl">不正解</div></div>
+      <div class="stat-card"><div class="stat-num" id="rv-total" style="color:var(--text)"></div><div class="stat-lbl">合計</div></div>
     </div>
     <div id="rv-sync" class="hidden"></div>
     <div class="result-list" id="rv-list"></div>
-    <button class="primary-btn pink" id="rv-retry">🔄 もう一度</button>
-    <button class="primary-btn" id="rv-menu">メニューに戻る</button>
+    <div class="rv-actions">
+      <button class="primary-btn" id="rv-retry">🔄 もう一度</button>
+      <button class="primary-btn outline" id="rv-menu">メニューに戻る</button>
+    </div>
   </div>
 
 </div><!-- end main-col -->
@@ -807,58 +832,102 @@ async function saveResultToSupabase(actType, unitId, score, total, items) {
 // ══════════════════════════════════════════════════════════
 // HOME SCREEN
 // ══════════════════════════════════════════════════════════
-document.getElementById("unit-tabs").addEventListener("click", e => {
-  const tab = e.target.closest(".unit-tab");
-  if (!tab) return;
-  currentUnit = parseInt(tab.dataset.unit);
-  document.querySelectorAll(".unit-tab").forEach(t => t.classList.remove("active"));
-  tab.classList.add("active");
-  renderHome();
-});
+// Whether the "all units" random-practice picker is currently open.
+let allSelected = false;
 
-function getUnitsToShow() {
-  if (currentUnit === 0) return UNITS.filter(Boolean);
-  return [UNITS[currentUnit]].filter(Boolean);
+// ── Local per-unit progress (# of practice modes completed, out of the
+//    unit's available modes). Presentation-only; never touches the
+//    reporting contract. ──
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem("lt1-progress") || "{}"); }
+  catch { return {}; }
+}
+function markUnitMode(unitId, mode) {
+  if (!unitId) return;
+  const p = loadProgress();
+  const set = new Set(p[unitId] || []);
+  set.add(mode);
+  p[unitId] = [...set];
+  try { localStorage.setItem("lt1-progress", JSON.stringify(p)); } catch (e) {}
+}
+function unitProgress(u) {
+  const done = (loadProgress()[u.id] || []).filter(m => u.activities.includes(m)).length;
+  return { done, total: u.activities.length };
+}
+
+function renderUnitGrid() {
+  const grid = document.getElementById("unit-grid");
+  grid.innerHTML = "";
+  UNITS.filter(Boolean).forEach(u => {
+    const { done, total } = unitProgress(u);
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    const card = document.createElement("button");
+    card.className = "unit-card" + (currentUnit === u.id ? " selected" : "");
+    card.style.setProperty("--u", u.color);
+    card.innerHTML =
+      `<div class="unit-card__no">UNIT ${u.id}</div>` +
+      `<div class="unit-card__title">${u.title}</div>` +
+      `<div class="unit-card__sub">${u.titleJp}</div>` +
+      `<div class="unit-card__bar"><div class="unit-card__fill" style="width:${pct}%"></div></div>` +
+      `<div class="unit-card__done" style="color:${done ? u.color : 'var(--text3)'}">${done}/${total} かんりょう</div>`;
+    card.addEventListener("click", () => {
+      currentUnit = u.id;
+      allSelected = false;
+      renderHome();
+      document.getElementById("mode-picker").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+    grid.appendChild(card);
+  });
+}
+
+function renderModeCards(unitData) {
+  const grid = document.getElementById("act-grid");
+  grid.innerHTML = "";
+  const keys = unitData ? unitData.activities : Object.keys(ACTIVITY_DEFS);
+  keys.forEach(key => {
+    const def = ACTIVITY_DEFS[key];
+    const btn = document.createElement("button");
+    btn.className = "mode-card";
+    btn.innerHTML =
+      `<span class="mode-card__icon">${def.icon}</span>` +
+      `<span class="mode-card__label">${def.label}</span>` +
+      `<span class="mode-card__desc">${def.desc}</span>`;
+    btn.addEventListener("click", () => launchActivity(key, unitData));
+    grid.appendChild(btn);
+  });
 }
 
 function renderHome() {
-  const units = getUnitsToShow();
-  const banner = document.getElementById("unit-banner");
-  if (currentUnit !== 0 && units.length) {
-    const u = units[0];
-    banner.classList.remove("hidden");
-    banner.style.borderColor = u.color;
-    document.getElementById("banner-title").textContent = `Unit ${u.id}: ${u.title}`;
-    document.getElementById("banner-title").style.color = u.color;
-    document.getElementById("banner-sub").textContent = u.titleJp;
+  renderUnitGrid();
+  document.getElementById("all-units-btn").classList.toggle("selected", allSelected);
+  const picker = document.getElementById("mode-picker");
+  if (currentUnit !== 0) {
+    const u = UNITS[currentUnit];
+    document.getElementById("mp-title").textContent = `Unit ${u.id}: ${u.title} をれんしゅうしよう`;
+    document.getElementById("mp-sub").textContent = u.titleJp;
+    renderModeCards(u);
+    picker.classList.remove("hidden");
+  } else if (allSelected) {
+    document.getElementById("mp-title").textContent = "すべてのユニットで練習";
+    document.getElementById("mp-sub").textContent = "全ユニットからランダムに出題します";
+    renderModeCards(null);
+    picker.classList.remove("hidden");
   } else {
-    banner.classList.add("hidden");
+    picker.classList.add("hidden");
   }
+}
 
-  const grid = document.getElementById("act-grid");
-  grid.innerHTML = "";
+document.getElementById("all-units-btn").addEventListener("click", () => {
+  currentUnit = 0;
+  allSelected = true;
+  renderHome();
+  document.getElementById("mode-picker").scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
 
-  if (currentUnit === 0) {
-    Object.entries(ACTIVITY_DEFS).forEach(([key, def]) => {
-      const unitCount = UNITS.filter(Boolean).filter(u => u.activities.includes(key)).length;
-      const btn = document.createElement("button");
-      btn.className = "act-card";
-      btn.innerHTML = `<span class="act-icon">${def.icon}</span><div><div class="act-label">${def.label}</div><div class="act-desc">${def.desc}</div></div><span class="act-badge" style="background:var(--accent2);color:#4A6B4F">${unitCount} Units</span>`;
-      btn.addEventListener("click", () => launchActivity(key, null));
-      grid.appendChild(btn);
-    });
-  } else {
-    const u = units[0];
-    u.activities.forEach(key => {
-      const def = ACTIVITY_DEFS[key];
-      const count = key === "build" ? u.sentences.length : key === "match" ? u.matchPairs.length : u.vocab.length;
-      const btn = document.createElement("button");
-      btn.className = "act-card";
-      btn.innerHTML = `<span class="act-icon">${def.icon}</span><div><div class="act-label">${def.label}</div><div class="act-desc">${def.desc}</div></div><span class="act-badge" style="background:var(--accent2);color:#4A6B4F">${count}問</span>`;
-      btn.addEventListener("click", () => launchActivity(key, u));
-      grid.appendChild(btn);
-    });
-  }
+// Returns to the home menu, refreshing the unit-grid progress bars.
+function goHome() {
+  renderHome();
+  showScreen("home-screen");
 }
 
 function launchActivity(type, unitData) {
@@ -910,8 +979,8 @@ function renderQuizQ() {
   document.getElementById("quiz-badge").textContent = `Unit ${item.unit} · ${item.unitTitle}`;
   document.getElementById("quiz-badge").style.background = item.unitColor + "22";
   document.getElementById("quiz-badge").style.color = item.unitColor;
-  document.getElementById("quiz-q").textContent = `${item.emoji} ${item.en}`;
-  document.getElementById("quiz-sub").textContent = item.hint;
+  document.getElementById("quiz-emoji").textContent = item.emoji;
+  document.getElementById("quiz-q").textContent = item.en;
   document.getElementById("quiz-prog-text").textContent = `${qIdx + 1} / ${total}`;
   document.getElementById("quiz-prog-bar").style.width = `${(qIdx / total) * 100}%`;
   document.getElementById("quiz-hint").classList.add("hidden");
@@ -919,11 +988,12 @@ function renderQuizQ() {
   document.getElementById("quiz-run-score").textContent = `現在の成績: ${qScore} / ${qIdx}`;
   const opts = document.getElementById("quiz-opts");
   opts.innerHTML = "";
-  ["A","B","C","D"].forEach((letter, i) => {
+  item.choices.forEach(choice => {
     const btn = document.createElement("button");
     btn.className = "opt-btn";
-    btn.innerHTML = `<span class="opt-letter">${letter}</span> ${item.choices[i]}`;
-    btn.addEventListener("click", () => chooseQuizOpt(btn, item.choices[i], item));
+    btn.dataset.choice = choice;
+    btn.textContent = choice;
+    btn.addEventListener("click", () => chooseQuizOpt(btn, choice, item));
     opts.appendChild(btn);
   });
 }
@@ -932,7 +1002,7 @@ function chooseQuizOpt(btn, choice, item) {
   const correct = choice === item.correct;
   document.querySelectorAll(".opt-btn").forEach(b => {
     b.classList.add("locked");
-    if (b.textContent.trim().slice(1).trim() === item.correct) b.classList.add("correct");
+    if (b.dataset.choice === item.correct) b.classList.add("correct");
   });
   if (!correct) btn.classList.add("wrong");
   if (correct) qScore++;
@@ -948,7 +1018,7 @@ document.getElementById("quiz-next").addEventListener("click", () => {
   if (qIdx >= qItems.length) showReview("quiz");
   else renderQuizQ();
 });
-document.getElementById("quiz-back").addEventListener("click", () => showScreen("home-screen"));
+document.getElementById("quiz-back").addEventListener("click", goHome);
 
 // ══════════════════════════════════════════════════════════
 // FLASHCARDS
@@ -972,9 +1042,13 @@ function renderFlash() {
 }
 document.getElementById("flashcard").addEventListener("click", () => document.getElementById("flashcard").classList.toggle("flipped"));
 document.getElementById("fc-prev").addEventListener("click", () => { fcIdx = (fcIdx - 1 + fcItems.length) % fcItems.length; renderFlash(); });
-document.getElementById("fc-next").addEventListener("click", () => { fcIdx = (fcIdx + 1) % fcItems.length; renderFlash(); });
+document.getElementById("fc-next").addEventListener("click", () => {
+  fcIdx = (fcIdx + 1) % fcItems.length;
+  if (currentUnitData && fcIdx === fcItems.length - 1) markUnitMode(currentUnitData.id, "flash");
+  renderFlash();
+});
 document.getElementById("fc-shuffle").addEventListener("click", () => { fcItems = shuffle([...fcItems]); fcIdx = 0; renderFlash(); });
-document.getElementById("flash-back").addEventListener("click", () => showScreen("home-screen"));
+document.getElementById("flash-back").addEventListener("click", goHome);
 
 // ══════════════════════════════════════════════════════════
 // MATCHING
@@ -1036,6 +1110,7 @@ function renderMatchRound(pairs) {
           matchScore++;
           document.getElementById("match-score-text").textContent = `${matchScore} / ${matchTotal}`;
           if (matched === pairs.length) {
+            if (currentUnitData) markUnitMode(currentUnitData.id, "match");
             document.getElementById("match-result").textContent = "🎉 全部正解！素晴らしい！";
             document.getElementById("match-result").classList.remove("hidden");
             document.getElementById("match-next-round").classList.remove("hidden");
@@ -1058,7 +1133,7 @@ document.getElementById("match-next-round").addEventListener("click", () => {
   const pairs = currentUnitData ? currentUnitData.matchPairs : UNITS.filter(Boolean).flatMap(u => u.matchPairs);
   renderMatchRound(shuffle(pairs).slice(0, 6));
 });
-document.getElementById("match-back").addEventListener("click", () => showScreen("home-screen"));
+document.getElementById("match-back").addEventListener("click", goHome);
 
 // ══════════════════════════════════════════════════════════
 // SENTENCE BUILD
@@ -1147,7 +1222,7 @@ document.getElementById("build-next").addEventListener("click", () => {
   if (buildIdx >= buildItems.length) showReview("build");
   else renderBuildQ();
 });
-document.getElementById("build-back").addEventListener("click", () => showScreen("home-screen"));
+document.getElementById("build-back").addEventListener("click", goHome);
 
 // ══════════════════════════════════════════════════════════
 // REVIEW SCREEN
@@ -1158,8 +1233,13 @@ async function showReview(type) {
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   const grade = pct >= 90 ? "🌟 すばらしい！" : pct >= 70 ? "👍 よくできました！" : pct >= 50 ? "😊 もう少し！" : "💪 練習しよう！";
 
+  // Mark this practice mode complete for the unit (local progress only).
+  if (currentUnitData) markUnitMode(currentUnitData.id, type === "quiz" ? "vocab" : "build");
+
   document.getElementById("rv-pct").textContent = pct + "%";
   document.getElementById("rv-grade").textContent = grade;
+  document.getElementById("rv-donut").style.background =
+    `conic-gradient(var(--moss) 0% ${pct}%, var(--surface2) ${pct}% 100%)`;
   document.getElementById("rv-correct").textContent = score;
   document.getElementById("rv-wrong").textContent = total - score;
   document.getElementById("rv-total").textContent = total;
@@ -1208,7 +1288,7 @@ document.getElementById("rv-retry").addEventListener("click", () => {
   if (currentActivity === "build") startBuild(currentUnitData);
   if (currentActivity === "match") startMatch(currentUnitData);
 });
-document.getElementById("rv-menu").addEventListener("click", () => showScreen("home-screen"));
+document.getElementById("rv-menu").addEventListener("click", goHome);
 
 // ══════════════════════════════════════════════════════════
 // INIT
