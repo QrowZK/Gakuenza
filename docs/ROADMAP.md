@@ -266,7 +266,16 @@ biggest news landed a few hours later. Folding in everything since:
 
 ## Near-term debt (known, not yet done)
 
-Debt items, not new ideas:
+Debt items, not new ideas.
+
+> **Status as of 2026-07-24: the near-term-debt list is effectively cleared.**
+> Items 1, 2, 5, 6, 8, 10, 11 are done; 3 and 9 are now **fully** done (below);
+> 7 has its safe subset done. The **only** things left open are **#4
+> (leaked-password protection)** and the **residual `ALL`+`SELECT` half of #7** —
+> and both are blocked by the **same** cause: they need a Supabase **Pro plan**
+> (leaked-password is a paid Auth feature; the RLS-split needs a dev *branch*,
+> also Pro-only). Neither is an engineering task on the free tier. A single plan
+> upgrade unblocks both.
 
 1. ~~**Fix the five hand-rolled reporters.**~~ **Done 2026-07-23 (#126).**
    `nh6`, `nhvocab`, `letstry1`, `letstry2`, and `shakai3` now route through
@@ -301,17 +310,29 @@ Debt items, not new ideas:
    - **Done:** revoked `anon` EXECUTE on `app_set_module_active` — the only
      mutating helper and the only one not referenced by any RLS policy (so no
      lockout risk); it already self-guards on `app_is_platform_admin()`.
-   - **Deferred (optional hardening):** moving the read helpers into a
-     non-exposed schema would drop them from the API surface entirely and clear
-     the 0028/0029 WARNs, but it is an all-RLS refactor (rewrite every policy
-     reference) with real lockout risk — belongs in the pre-second-school
-     hardening pass, verified on a Supabase branch, not a bulk sweep.
-4. **Leaked-password protection is still off — blocked on the Supabase
-   free tier.** The HaveIBeenPwned check is a **paid-plan feature**; the
-   project is currently on the free tier, so it cannot be enabled yet. It's
-   a Dashboard toggle (Authentication → Policies) once the project is on a
-   paid plan — not something console access alone can flip today. Revisit
-   after any tier upgrade.
+   - ~~**Deferred (optional hardening):** moving the read helpers into a
+     non-exposed schema…~~ **DONE 2026-07-24 (migration `20260724011947`) — #3
+     now fully closed.** The 8 read helpers (`app_user_*`, `app_has_role`,
+     `app_is_platform_admin`, `app_class_school`) were moved to a `private`
+     schema, so they're no longer reachable via `/rest/v1/rpc` — the SECURITY
+     DEFINER function findings dropped **18 → 1** (only `app_set_module_active`
+     remains, intentionally rpc-exposed + self-guarded + documented). The feared
+     "all-RLS refactor" turned out unnecessary: RLS policies reference these
+     functions by **OID**, so `ALTER FUNCTION ... SET SCHEMA` transparently
+     re-qualified every dependent policy with no rewrite and no semantic change.
+     Verified live: all policies intact, `authenticated`/`anon` retain EXECUTE +
+     `private` USAGE, and RLS returns correct rows for both a no-data user (0)
+     and a real platform admin (full visibility). No Supabase branch needed.
+4. **Leaked-password protection is still off — BLOCKED on the Supabase
+   free tier (not an engineering task).** The HaveIBeenPwned check is a
+   **paid-plan feature**; the project is on the free tier, so it cannot be
+   enabled yet. It's a Dashboard toggle (Authentication → Policies) once the
+   project is on a paid plan — nothing in code or console access can flip it
+   today. Revisit after any tier upgrade. **This same free-tier gate also
+   blocks Supabase dev *branches*** (Pro-plan only, confirmed 2026-07-24), which
+   is why the residual RLS-consolidation part of #7 can't be branch-verified —
+   the two remaining open items share one root cause: **the free tier**. A
+   plan upgrade closes both at once.
 5. ~~Build `SPEC_decentralize_module_units.md`~~ **done 2026-07-18** (#99) —
    the shared-registry corruption class is closed; `kokugo4`/`eigo5` built
    in parallel the same day with zero registry conflict, proving the fix.
@@ -353,13 +374,23 @@ Debt items, not new ideas:
    to 0. (The advisor now shows 13 *new* `unused_index` INFOs — expected: a
    freshly-created index has zero scans until traffic hits it; do NOT "fix"
    these by dropping the FK indexes.) **The 78 `multiple_permissive_policies`
-   are deliberately still open.** They are almost all an `ALL` write-policy
-   overlapping a `SELECT` read-policy on the same table; consolidating them
-   means splitting each `ALL` into INSERT/UPDATE/DELETE and folding its SELECT
-   arm into the read policy — a security-model refactor on the exact RLS
-   machinery behind this project's documented P0s, for a WARN-level perf hint at
-   single-school scale. That belongs in a deliberate, per-table, branch-verified
-   pass, not a bulk sweep — leave it for the pre-second-school hardening.
+   are almost all an `ALL` write-policy overlapping a `SELECT` read-policy on
+   the same table.
+   **UPDATE 2026-07-24 (safe subset done, migration `20260724012938`).** The two
+   tables with **same-command** overlaps — `profiles` (3 SELECT policies) and
+   `schools` (2 SELECT) — were consolidated to one SELECT policy each. Merging
+   permissive policies of the *same* command via OR is provably identical to
+   leaving them separate (Postgres already OR-combines them), so this is
+   zero-risk; verified live with before/after visibility snapshots (platform
+   admin still 114 profiles / 2 schools, student still 1 / 0). **The residual —
+   the `ALL`+`SELECT` overlaps across ~10 tables — stays deferred.** Closing
+   those means splitting each `ALL` policy into INSERT/UPDATE/DELETE and folding
+   its SELECT arm into the read policy: a semantically trickier change on the
+   exact RLS machinery behind this project's documented P0s, for a WARN-level
+   perf hint at single-school scale. It should be verified on a Supabase branch
+   — which is **Pro-plan only** (see #4), so it's gated on the same free-tier
+   upgrade. Not worth doing blind on prod for marginal benefit; revisit with the
+   pre-second-school hardening once on a paid plan.
 8. ~~**Full rekey of `nh6` → `eigo6` (low priority).**~~ **Done 2026-07-24
    (#159, #160, live migration `20260723233907`).** Rekeyed end-to-end
    (`modules/nh6/` → `modules/eigo6/`, `eigo6-report.js` key query, `eigo6-*`
@@ -388,14 +419,19 @@ Debt items, not new ideas:
    and three of the four gaps shipped as pure-frontend over existing RLS:
    **edit a staff member's role**, **remove a staff member from a school** (both
    with self-lockout guards), and a **cross-school staff directory / search**.
-   **Still open (specced, not built):** **school edit/status editor** on
-   `schools.html` (needs a platform-admin-only `schools` UPDATE policy — the
-   table currently has none), **staff soft-disable/deactivation** (needs a
-   `service_role` `set-staff-active` Edge Function doing a GoTrue ban), and
-   **account-lookup-by-email** (needs a `service_role` `lookup-account`
-   function, platform-admin only, to avoid an enumeration oracle). Each of these
-   is auth-adjacent and deliberately left for a human-approved, branch-verified
-   pass — full design in `docs/specs/SPEC_admin_staff_management.md`.
+   ~~**Still open (specced, not built):** school edit/status, staff
+   soft-disable, account-lookup-by-email…~~ **DONE 2026-07-24 (PR #170; backend
+   applied/deployed live) — #9 now fully closed.** All three remaining gaps were
+   built from `docs/specs/SPEC_admin_staff_management.md` and their backends
+   applied to prod: **school edit/status** — `schools_platform_admin_update`
+   RLS policy (platform-admin only, migration `20260724012414`, verified admin
+   updates / non-admin blocked) + a `schools.html` edit modal; **staff
+   soft-disable** — `set-staff-active` Edge Function (GoTrue ban;
+   platform-admin-or-school_admin, refuses self / platform-admin / coordinator)
+   + a `teachers.html` toggle; **account-lookup-by-email** — `lookup-account`
+   Edge Function (platform-admin only, minimal projection, no auth internals) +
+   a `staff-directory.html` lookup. Both functions deployed (ACTIVE, verify_jwt
+   on). The frontend ships with PR #170.
 10. ~~**`modules.html` bulk-assign matrix drops assignment metadata.**~~ **Done
     2026-07-23 (#147).** Decided: null `total_items`/`due_date`/`focus_units`
     are the correct defaults for a coarse grid toggle (per-cell prompting would
