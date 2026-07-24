@@ -12,6 +12,9 @@
   .md-toolbar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:-8px 0 24px; }
   .md-toolbar select { padding:7px 10px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:0.85rem; }
   .md-note { font-size:0.8rem; color:var(--ink-soft); }
+  .md-cat-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 4px; }
+  .md-groupby { display:flex; align-items:center; gap:6px; font-size:0.8rem; color:var(--ink-soft); white-space:nowrap; }
+  .md-groupby select { width:auto; padding:6px 9px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:0.82rem; margin:0; background:#fdfcf9; }
   .md-cat-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
   .md-cat-row:last-child { border-bottom:none; }
   .md-cat-body { flex:1; min-width:0; }
@@ -54,7 +57,15 @@
     <div class="md-toolbar" id="md-toolbar"></div>
 
     <div class="ac-card" style="margin-bottom:22px;">
-      <h2 class="ac-card-head" style="margin:0 0 4px;">カタログ・学校での有効化</h2>
+      <div class="md-cat-head">
+        <h2 class="ac-card-head" style="margin:0;">カタログ・学校での有効化</h2>
+        <label class="md-groupby">並び順
+          <select id="md-groupby">
+            <option value="subject">教科別</option>
+            <option value="publisher">出版社別</option>
+          </select>
+        </label>
+      </div>
       <p class="md-note" style="margin:0 0 12px;">「学校で有効」にしたモジュールだけ、下のマトリクスでクラスに割り当てられます。</p>
       <div id="md-bulk-toolbar" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 16px;"></div>
       <div id="md-catalog"><div class="ac-card ac-skel" style="height:80px;"></div></div>
@@ -111,6 +122,7 @@
   }
 
   // ── state ────────────────────────────────────────────────────────────
+  let groupMode = 'subject'; // 'subject' | 'publisher' — catalog grouping (#168)
   let modules = [], enabledSet = new Set(), classes = [], assignedSet = new Set();
   // Keys (classId|moduleId) whose class_modules row carries teacher-set
   // metadata (due_date / total_items / focus_units). The coarse matrix must
@@ -219,38 +231,65 @@
   }
 
   // ── catalog + enable toggles ─────────────────────────────────────────
+  // One module row, identical in both grouping modes.
+  function catalogRow(m) {
+    const on = enabledSet.has(m.id);
+    const inactive = m.is_active === false;
+    return `<div class="md-cat-row" data-module-id="${m.id}">
+      <div class="md-cat-body">
+        <div class="md-cat-name">${esc(m.name)}${inactive ? '<span class="md-inactive-badge">停止中</span>' : ''}</div>
+        <div class="md-cat-en">${esc(m.name_en || '')}</div>
+        ${m.publisher ? `<div class="md-cat-pub">${esc(m.publisher)}</div>` : ''}
+      </div>
+      <div class="md-ctl">
+        ${canRetire ? `<label class="md-note" style="cursor:pointer;">稼働
+          <input type="checkbox" data-act="active" data-module-id="${m.id}" ${inactive ? '' : 'checked'}></label>` : ''}
+        <span>学校で有効</span>
+        <label class="md-switch">
+          <input type="checkbox" data-act="enable" data-module-id="${m.id}" ${on ? 'checked' : ''} ${canEnable ? '' : 'disabled'}>
+          <span class="md-slider"></span>
+        </label>
+      </div>
+    </div>`;
+  }
+  // A titled group of rows (label is already-safe HTML).
+  function catalogGroup(dotColor, labelHtml, mods) {
+    return `<div class="ac-subject-group">
+      <div class="ac-subject-label">
+        <span style="width:10px;height:10px;border-radius:50%;background:${dotColor};display:inline-block;flex:0 0 auto;"></span>
+        <span>${labelHtml}</span>
+      </div>
+      ${mods.map(catalogRow).join('')}
+    </div>`;
+  }
+
   function renderCatalog() {
     const el = document.getElementById('md-catalog');
     if (!modules.length) { el.innerHTML = '<p class="ac-calm-msg">モジュールがまだ登録されていません。</p>'; return; }
-    const bySubject = {};
-    for (const m of modules) (bySubject[m.subject] ||= []).push(m);
-    el.innerHTML = H.sortedSubjectKeys(bySubject).map(subject => `
-      <div class="ac-subject-group">
-        <div class="ac-subject-label">
-          <span style="width:10px;height:10px;border-radius:50%;background:${H.subjectVar(subject)};display:inline-block;flex:0 0 auto;"></span>
-          <span>${H.subjectLabel(subject)}</span>
-        </div>
-        ${bySubject[subject].map(m => {
-          const on = enabledSet.has(m.id);
-          const inactive = m.is_active === false;
-          return `<div class="md-cat-row" data-module-id="${m.id}">
-            <div class="md-cat-body">
-              <div class="md-cat-name">${esc(m.name)}${inactive ? '<span class="md-inactive-badge">停止中</span>' : ''}</div>
-              <div class="md-cat-en">${esc(m.name_en || '')}</div>
-              ${m.publisher ? `<div class="md-cat-pub">${esc(m.publisher)}</div>` : ''}
-            </div>
-            <div class="md-ctl">
-              ${canRetire ? `<label class="md-note" style="cursor:pointer;">稼働
-                <input type="checkbox" data-act="active" data-module-id="${m.id}" ${inactive ? '' : 'checked'}></label>` : ''}
-              <span>学校で有効</span>
-              <label class="md-switch">
-                <input type="checkbox" data-act="enable" data-module-id="${m.id}" ${on ? 'checked' : ''} ${canEnable ? '' : 'disabled'}>
-                <span class="md-slider"></span>
-              </label>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`).join('') + (canEnable ? '' : '<p class="md-note" style="margin-top:10px;">学校での有効化の変更は管理者のみ可能です。</p>');
+
+    let sections;
+    if (groupMode === 'publisher') {
+      // Group by textbook publisher (#168). Modules with no publisher fall into
+      // a trailing "出版社の指定なし" group. Neutral dot (publisher isn't a
+      // subject, so no subject colour). Within a group, order by subject then
+      // name so a publisher's modules still read subject-clustered.
+      const byPub = {};
+      for (const m of modules) (byPub[m.publisher || '__none'] ||= []).push(m);
+      const keys = Object.keys(byPub).sort((a, b) =>
+        a === '__none' ? 1 : b === '__none' ? -1 : a.localeCompare(b, 'ja'));
+      sections = keys.map(k => {
+        const mods = byPub[k].slice().sort((x, y) =>
+          (x.subject || '').localeCompare(y.subject || '') || x.name.localeCompare(y.name, 'ja'));
+        return catalogGroup('var(--ink-soft)', k === '__none' ? '出版社の指定なし' : esc(k), mods);
+      });
+    } else {
+      const bySubject = {};
+      for (const m of modules) (bySubject[m.subject] ||= []).push(m);
+      sections = H.sortedSubjectKeys(bySubject).map(subject =>
+        catalogGroup(H.subjectVar(subject), H.subjectLabel(subject), bySubject[subject]));
+    }
+
+    el.innerHTML = sections.join('') + (canEnable ? '' : '<p class="md-note" style="margin-top:10px;">学校での有効化の変更は管理者のみ可能です。</p>');
 
     el.querySelectorAll('[data-act="enable"]').forEach(cb =>
       cb.addEventListener('change', () => toggleEnable(cb.dataset.moduleId, cb.checked, cb)));
@@ -370,6 +409,11 @@
     if (failures.length) alert(`${entries.length - failures.length}件を適用しました。${failures.length}件は失敗しました。`);
     renderMatrix();
   }
+
+  // Catalog grouping toggle (#168) — static control, wired once.
+  const groupSel = document.getElementById('md-groupby');
+  groupSel.value = groupMode;
+  groupSel.addEventListener('change', () => { groupMode = groupSel.value; renderCatalog(); });
 
   await load();
 })();

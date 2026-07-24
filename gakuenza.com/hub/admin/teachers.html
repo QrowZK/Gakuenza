@@ -256,12 +256,14 @@
       return `
         <div class="ac-card ac-person-card">
           <div class="ac-avatar-sm">${H.escapeHtml(given.slice(0, 2) || '?')}</div>
-          <div style="flex:1;min-width:0;">
+          <div class="ac-person-main">
             <div class="ac-roster-name" title="${H.escapeHtml(name)}">${H.escapeHtml(name)}</div>
           </div>
-          <span class="ac-badge ${isAdmin ? 'ac-badge-gold' : 'ac-badge-moss'}">${roleLabel}</span>
-          ${scopeBtn}
-          ${editBtn}
+          <div class="ac-person-actions">
+            <span class="ac-badge ${isAdmin ? 'ac-badge-gold' : 'ac-badge-moss'}">${roleLabel}</span>
+            ${scopeBtn}
+            ${editBtn}
+          </div>
         </div>`;
     }).join('');
     if (admin.canManageStaff) {
