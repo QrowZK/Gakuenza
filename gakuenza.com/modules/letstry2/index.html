@@ -142,17 +142,22 @@
     #quiz-screen .q-card { text-align: center; border-radius: 22px; padding: 36px 20px; }
     #quiz-screen .q-badge { margin-bottom: 12px; }
     .q-emoji { font-size: 64px; line-height: 1; margin: 4px 0 2px; }
-    #quiz-screen .q-text { font-size: 28px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; justify-content: center; margin-top: 8px; }
-    #quiz-screen .q-sub { font-size: 14px; color: var(--text3); margin-top: 8px; }
+    /* The English prompt is a plain centered line — no inline speaker button
+       crowding it (the TTS control lives on its own centered line below). */
+    #quiz-screen .q-text { display: block; font-size: 28px; font-weight: 700; font-family: 'Zen Maru Gothic', sans-serif; margin-top: 8px; }
+    .q-tts { display: flex; justify-content: center; margin-top: 12px; }
+    .q-tts:empty { display: none; }
+    #quiz-screen .q-sub { font-size: 14px; color: var(--text3); margin-top: 12px; }
 
     /* ── Options (2×2, thick border, mockup) ── */
     .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
     .opt-btn {
       display: flex; align-items: center; justify-content: center; gap: 6px; padding: 22px 14px;
-      border-radius: 18px; border: 3px solid var(--border); cursor: pointer;
+      border-radius: 18px; border: 3px solid #E4E0D4; cursor: pointer;
       font-size: 18px; font-weight: 700; text-align: center; background: var(--surface);
       transition: all .15s; font-family: 'Zen Maru Gothic', sans-serif; color: var(--text);
     }
+    body.dark .opt-btn { border-color: var(--border); }
     .opt-btn:hover:not(.locked) { border-color: var(--gold); background: var(--surface2); }
     .opt-letter {
       display: inline-flex; align-items: center; justify-content: center;
@@ -395,6 +400,7 @@
       <span class="q-badge" id="quiz-badge"></span>
       <div class="q-emoji" id="quiz-emoji"></div>
       <div class="q-text" id="quiz-q"></div>
+      <div class="q-tts" id="quiz-tts"></div>
       <div class="q-sub" id="quiz-sub"></div>
     </div>
 
@@ -985,9 +991,11 @@ function renderQuizQ() {
   document.getElementById("quiz-badge").style.background = item.unitColor + "22";
   document.getElementById("quiz-badge").style.color = item.unitColor;
   document.getElementById("quiz-emoji").textContent = item.emoji;
-  // quiz-q is the English prompt — gets a speaker button. (The four choices
-  // below are Japanese, so they don't.)
-  document.getElementById("quiz-q").innerHTML = `<span>${esc(item.en)}</span>${ttsBtn(item.en, 'qword-tts')}`;
+  // quiz-q holds ONLY the English prompt (clean centered line, never crowded).
+  // The speaker button sits on its own centered line below (quiz-tts). The four
+  // choices are Japanese, so they don't get one.
+  document.getElementById("quiz-q").textContent = item.en;
+  document.getElementById("quiz-tts").innerHTML = ttsBtn(item.en, 'qword-tts');
   document.getElementById("quiz-sub").textContent = "日本語の意味は？";
   document.getElementById("quiz-prog-text").textContent = `${qIdx + 1} / ${total}`;
   document.getElementById("quiz-prog-bar").style.width = `${((qIdx) / total) * 100}%`;
