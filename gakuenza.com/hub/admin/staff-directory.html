@@ -43,6 +43,24 @@
       </div>
     </div>
 
+    <!-- Email lookup (Gap #4b) — platform-admin only. Answers "does this
+         email already have an account?" across every tenant, via the
+         lookup-account Edge Function (service_role; emails live in
+         auth.users, unreadable from the anon key). Shown only to platform
+         admins; the function re-checks and rejects everyone else. -->
+    <div class="ac-card" id="lookup-card" style="margin-bottom:20px;display:none;">
+      <div class="ac-field" style="margin-bottom:12px;">
+        <label class="ac-field-label" for="lookup-email">メールアドレスでアカウントを確認</label>
+        <p style="font-size:0.76rem;color:var(--ink-soft);line-height:1.5;margin:0 0 8px;">このメールアドレスが既にアカウントを持っているか（全校横断で）を確認します。</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+          <input id="lookup-email" type="email" autocomplete="off" placeholder="例：teacher@example.com" style="flex:1;min-width:220px;max-width:360px;">
+          <button class="ac-btn ac-btn-accent ac-btn-md" type="button" id="btn-lookup">確認</button>
+        </div>
+      </div>
+      <p class="ac-modal-err" id="lookup-err" style="display:none;"></p>
+      <div id="lookup-result" style="display:none;"></div>
+    </div>
+
     <div id="dir-summary" style="font-size:0.8rem;color:var(--ink-soft);margin:0 0 14px;"></div>
 
     <div id="dir-list" style="display:flex;flex-direction:column;gap:10px;max-width:760px;">
@@ -162,6 +180,88 @@
       p.memberships.some(m => m.schoolName.toLowerCase().includes(q)));
     render(filtered);
   });
+
+  // ── email lookup (Gap #4b, platform-admin only) ─────────────────────
+  // Calls the lookup-account Edge Function, which re-authorizes as
+  // platform-admin-only server-side and returns a deliberately minimal
+  // projection (display_name + caller-visible school footprint, never
+  // is_platform_admin or auth internals). We only reveal the card to a
+  // platform admin here; the function is the real boundary.
+  if (admin.isPlatformAdmin) {
+    document.getElementById('lookup-card').style.display = '';
+    const lookupEmail = document.getElementById('lookup-email');
+    const lookupBtn = document.getElementById('btn-lookup');
+    const lookupErr = document.getElementById('lookup-err');
+    const lookupResult = document.getElementById('lookup-result');
+
+    async function runLookup() {
+      const email = lookupEmail.value.trim();
+      lookupErr.style.display = 'none';
+      lookupResult.style.display = 'none';
+      lookupResult.innerHTML = '';
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        lookupErr.textContent = 'メールアドレスの形式が正しくありません。';
+        lookupErr.style.display = 'block';
+        return;
+      }
+      lookupBtn.disabled = true;
+      const prevText = lookupBtn.textContent;
+      lookupBtn.textContent = '確認中…';
+      try {
+        const res = await fetch(`${cfg.supabaseUrl}/functions/v1/lookup-account`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ email }),
+        });
+        const body = await res.json();
+        if (!res.ok || !body.ok) {
+          lookupErr.textContent = body.error || '確認できませんでした。';
+          lookupErr.style.display = 'block';
+          return;
+        }
+        if (!body.exists) {
+          lookupResult.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--border);">
+              <span class="ac-badge ac-badge-moss">未登録</span>
+              <span style="font-size:0.85rem;color:var(--ink-soft);">${H.escapeHtml(email)} のアカウントはまだありません。</span>
+            </div>`;
+          lookupResult.style.display = 'block';
+          return;
+        }
+        const acct = body.account || {};
+        const schools = Array.isArray(acct.schools) ? acct.schools : [];
+        const footprint = schools.length
+          ? schools.map(s => `
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--ink-soft);white-space:nowrap;">
+                <span class="ac-badge ${s.role === 'school_admin' ? 'ac-badge-gold' : 'ac-badge-moss'}">${ROLE_LABEL[s.role] || H.escapeHtml(s.role || '')}</span>
+                ${H.escapeHtml(s.name || '(不明な学校)')}
+              </span>`).join('')
+          : '<span style="font-size:0.78rem;color:var(--ink-soft);">担当校の登録はありません。</span>';
+        lookupResult.innerHTML = `
+          <div style="padding-top:12px;border-top:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <span class="ac-badge ac-badge-gold">登録済み</span>
+              <span class="ac-roster-name">${H.escapeHtml(acct.display_name || '(表示名未設定)')}</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px 16px;">${footprint}</div>
+          </div>`;
+        lookupResult.style.display = 'block';
+      } catch (err) {
+        lookupErr.textContent = 'ネットワークエラーが発生しました。もう一度お試しください。';
+        lookupErr.style.display = 'block';
+      } finally {
+        lookupBtn.disabled = false;
+        lookupBtn.textContent = prevText;
+      }
+    }
+    lookupBtn.addEventListener('click', runLookup);
+    lookupEmail.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); runLookup(); }
+    });
+  }
 
   await load();
 })();
