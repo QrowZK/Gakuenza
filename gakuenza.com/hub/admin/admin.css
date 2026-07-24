@@ -98,7 +98,7 @@ button:hover { background: var(--moss-deep); }
 .ac-assigned-meta { font-size: 0.72rem; color: var(--ink-soft); }
 
 /* ---- buttons (admin-console scoped — see file header for why) ---- */
-.ac-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: var(--radius-sm); font-family: inherit; font-weight: 600; cursor: pointer; transition: transform 140ms ease, background 140ms ease; width: auto; }
+.ac-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: var(--radius-sm); font-family: inherit; font-weight: 600; cursor: pointer; transition: transform 140ms ease, background 140ms ease; width: auto; white-space: nowrap; }
 .ac-btn:hover { transform: translateY(-1px); }
 .ac-btn:disabled { cursor: wait; opacity: 0.7; transform: none; }
 .ac-btn-md { padding: 8px 16px; font-size: 0.88rem; }
@@ -144,8 +144,15 @@ button:hover { background: var(--moss-deep); }
 
 /* ---- card grid (teachers list, modules catalog — added 2026-07-09) ---- */
 .ac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-.ac-person-card { display: flex; align-items: center; gap: 12px; }
-.ac-person-card .ac-roster-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-person-card { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
+/* Names show in full — no ellipsis. A long name wraps within its own block
+   (person-main) and, when the row runs out of room, the trailing controls
+   (person-actions) drop to their own line rather than squeezing the name or
+   wrapping their own button labels. Fixes the recurring teacher-card cramming
+   (issue #171). */
+.ac-person-card .ac-roster-name { display: block; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.ac-person-main { flex: 1 1 140px; min-width: 0; }
+.ac-person-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex: 1 1 auto; min-width: 0; }
 .ac-subject-group { margin-bottom: 28px; }
 .ac-subject-group:last-child { margin-bottom: 0; }
 .ac-subject-label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 0.82rem; font-weight: 600; color: var(--ink); }
