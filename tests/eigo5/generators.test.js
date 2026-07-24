@@ -45,13 +45,29 @@ for (const u of EIGO5_UNITS) {
   if (!unitsJs.includes(`'${u.key}'`)) fail(`units.js missing unit key ${u.key}`);
 }
 for (const w of EIGO5_VOCAB) if (!unitKeys.has(w.unit)) fail(`vocab ${w.id}: unknown unit ${w.unit}`);
+const sentIds = new Set();
 for (const s of EIGO5_SENTENCES) {
   if (!unitKeys.has(s.unit)) fail(`sentence ${s.id}: unknown unit ${s.unit}`);
+  if (sentIds.has(s.id)) fail(`sentence ${s.id}: duplicate id`);
+  sentIds.add(s.id);
   if (!s.text.includes('____')) fail(`sentence ${s.id}: no blank marker ____`);
   if (!Array.isArray(s.distractors) || s.distractors.length < 3) fail(`sentence ${s.id}: <3 distractors`);
   // authoring hygiene: answer must not appear inside its own distractor pool
   if (s.distractors.some(d => norm(d) === norm(s.answer))) fail(`sentence ${s.id}: distractor equals answer`);
   if (new Set(s.distractors.map(norm)).size !== s.distractors.length) fail(`sentence ${s.id}: duplicate distractors`);
+}
+
+// ── Depth floor (content-depth audit, roadmap debt #11) ──────────────────────
+// Each unit must clear the ~10-12 distinct-questions/unit bar in EVERY playable
+// mode. The vocab modes (en2ja/ja2en) draw from the unit's vocab pool and the
+// sentence mode from its sentence pool; the sentence pool was the thin one
+// (5/unit) before this audit, so lock a floor of 10 on both so it can't regress.
+const DEPTH_FLOOR = 10;
+for (const u of EIGO5_UNITS) {
+  const nVocab = EIGO5_VOCAB.filter(w => w.unit === u.key).length;
+  const nSent  = EIGO5_SENTENCES.filter(s => s.unit === u.key).length;
+  if (nVocab < DEPTH_FLOOR) fail(`unit ${u.key}: only ${nVocab} vocab (< ${DEPTH_FLOOR} depth floor)`);
+  if (nSent  < DEPTH_FLOOR) fail(`unit ${u.key}: only ${nSent} sentences (< ${DEPTH_FLOOR} depth floor)`);
 }
 
 // ── Vocab generation stress ─────────────────────────────────────────────────

@@ -180,8 +180,9 @@ try {
   await runUnit(page, 'u02_en2ja', 2, 0, 'en2ja', 10);
   // Unit 1 ja2en — 12 words -> 10.
   await runUnit(page, 'u01_ja2en', 1, 1, 'ja2en', 10);
-  // Unit 5 sentence — 5 items -> 5-question session.
-  await runUnit(page, 'u05_sentence', 5, 2, 'sentence', 5);
+  // Unit 5 sentence — 11 items (deepened, #162) -> full session of 10, same
+  // cap as the vocab modes above. (Was 5 items -> 5 before the depth fill.)
+  await runUnit(page, 'u05_sentence', 5, 2, 'sentence', 10);
 } finally {
   await browser.close();
   server.close();
