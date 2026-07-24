@@ -1,6 +1,6 @@
 # Gakuenza — Roadmap (single source of truth)
 
-_Last updated: 2026-07-23. Living planning doc, not a spec._
+_Last updated: 2026-07-24. Living planning doc, not a spec._
 
 > ### How this roadmap is organized — read before editing
 >
@@ -60,6 +60,44 @@ in real use by Mizuho students as of today onward; 6年 is expected to follow
 shortly (recorded via #134). Today's live check showed no `activity_results`
 traffic through the end of the school day, but that is discounted as
 weekend/summer-break timing, not a platform problem.
+
+## Progress since last update (2026-07-23 → 2026-07-24)
+
+A follow-on batch after the big 07-23 window — debt burn-down, a catalog-wide
+depth pass, and the first module UI redesigns since eigo5/nh6. All merged:
+
+- **`nh6` → `eigo6` full rekey — closes Near-term debt #8 (#159, #160).** The
+  grade-6 English module was rekeyed end-to-end (directory `modules/nh6/` →
+  `modules/eigo6/`, `eigo6-report.js` querying `key='eigo6'`, localStorage
+  `eigo6-*`, the guide + tests, and the `modules.key`/`launch_url` migration
+  `20260723233907`) so the 外国語 5/6 pair is consistent internally too. Done
+  **zero-downtime**: the frontend deployed first (verified `eigo6/` live), then
+  the DB flipped, with a **redirect stub** left at `modules/nh6/index.html` so
+  the deploy-ordering trap the debt item warned about never opened a 404 window.
+  Safe timing — 6年 wasn't load-bearing yet and had zero traffic. The 2
+  `class_modules` assignments survived (they key on `module_id`, not `key`).
+- **Content-depth audit went catalog-wide — extends Near-term debt #11.** #11
+  originally scoped `rika3–6` + `shakai4`; this pass audited **every remaining
+  drill module** to the same shakai5 bar and filled the genuinely-thin ones:
+  `kokugo3` reading units (8→11, #161), `eigo5` sentence mode (5→11/unit, #162),
+  `nhvocab` 9 categories (→12 words, #163), and `shakai3` (84→143) + `shakai6`
+  (115→198, all sections →11, #166). Confirmed already-deep and left untouched
+  (no padding): `kokugo1/2/4/5/6`, `eigo6`, and `letstry1/2`. Every fill is
+  original content, stress-tested for structural + distractor-collision bugs,
+  with per-section depth-floor assertions added so it can't silently regress.
+  **The whole catalog now clears the depth bar** — the "shakai5 isn't the only
+  thin one" hypothesis (debt #11) was right, and it's now closed catalog-wide.
+- **Let's Try 1 & 2 UI redesigns (#164, #165) — see `planning/UI_REDESIGN.md`.**
+  `letstry1`/`letstry2` (外国語活動 3/4年), previously flagged "out of visual
+  scope" (inline CSS, ported apps), were re-skinned to the shared washi/indigo
+  design system from a design mockup — unit-card grids with per-unit accents +
+  progress bars, cream mode-picker, quiz cards, conic-gradient results donut.
+  All app logic / reporting preserved; self-contained CSS. **The entire 外国語
+  family (grades 3–6: `letstry1/2` + `eigo5/6`) now shares one visual system.**
+  A fail-soft `localStorage` per-unit progress tracker was added so the mockup's
+  progress bars are real, not decorative. (Deeper polish of the ported English
+  apps — `nhvocab` and Let's Try's activity internals — remains backlogged in
+  design.)
 
 ## Progress since last update (2026-07-21 → 2026-07-23)
 
@@ -322,10 +360,18 @@ Debt items, not new ideas:
    machinery behind this project's documented P0s, for a WARN-level perf hint at
    single-school scale. That belongs in a deliberate, per-table, branch-verified
    pass, not a bulk sweep — leave it for the pre-second-school hardening.
-8. **Full rekey of `nh6` → `eigo6` (low priority).** As of 2026-07-21 the
+8. ~~**Full rekey of `nh6` → `eigo6` (low priority).**~~ **Done 2026-07-24
+   (#159, #160, live migration `20260723233907`).** Rekeyed end-to-end
+   (`modules/nh6/` → `modules/eigo6/`, `eigo6-report.js` key query, `eigo6-*`
+   localStorage, guide + tests, and the `modules.key`/`launch_url` flip) so the
+   5/6 English pair is consistent internally. The deploy-ordering trap described
+   below was defused with a **redirect stub** at `modules/nh6/index.html` +
+   deploy-then-migrate ordering (frontend verified live before the DB flip), so
+   no 404 window. Done while 6年 was still zero-traffic. Original hazard note,
+   kept for reference: As of 2026-07-21 the
    grade-6 English module's *display name* was aligned with `eigo5` (both now
    read `外国語 5年` / `外国語 6年` in the hub — migration
-   `20260721000411`), but its internal key is still `nh6`: the directory
+   `20260721000411`), but its internal key was still `nh6`: the directory
    (`modules/nh6/`), `launch_url`, `nh6-report.js` (whose `activity_results`
    lookup is `.eq('key','nh6')`), and the `nh6-*` localStorage keys all still
    use the old key. A full rekey to `eigo6` would make the 5/6 English pair
@@ -384,6 +430,15 @@ Debt items, not new ideas:
     quiz. Every fill is original content, collision/structural stress-tested.
     Depth-floor assertions were added to the affected modules' tests to keep the
     bar enforced going forward.
+    **Extended catalog-wide 2026-07-24 (#161, #162, #163, #166) — now fully
+    closed.** The audit was taken beyond the original `rika3–6`+`shakai4` scope
+    to **every remaining drill module**. Filled where genuinely thin: `kokugo3`
+    reading units, `eigo5` sentence mode, `nhvocab` categories, `shakai3`
+    (84→143) and `shakai6` (115→198). Confirmed already-deep and left untouched
+    (no padding): `kokugo1/2/4/5/6`, `eigo6`, `letstry1/2`. The whole catalog now
+    clears the ~10–12/section bar, each affected module guarded by a depth-floor
+    test — so the "shakai5 isn't the only thin one" hypothesis is settled and
+    the depth axis is closed platform-wide.
 
 ## What's next — by domain
 
