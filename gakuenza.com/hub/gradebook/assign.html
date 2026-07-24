@@ -41,10 +41,41 @@
     </div>
     <hr class="gb-rule">
     <div id="gb-body">
-      <div class="gb-card" id="assigned-card"><h2 class="gb-card-head">割り当て済みの課題</h2><div id="assigned-list"></div></div>
-      <div class="gb-card" id="available-card" style="margin-top:16px;"><h2 class="gb-card-head">追加できるモジュール <span class="gb-sub">学校で有効なモジュールから選べます</span></h2><div id="available-list"></div></div>
+      <div class="gb-card" id="issued-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <h2 class="gb-card-head" style="margin:0;">出した課題 <span class="gb-sub">子どもに出す個別の課題（モジュール・単元・期限・問題数）</span></h2>
+          <button class="gb-btn" id="btn-new-assignment" type="button" style="flex:0 0 auto;">＋ 課題を作成</button>
+        </div>
+        <div id="issued-list" style="margin-top:12px;"></div>
+      </div>
+      <div class="gb-card" id="assigned-card" style="margin-top:16px;"><h2 class="gb-card-head">このクラスで使えるモジュール <span class="gb-sub">有効にしたモジュールが児童のホームに並びます</span></h2><div id="assigned-list"></div></div>
+      <div class="gb-card" id="available-card" style="margin-top:16px;"><h2 class="gb-card-head">モジュールを追加で有効化 <span class="gb-sub">学校で有効なモジュールから選べます</span></h2><div id="available-list"></div></div>
     </div>
   </main>
+</div>
+
+<div class="ma-backdrop" id="asg-backdrop">
+  <div class="ma-modal">
+    <h2>課題を作成</h2>
+    <p class="ma-err" id="asg-err"></p>
+    <div class="ma-field">
+      <label for="asg-module">モジュール</label>
+      <select id="asg-module" style="width:100%;padding:8px 10px;border:1px solid var(--mist);border-radius:8px;font-family:inherit;font-size:13px;background:#fffdf8;"></select>
+    </div>
+    <div class="ma-field" id="asg-focus-slot"></div>
+    <div class="ma-field">
+      <label for="asg-total">問題数（任意）</label>
+      <input type="number" id="asg-total" min="1" placeholder="例：10">
+    </div>
+    <div class="ma-field">
+      <label for="asg-due">期限（任意）</label>
+      <input type="date" id="asg-due">
+    </div>
+    <div class="ma-modal-actions">
+      <button class="ma-btn-sm" id="asg-cancel" type="button">キャンセル</button>
+      <button class="gb-btn" id="asg-save" type="button">作成する</button>
+    </div>
+  </div>
 </div>
 
 <div class="ma-backdrop" id="ma-backdrop">
@@ -84,7 +115,7 @@
 
   const ctxWrap = await GB.requireContext(sb);
   if (!ctxWrap) return;
-  const { ctx, profile } = ctxWrap;
+  const { userId, ctx, profile } = ctxWrap;
 
   const classes = await GB.loadClasses(sb, ctx);
   let classId = GB.getCurrentClassId(classes);
@@ -106,18 +137,62 @@
 
   // ── data ────────────────────────────────────────────────────────────
   let catalog = [], assigned = [], enabledIds = new Set();
+  let assignments = [], rosterIds = new Set(), activityRows = [];
   async function load() {
-    const [catRes, assignedRes, enabled] = await Promise.all([
+    const [catRes, assignedRes, enabled, asgRes, enrRes, actRes] = await Promise.all([
       sb.from('modules').select('id, key, name, subject, recommended_grades').eq('is_active', true),
       MA.loadAssigned(sb, classId),
       MA.loadSchoolEnabledIds(sb, schoolId),
+      MA.loadModuleAssignments(sb, classId),
+      sb.from('enrollments').select('user_id').eq('class_id', classId),
+      sb.from('activity_results').select('user_id, module_id, created_at').eq('class_id', classId),
     ]);
     catalog = catRes.data || [];
     assigned = assignedRes.error ? [] : (assignedRes.data || []);
     enabledIds = enabled || new Set();
-    // Pre-load unit lists for every assigned module so the (synchronous)
-    // focusSummary() below can read them from cache while building innerHTML.
-    await Promise.all(assigned.map(a => MA.moduleUnitsFor(a.modules ? a.modules.key : null)));
+    assignments = (asgRes && !asgRes.error) ? (asgRes.data || []) : [];
+    rosterIds = new Set((enrRes.data || []).map(r => r.user_id));
+    activityRows = (actRes && !actRes.error) ? (actRes.data || []) : [];
+    // Pre-load unit lists for every assigned + assigned-task module so the
+    // (synchronous) focusSummary() below can read them from cache.
+    await Promise.all(
+      assigned.map(a => MA.moduleUnitsFor(a.modules ? a.modules.key : null))
+        .concat(assignments.map(a => MA.moduleUnitsFor(a.modules ? a.modules.key : null)))
+    );
+  }
+
+  // Inferred completion (MVP, see SPEC): a student "did" an assignment if they
+  // have an activity_results row for its module dated on/after the assignment.
+  function completionFor(a) {
+    const done = new Set();
+    for (const r of activityRows) {
+      if (r.module_id === a.module_id && r.created_at >= a.created_at && rosterIds.has(r.user_id)) done.add(r.user_id);
+    }
+    return { done: done.size, total: rosterIds.size };
+  }
+
+  function renderIssued() {
+    const el = document.getElementById('issued-list');
+    if (!assignments.length) {
+      el.innerHTML = `<div class="gb-empty" style="padding:16px;">まだ課題を出していません。「＋ 課題を作成」から出せます。</div>`;
+      return;
+    }
+    el.innerHTML = assignments.map(a => {
+      const name = a.modules ? a.modules.name : '(不明なモジュール)';
+      const due = a.due_date ? H.formatDueDate(a.due_date) : '期限なし';
+      const c = completionFor(a);
+      const prog = c.total ? `${c.done}/${c.total} 完了` : '対象児童なし';
+      return `<div class="ma-row" data-asg-id="${a.id}">
+        <div class="ma-row-body">
+          <div class="ma-row-name">${esc(name)}</div>
+          <div class="ma-row-meta">${esc(due)}・${esc(focusSummary(a))}${a.target_items != null ? '・' + a.target_items + '問' : ''}・${esc(prog)}</div>
+        </div>
+        <div class="ma-actions">
+          <button class="ma-btn-sm ma-btn-danger" data-act="del-asg" data-asg-id="${a.id}" type="button">削除</button>
+        </div>
+      </div>`;
+    }).join('');
+    el.querySelectorAll('[data-act="del-asg"]').forEach(b => b.addEventListener('click', () => deleteAssignment(b.dataset.asgId)));
   }
 
   const moduleById = {};
@@ -132,6 +207,7 @@
 
   function render() {
     catalog.forEach(m => moduleById[m.id] = m);
+    renderIssued();
     // assigned
     const aEl = document.getElementById('assigned-list');
     if (!assigned.length) {
@@ -236,6 +312,69 @@
     if (!ok) return;
     const res = await MA.unassignModule(sb, { classId, moduleId });
     if (res.error) { alert('解除できませんでした。'); return; }
+    await load(); render();
+  }
+
+  // ── create-assignment modal (#176 — discrete tasks) ─────────────────
+  const asgBackdrop = document.getElementById('asg-backdrop');
+  const asgModuleSel = document.getElementById('asg-module');
+  function assignableModules() {
+    return catalog.filter(m => enabledIds.has(m.id)).sort((x, y) => x.name.localeCompare(y.name, 'ja'));
+  }
+  async function refreshAsgFocus() {
+    const m = moduleById[asgModuleSel.value];
+    document.getElementById('asg-focus-slot').innerHTML =
+      (await MA.focusUnitsFieldHtml(m ? m.key : null, [])) ||
+      '<div class="ma-focus-hint">この教材には単元の指定はありません（全単元が対象）。</div>';
+  }
+  async function openAssignmentModal() {
+    const mods = assignableModules();
+    if (!mods.length) { alert('この学校で有効なモジュールがありません。先に管理者がモジュールを有効化する必要があります。'); return; }
+    asgModuleSel.innerHTML = mods.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+    document.getElementById('asg-err').style.display = 'none';
+    document.getElementById('asg-total').value = '';
+    document.getElementById('asg-due').value = '';
+    await refreshAsgFocus();
+    asgBackdrop.style.display = 'flex';
+  }
+  asgModuleSel.addEventListener('change', refreshAsgFocus);
+  document.getElementById('btn-new-assignment').addEventListener('click', openAssignmentModal);
+  document.getElementById('asg-cancel').addEventListener('click', () => { asgBackdrop.style.display = 'none'; });
+  asgBackdrop.addEventListener('click', e => { if (e.target === asgBackdrop) asgBackdrop.style.display = 'none'; });
+  document.getElementById('asg-save').addEventListener('click', async () => {
+    const moduleId = asgModuleSel.value;
+    if (!moduleId) return;
+    const errEl = document.getElementById('asg-err');
+    const saveBtn = document.getElementById('asg-save');
+    const totalRaw = document.getElementById('asg-total').value;
+    const targetItems = totalRaw ? parseInt(totalRaw, 10) : null;
+    const dueDate = document.getElementById('asg-due').value || null;
+    const focusUnits = MA.readFocusUnitsField(document.getElementById('asg-focus-slot'));
+    const mod = moduleById[moduleId];
+    if (mod && MA.gradeMismatch(mod.recommended_grades, klass ? klass.year : null)) {
+      if (!window.confirm(MA.gradeMismatchMessage(mod.recommended_grades, klass.year, mod.name))) return;
+    }
+    errEl.style.display = 'none';
+    saveBtn.disabled = true;
+    // Auto-enable the module for the class so children can launch it (decision #3).
+    await MA.assignModuleIfAbsent(sb, { classId, moduleId });
+    const res = await MA.createModuleAssignment(sb, { classId, moduleId, createdBy: userId, focusUnits, targetItems, dueDate });
+    saveBtn.disabled = false;
+    if (res.error) {
+      errEl.textContent = '作成できませんでした。' + (res.error.message ? '（' + res.error.message + '）' : '');
+      errEl.style.display = 'block';
+      return;
+    }
+    asgBackdrop.style.display = 'none';
+    await load(); render();
+  });
+
+  async function deleteAssignment(id) {
+    const a = assignments.find(x => x.id === id);
+    const nm = a && a.modules ? a.modules.name : 'この課題';
+    if (!window.confirm(`「${nm}」の課題を削除しますか？\n\n児童のホームからこの課題が消えます（これまでの学習記録は残ります）。`)) return;
+    const res = await MA.deleteModuleAssignment(sb, id);
+    if (res.error) { alert('削除できませんでした。'); return; }
     await load(); render();
   }
 
