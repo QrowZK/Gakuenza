@@ -24,6 +24,9 @@
 //      role in (school_admin, coordinator, educator). Students are rejected.
 //   3. Per-user rate limit (default 5/hour) counted from bug_reports, because
 //      each issue can trigger real Claude usage against the subscription quota.
+//      Platform admins are EXEMPT: they are the owner / trust root, bear that
+//      Claude cost themselves, and run QA sweeps that legitimately file many
+//      small reports in one sitting. The cap only guards client-school staff.
 //   4. The GitHub token lives only here (service-side); never client-exposed.
 //   5. Role in the issue body is resolved server-side, not trusted from the
 //      client. pageUrl is client context (length-capped, newlines stripped).
@@ -90,13 +93,19 @@ Deno.serve(async (req) => {
   }
   if (!role) return json(403, { ok: false, error: "この操作はスタッフのみ利用できます" });
 
-  // ── 3. Rate limit ─────────────────────────────────────────────────────
-  const sinceIso = new Date(Date.now() - 3600_000).toISOString();
-  const { count } = await service
-    .from("bug_reports").select("id", { count: "exact", head: true })
-    .eq("reporter_id", callerId).gte("created_at", sinceIso);
-  if ((count ?? 0) >= RATE_PER_HOUR) {
-    return json(429, { ok: false, error: "報告が多すぎます。しばらくしてからもう一度お試しください。" });
+  // ── 3. Rate limit (client-school staff only; platform admins exempt) ──
+  // The cap exists to stop a spammy/compromised staff account from burning the
+  // Claude subscription quota via auto-triaged issues. The platform admin is
+  // the account owner who bears that cost and does legitimate QA sweeps, so
+  // they are not throttled.
+  if (role !== "platform_admin") {
+    const sinceIso = new Date(Date.now() - 3600_000).toISOString();
+    const { count } = await service
+      .from("bug_reports").select("id", { count: "exact", head: true })
+      .eq("reporter_id", callerId).gte("created_at", sinceIso);
+    if ((count ?? 0) >= RATE_PER_HOUR) {
+      return json(429, { ok: false, error: "報告が多すぎます。しばらくしてからもう一度お試しください。" });
+    }
   }
 
   // ── 4. Validate ───────────────────────────────────────────────────────
