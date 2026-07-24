@@ -175,6 +175,19 @@ UNITS.forEach((unit) => {
   });
 });
 
+// Per-section depth floor: every section must carry at least DEPTH_FLOOR
+// questions so no unit is thin in the quiz picker. Matches the shakai5
+// reference bank (10–12/section). Content-depth audit, roadmap debt #11.
+const DEPTH_FLOOR = 10;
+UNITS.forEach((unit) => {
+  (unit.sections || []).forEach((sec) => {
+    const n = Array.isArray(sec.questions) ? sec.questions.length : 0;
+    if (n < DEPTH_FLOOR) {
+      fail(`section ${sec.id}: only ${n} question(s), below depth floor of ${DEPTH_FLOOR}`);
+    }
+  });
+});
+
 // unit.num should be a clean 1..N sequence (drives report/focus_units unit tagging).
 const nums = UNITS.map((u) => u.num).sort((a, b) => a - b);
 nums.forEach((n, i) => {
