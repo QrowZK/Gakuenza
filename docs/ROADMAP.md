@@ -264,18 +264,22 @@ biggest news landed a few hours later. Folding in everything since:
   nothing merged yet today. `CLAUDE.md` needed no changes across this window
   — no new DB surface, no new hard-rule violation to record.
 
-## Near-term debt (known, not yet done)
+## Near-term debt (ledger closed — every item shipped or dispositioned)
 
 Debt items, not new ideas.
 
-> **Status as of 2026-07-24: the near-term-debt list is effectively cleared.**
-> Items 1, 2, 5, 6, 8, 10, 11 are done; 3 and 9 are now **fully** done (below);
-> 7 has its safe subset done. The **only** things left open are **#4
+> **Status as of 2026-07-24: the near-term-debt ledger is closed.** Items
+> 1, 2, 5, 6, 8, 10, 11 are done; 3 and 9 are now **fully** done (below); 7 has
+> its safe subset done. The two items that are not *implemented* — **#4
 > (leaked-password protection)** and the **residual `ALL`+`SELECT` half of #7** —
-> and both are blocked by the **same** cause: they need a Supabase **Pro plan**
-> (leaked-password is a paid Auth feature; the RLS-split needs a dev *branch*,
-> also Pro-only). Neither is an engineering task on the free tier. A single plan
-> upgrade unblocks both.
+> are **not open engineering tasks**: both are blocked by the same external
+> dependency (a Supabase **Pro plan** — leaked-password is a paid Auth feature;
+> the RLS-split needs a dev *branch*, also Pro-only), and both are now **formally
+> accepted as deferred by owner decision (2026-07-24)** — folded into the
+> pre-second-school hardening pass, to be done on a Pro branch. Every item on
+> this list is therefore either shipped or has a recorded disposition; nothing on
+> the free tier remains to action. A single plan upgrade re-opens #4 and
+> #7-residual as concrete, branch-verifiable tasks.
 
 1. ~~**Fix the five hand-rolled reporters.**~~ **Done 2026-07-23 (#126).**
    `nh6`, `nhvocab`, `letstry1`, `letstry2`, and `shakai3` now route through
@@ -323,6 +327,17 @@ Debt items, not new ideas.
      Verified live: all policies intact, `authenticated`/`anon` retain EXECUTE +
      `private` USAGE, and RLS returns correct rows for both a no-data user (0)
      and a real platform admin (full visibility). No Supabase branch needed.
+   - **Follow-on regression (found + fixed 2026-07-24, migrations
+     `20260724014636` / `20260724014812`).** The OID-rebind argument covered RLS
+     *policy* expressions but **not function bodies that name-qualify the moved
+     helpers as `public.`**. Two did: `app_set_module_active` (admin module
+     toggle) and `kadaiban_submissions_guard` (a BEFORE trigger on every
+     `kadaiban_submissions` insert/update — so all Kadaiban submit/grade was
+     erroring `function public.app_user_taught_class_ids() does not exist`). Both
+     re-pointed at `private.`, verified live by impersonation; a full `pg_proc`
+     scan now shows no remaining `public.`-qualified reference to a moved helper.
+     Lesson recorded: after `ALTER FUNCTION ... SET SCHEMA`, grep every function
+     body (not just policies) for stale schema-qualified calls.
 4. **Leaked-password protection is still off — BLOCKED on the Supabase
    free tier (not an engineering task).** The HaveIBeenPwned check is a
    **paid-plan feature**; the project is on the free tier, so it cannot be
@@ -332,7 +347,10 @@ Debt items, not new ideas.
    blocks Supabase dev *branches*** (Pro-plan only, confirmed 2026-07-24), which
    is why the residual RLS-consolidation part of #7 can't be branch-verified —
    the two remaining open items share one root cause: **the free tier**. A
-   plan upgrade closes both at once.
+   plan upgrade closes both at once. **Disposition (owner decision 2026-07-24):
+   accepted as deferred** — not an open task on the current plan; enable the
+   Dashboard toggle as step one of the next Pro upgrade / pre-second-school
+   hardening pass.
 5. ~~Build `SPEC_decentralize_module_units.md`~~ **done 2026-07-18** (#99) —
    the shared-registry corruption class is closed; `kokugo4`/`eigo5` built
    in parallel the same day with zero registry conflict, proving the fix.
@@ -390,7 +408,16 @@ Debt items, not new ideas.
    perf hint at single-school scale. It should be verified on a Supabase branch
    — which is **Pro-plan only** (see #4), so it's gated on the same free-tier
    upgrade. Not worth doing blind on prod for marginal benefit; revisit with the
-   pre-second-school hardening once on a paid plan.
+   pre-second-school hardening once on a paid plan. **Disposition (owner decision
+   2026-07-24): accepted as deferred.** The full transformation is worked out and
+   resumable — for each of the ~10 overlap tables (`class_modules`,
+   `class_teachers`, `classes`, `enrollments`, `school_members`, `school_modules`,
+   and the four `kadaiban_*`), drop the `ALL` policy, recreate it as explicit
+   INSERT (check=Wc) / UPDATE (using=Wu, check=Wc) / DELETE (using=Wu), and fold
+   the `ALL`'s `USING` into the SELECT policy via `OR` (for `kadaiban_submissions`
+   the split-UPDATE merges into `kadaiban_sub_teacher_grade`). Provably
+   per-command identical; do it on a Pro branch with before/after per-persona
+   visibility snapshots, not blind on prod.
 8. ~~**Full rekey of `nh6` → `eigo6` (low priority).**~~ **Done 2026-07-24
    (#159, #160, live migration `20260723233907`).** Rekeyed end-to-end
    (`modules/nh6/` → `modules/eigo6/`, `eigo6-report.js` key query, `eigo6-*`
