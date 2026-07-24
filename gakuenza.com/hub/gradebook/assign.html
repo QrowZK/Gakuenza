@@ -139,20 +139,26 @@
   let catalog = [], assigned = [], enabledIds = new Set();
   let assignments = [], rosterIds = new Set(), activityRows = [];
   async function load() {
-    const [catRes, assignedRes, enabled, asgRes, enrRes, actRes] = await Promise.all([
+    // allSettled + defensive extraction: one failing query — or a stale
+    // browser-cached module-assign-common.js missing a newer helper — must not
+    // blank the whole page. loadModuleAssignments is guarded for exactly that
+    // (a cached old MA would leave it undefined; hard-refresh is the real fix).
+    const results = await Promise.allSettled([
       sb.from('modules').select('id, key, name, subject, recommended_grades').eq('is_active', true),
       MA.loadAssigned(sb, classId),
       MA.loadSchoolEnabledIds(sb, schoolId),
-      MA.loadModuleAssignments(sb, classId),
+      (typeof MA.loadModuleAssignments === 'function') ? MA.loadModuleAssignments(sb, classId) : Promise.resolve({ data: [] }),
       sb.from('enrollments').select('user_id').eq('class_id', classId),
       sb.from('activity_results').select('user_id, module_id, created_at').eq('class_id', classId),
     ]);
-    catalog = catRes.data || [];
-    assigned = assignedRes.error ? [] : (assignedRes.data || []);
+    const val = i => results[i].status === 'fulfilled' ? results[i].value : null;
+    const catRes = val(0), assignedRes = val(1), enabled = val(2), asgRes = val(3), enrRes = val(4), actRes = val(5);
+    catalog = (catRes && catRes.data) || [];
+    assigned = (assignedRes && !assignedRes.error && assignedRes.data) || [];
     enabledIds = enabled || new Set();
-    assignments = (asgRes && !asgRes.error) ? (asgRes.data || []) : [];
-    rosterIds = new Set((enrRes.data || []).map(r => r.user_id));
-    activityRows = (actRes && !actRes.error) ? (actRes.data || []) : [];
+    assignments = (asgRes && !asgRes.error && asgRes.data) || [];
+    rosterIds = new Set(((enrRes && enrRes.data) || []).map(r => r.user_id));
+    activityRows = (actRes && !actRes.error && actRes.data) || [];
     // Pre-load unit lists for every assigned + assigned-task module so the
     // (synchronous) focusSummary() below can read them from cache.
     await Promise.all(
@@ -319,7 +325,15 @@
   const asgBackdrop = document.getElementById('asg-backdrop');
   const asgModuleSel = document.getElementById('asg-module');
   function assignableModules() {
-    return catalog.filter(m => enabledIds.has(m.id)).sort((x, y) => x.name.localeCompare(y.name, 'ja'));
+    // Source: modules enabled for the school (school_modules) OR already
+    // available to this class (class_modules). If neither is readable/populated
+    // (e.g. a school with no school_modules rows), fall back to every active
+    // module — creating an assignment auto-enables it for the class anyway, so
+    // the modal is never a dead-end.
+    const assignedIds = new Set(assigned.map(a => a.module_id));
+    let mods = catalog.filter(m => enabledIds.has(m.id) || assignedIds.has(m.id));
+    if (!mods.length) mods = catalog.slice();
+    return mods.sort((x, y) => x.name.localeCompare(y.name, 'ja'));
   }
   async function refreshAsgFocus() {
     const m = moduleById[asgModuleSel.value];
@@ -329,7 +343,7 @@
   }
   async function openAssignmentModal() {
     const mods = assignableModules();
-    if (!mods.length) { alert('この学校で有効なモジュールがありません。先に管理者がモジュールを有効化する必要があります。'); return; }
+    if (!mods.length) { alert('モジュールの一覧を読み込めませんでした。ページを再読み込みしてからお試しください。'); return; }
     asgModuleSel.innerHTML = mods.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
     document.getElementById('asg-err').style.display = 'none';
     document.getElementById('asg-total').value = '';
