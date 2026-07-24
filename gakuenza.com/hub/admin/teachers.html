@@ -116,6 +116,17 @@
            row. The login account + profile are kept, mirroring remove-student
            on class-detail.html — this only removes staff membership here. -->
       <div id="edit-teacher-danger" style="border-top:1px solid var(--border);margin-top:18px;padding-top:16px;">
+        <!-- Soft-disable (Gap #2b): bans / unbans the login at the auth layer
+             via the set-staff-active Edge Function (service_role). Distinct
+             from "remove from school" (which keeps the account usable, just
+             unaffiliated). Because ban state is not readable from the anon
+             key, both actions are offered rather than a single stateful
+             toggle — the admin picks 停止 or 再開. Hidden for a self-edit. -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+          <button class="ac-btn ac-btn-ghost-light ac-btn-sm" type="button" id="btn-disable-teacher">利用停止</button>
+          <button class="ac-btn ac-btn-ghost-light ac-btn-sm" type="button" id="btn-enable-teacher">利用再開</button>
+        </div>
+        <p style="font-size:0.72rem;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;">利用停止中はログインできなくなりますが、アカウントと記録は保持され、いつでも再開できます。</p>
         <button class="ac-btn-danger" type="button" id="btn-remove-teacher">この学校の教員から外す</button>
       </div>
     </form>
@@ -480,6 +491,55 @@
       btn.textContent = 'この学校の教員から外す';
     }
   });
+
+  // ── soft-disable / re-enable (Gap #2b) ──────────────────────────────
+  // Bans or unbans the target's login via the set-staff-active Edge
+  // Function (needs service_role for the GoTrue ban write). The function
+  // re-authorizes server-side (platform admin OR school_admin of this
+  // school — NOT coordinator), refuses self-disable and refuses disabling
+  // a platform admin, so this button is only the honest UI reflection of
+  // that boundary, not the boundary itself. Hidden for a self-edit.
+  async function setStaffActive(active) {
+    if (!editingStaffId || editingStaffId === userId) return;
+    const nm = document.getElementById('edit-teacher-name').value.trim() || 'この教員';
+    const verb = active ? '利用を再開' : '利用を停止';
+    if (!window.confirm(`${nm}の${verb}しますか？`)) return;
+    const errEl = document.getElementById('edit-teacher-err');
+    errEl.style.display = 'none';
+    const disBtn = document.getElementById('btn-disable-teacher');
+    const enBtn = document.getElementById('btn-enable-teacher');
+    disBtn.disabled = true; enBtn.disabled = true;
+    try {
+      const res = await fetch(`${cfg.supabaseUrl}/functions/v1/set-staff-active`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          staff_id: editingStaffId,
+          school_id: pickerSchool.value,
+          active,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok) {
+        errEl.textContent = body.error || (active ? '利用を再開できませんでした。' : '利用を停止できませんでした。');
+        errEl.style.display = 'block';
+        return;
+      }
+      document.getElementById('modal-edit-teacher').style.display = 'none';
+      editingStaffId = null;
+      await loadTeachers(pickerSchool.value);
+    } catch (err) {
+      errEl.textContent = 'ネットワークエラーが発生しました。もう一度お試しください。';
+      errEl.style.display = 'block';
+    } finally {
+      disBtn.disabled = false; enBtn.disabled = false;
+    }
+  }
+  document.getElementById('btn-disable-teacher').addEventListener('click', () => setStaffActive(false));
+  document.getElementById('btn-enable-teacher').addEventListener('click', () => setStaffActive(true));
 
   // ── coordinator scope (#114, platform-admin only) ───────────────────
   // Which schools a coordinator has authority over is just the set of

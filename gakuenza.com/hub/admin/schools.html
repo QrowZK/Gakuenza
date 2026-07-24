@@ -59,6 +59,46 @@
   </div>
 </div>
 
+<!-- ============================================================ -->
+<!-- Edit-school modal (Gap #3, roadmap #9). Platform-admin only, both by
+     the page gate above and by the schools_platform_admin_update RLS
+     policy — a plain schools.update() the anon-key client can now make.
+     Mirrors the create modal, plus a status <select> (active/suspended/
+     pending, matching the schools_status_check constraint). -->
+<!-- ============================================================ -->
+<div class="ac-modal-backdrop" id="modal-edit-school" style="display:none;">
+  <div class="ac-modal" style="width:400px;">
+    <h2 class="ac-modal-title">学校を編集</h2>
+    <form id="form-edit-school">
+      <div class="ac-field">
+        <label class="ac-field-label" for="edit-school-name">学校名</label>
+        <input id="edit-school-name" required maxlength="100" autocomplete="off">
+      </div>
+      <div class="ac-field">
+        <label class="ac-field-label" for="edit-school-kana">ふりがな（任意）</label>
+        <input id="edit-school-kana" maxlength="120" autocomplete="off">
+      </div>
+      <div class="ac-field">
+        <label class="ac-field-label" for="edit-school-code">コード（任意・重複不可）</label>
+        <input id="edit-school-code" maxlength="60" autocomplete="off">
+      </div>
+      <div class="ac-field" style="margin-bottom:20px;">
+        <label class="ac-field-label" for="edit-school-status">状態</label>
+        <select id="edit-school-status">
+          <option value="active">稼働中</option>
+          <option value="suspended">停止中</option>
+          <option value="pending">準備中</option>
+        </select>
+      </div>
+      <p class="ac-modal-err" id="edit-school-err" style="display:none;"></p>
+      <div class="ac-modal-actions">
+        <button class="ac-btn ac-btn-ghost-light ac-btn-md" type="button" id="btn-cancel-edit-school">キャンセル</button>
+        <button class="ac-btn ac-btn-accent ac-btn-md" type="submit" id="btn-submit-edit-school">保存する</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="../supabase.js"></script>
 <script src="../config.js"></script>
 <script src="../hub-common.js"></script>
@@ -143,8 +183,16 @@
           <div style="font-size:0.76rem;color:var(--ink-soft);white-space:nowrap;">${cls}クラス・${stu}名</div>
           <div style="font-family:ui-monospace,Menlo,monospace;font-size:0.74rem;color:var(--ink-soft);white-space:nowrap;">${H.escapeHtml(s.code || '—')}</div>
           <span class="ac-badge ${statusClass}">${H.escapeHtml(statusLabel)}</span>
+          <button class="ac-btn ac-btn-ghost-light ac-btn-sm" type="button" data-action="edit-school" data-id="${s.id}">編集</button>
         </div>`;
     }).join('');
+
+    listEl.querySelectorAll('[data-action="edit-school"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const s = schools.find(x => x.id === btn.dataset.id);
+        if (s) openEditSchoolModal(s);
+      });
+    });
   }
 
   // ── create school ───────────────────────────────────────────────────
@@ -185,6 +233,60 @@
       return;
     }
     modal.style.display = 'none';
+    await loadSchools();
+  });
+
+  // ── edit school (Gap #3) ────────────────────────────────────────────
+  // Plain schools.update() via the anon-key client, now admitted by the
+  // schools_platform_admin_update RLS policy (platform-admin only — a
+  // suspended tenant must not be able to un-suspend itself). No Edge
+  // Function: this is a straight column update once the policy exists.
+  const editModal = document.getElementById('modal-edit-school');
+  let editingSchoolId = null;
+  function openEditSchoolModal(s) {
+    editingSchoolId = s.id;
+    document.getElementById('edit-school-err').style.display = 'none';
+    document.getElementById('edit-school-name').value = s.name || '';
+    document.getElementById('edit-school-kana').value = s.name_kana || '';
+    document.getElementById('edit-school-code').value = s.code || '';
+    document.getElementById('edit-school-status').value =
+      ['active', 'suspended', 'pending'].includes(s.status) ? s.status : 'active';
+    editModal.style.display = 'flex';
+    document.getElementById('edit-school-name').focus();
+  }
+  document.getElementById('btn-cancel-edit-school').addEventListener('click', () => {
+    editModal.style.display = 'none';
+    editingSchoolId = null;
+  });
+  document.getElementById('form-edit-school').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!editingSchoolId) return;
+    const name = document.getElementById('edit-school-name').value.trim();
+    const kana = document.getElementById('edit-school-kana').value.trim();
+    const code = document.getElementById('edit-school-code').value.trim();
+    const status = document.getElementById('edit-school-status').value;
+    const errEl = document.getElementById('edit-school-err');
+    const submitBtn = document.getElementById('btn-submit-edit-school');
+    errEl.style.display = 'none';
+
+    // Empty optional fields are written as NULL so clearing a code/kana works.
+    const payload = { name, name_kana: kana || null, code: code || null, status };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '保存中…';
+    const { error } = await sb.from('schools').update(payload).eq('id', editingSchoolId);
+    submitBtn.disabled = false;
+    submitBtn.textContent = '保存する';
+
+    if (error) {
+      errEl.textContent = /duplicate|unique|conflict/i.test(error.message || '')
+        ? 'このコードは既に使われています。'
+        : '保存できませんでした。';
+      errEl.style.display = 'block';
+      return;
+    }
+    editModal.style.display = 'none';
+    editingSchoolId = null;
     await loadSchools();
   });
 
