@@ -1,6 +1,6 @@
 # Gakuenza — Roadmap (single source of truth)
 
-_Last updated: 2026-07-24. Living planning doc, not a spec._
+_Last updated: 2026-07-24 (later the same day). Living planning doc, not a spec._
 
 > ### How this roadmap is organized — read before editing
 >
@@ -60,6 +60,99 @@ in real use by Mizuho students as of today onward; 6年 is expected to follow
 shortly (recorded via #134). Today's live check showed no `activity_results`
 traffic through the end of the school day, but that is discounted as
 weekend/summer-break timing, not a platform problem.
+
+**Live check (2026-07-24, later the same day):** `activity_results` 21 (was
+14 on 07-21, so +7 real attempts since adoption began), `activity_result_items`
+70 (was 60, +10), `observation_records` still 1. Small numbers, still early
+days, but non-zero real growth for the first time since the seasonal lull —
+consistent with adoption having actually started rather than being a false
+start. **`module_assignments` (the table `#176` Phase 1 created *today*) already
+has 1 row** — a real staff member used the brand-new assignment feature the
+same day it shipped. That's the concrete "watch for friction" signal the
+Kadaiban playbook calls for; follow this row count and whether the hub's 課題
+to-do list renders it correctly for the assigned students.
+
+## Progress since last update (2026-07-24, later the same day)
+
+A second wave the same day as the ledger-closing pass above — a real new
+feature (not just debt/depth), an admin-UX batch, and a same-day regression
+caught and fixed within the hour. All merged; no open PRs as of this check:
+
+- **`#176` Phase 1 shipped: teacher-driven module assignments (spec →
+  `57bc7b7`, build → `bf3b305`/PR #185, hardening → `b77471a`/PR #186).** This
+  is the first concrete progress on **F1** in `FEATURE_BACKLOG.md` (assignment
+  progress/due-date tracking, a standing P0) — see that doc's updated F1 entry.
+  New `module_assignments` table (own id, `created_by`, `focus_units`,
+  `target_items`, `due_date`, `instructions`; split-command RLS mirroring the
+  `kadaiban_assignments` precedent; RLS-verified live by impersonation) makes
+  "a teacher issued this as a task" a first-class fact, separate from
+  `class_modules` "this class may use this module" — the exact confusion #176
+  reported. `gradebook/assign.html` gained a "出した課題" card (create, list
+  with inferred N/M completion via `activity_results` presence, delete);
+  `hub/index.html` gained a distinct 課題 to-do section for students
+  (soonest-due first, done/これから marker). Creating an assignment
+  auto-enables the module for the class. Phase 1 deliberately used **inferred**
+  completion (an `activity_results` row exists since assignment date), not
+  exact per-assignment attribution — Phase 2 (`activity_results.assignment_id`
+  for exact completion, edit/archive, reminders) stays open, tracked in
+  `SPEC_teacher_assignment_workflow.md`.
+  A same-day hardening follow-up (`b77471a`) fixed a real "no enabled modules"
+  dead-end a platform admin hit — root cause was a stale cached
+  `module-assign-common.js` throwing during load and blanking the modal;
+  `load()` now uses `Promise.allSettled` so one failing query can't blank the
+  page, and the assignable-modules source now falls back through
+  `school_modules` → `class_modules` → all-active-modules so the picker is
+  never empty when a real catalog exists.
+- **Same-day regression from the above, caught and fixed within ~20 minutes
+  (`ac9ae8d`).** `hub/index.html`'s Kadaiban click-wiring used an *unscoped*
+  `querySelectorAll('.kbh-card')`; `#176`'s new assignment cards reuse the same
+  `.kbh-card` class under `#assignments-list`, so the Kadaiban handler also
+  attached to them and won a navigation race, sending students to
+  `kadaiban.html?a=undefined` instead of the assignment's real module. Fixed by
+  scoping the selector to `#kadaiban-list .kbh-card`. **Second occurrence of
+  the same failure shape as the `module-units.js` registry corruption** (a
+  shared class/selector two independently-shipped features both touch,
+  neither scoping itself against the other) — see New ideas below for a
+  proposed one-line convention to prevent a third.
+- **Eiken category-code translation fix (`1b7ca71`, closes reported issue
+  `#178`).** `karte.html`'s per-question breakdown and `analysis.html`'s class
+  heatmap/つまずき Top3 rendered `activity_result_items.category` raw, which is
+  fine for every module except `eiken` — it stores internal English codes
+  (`VOCAB`/`GRAMMAR`/`CONVERSATION`/`ORDER`) verbatim. Added
+  `HubCommon.categoryLabel()` (mirrors the existing `subjectLabel` pattern) and
+  applied it at all three teacher-facing display sites; `data-cat` attributes
+  (lookup keys, not shown to users) stay untranslated. **Note: GitHub issue
+  `#178` is still open** — the fix is merged and live but the issue wasn't
+  auto-closed; worth closing by hand next time someone's in the tracker.
+- **Admin-console UX batch from the same in-app QA sweep that filed `#176`–
+  `#182`** (`1524f29`/PR #183, teacher-card reflow `#171` + publisher grouping
+  `#168` + roster clarity `#169`) **and an autofix** (`1df273c`/PR #175,
+  `#172`): person-cards (teacher/staff) now wrap instead of truncating Japanese
+  button labels; `admin/modules.html` gained a 教科別/出版社別 toggle; the
+  cross-school スタッフ名簿 got an explicit "read-only, add/edit is on 教員"
+  label to stop it reading as a duplicate page; and class rosters now sort by
+  student number **numerically** (`parseInt` comparator, NaN-safe fallback)
+  instead of lexicographically, fixing the classic `"1","10","11","2"` bug for
+  any class with 10+ students.
+- **Gradebook print worksheet fixes** (`4842912`/PR #174): the weakness-weight
+  sliders now redistribute proportionally to always sum to 100 (verified with
+  8,000 randomized cases) instead of allowing every slider to independently hit
+  100%, and the helper note below them was reworded out of schema jargon
+  (`activity_result_items` → plain Japanese) for teacher readers.
+- **Advisor re-check (2026-07-24, this pass):** security advisors show nothing
+  new beyond the already-tracked/accepted debt items 3–4 above, plus one INFO
+  not previously recorded — `public.bug_reports` has RLS enabled with **zero**
+  policies. Almost certainly intentional (writes go through the `report-bug`
+  Edge Function under `service_role`, nothing client-facing needs to read/write
+  it directly, and "no policy" under RLS means "no access," not "open") — but
+  it's never been explicitly noted as accepted-by-design the way the
+  SECURITY DEFINER functions/views were. Worth a one-line `COMMENT` the next
+  time anyone is in that migration, same treatment as debt item 3. Performance
+  advisors: **66 `multiple_permissive_policies`** (down from 78 after the
+  `profiles`/`schools` consolidation two commits ago) and **13 `unused_index`**
+  (still the expected zero-traffic FK indexes settling in, not a regression) —
+  consistent with the already-tracked, deliberately-deferred debt item #7.
+  Nothing new to action.
 
 ## Progress since last update (2026-07-23 → 2026-07-24)
 
@@ -739,6 +832,83 @@ Fresh proposals prompted by today's later pass — not yet scoped as specs:
   term-start prep instead — teacher-facing materials (semester docs + a
   teacher user guide) and the content-depth fills (debt #11), ahead of the
   2学期 restart.
+
+## New ideas & frontiers (2026-07-24, later the same day)
+
+Fresh proposals prompted by today's second pass — not yet scoped as specs:
+
+- **A real staff member is now dogfooding the whole admin/gradebook surface in
+  one sitting, and it's a higher-signal source than the usual trickle of bug
+  reports.** Five `user-report` issues (`#173`, `#177`, `#178`, `#181`,
+  `#182`) landed within about 40 minutes this morning (01:24–02:07 UTC),
+  all from the same platform-admin account, walking `modules.html` →
+  `roster.html` → `karte.html` → `class-detail.html`. One (`#178`) is already
+  fixed same-day; the other four are UX/polish, not bugs, and worth treating
+  as a single structured "admin console walkthrough" backlog rather than four
+  unrelated tickets:
+  - **`#182` staff profile pictures** (admin/coord/teacher) — reuses the
+    Kadaiban Storage-bucket precedent (private bucket, path-segment RLS,
+    EXIF-normalize/downscale on upload); genuinely small effort now that the
+    pattern exists once. Lower PII sensitivity than the guardian-data
+    proposals in `FEATURE_BACKLOG.md` (F7/F8) since it's staff, not children,
+    but still a new kind of personal data — reuse, don't reinvent, the
+    Kadaiban upload pipeline.
+  - **`#181` teacher guide viewer** — guides currently render as a flat page
+    with, per the report, visible developer-facing content mixed into
+    teacher-facing material. Two independent fixes bundled in one report:
+    present guides as cards that open in a new tab in a proper reading layout,
+    and audit `docs/teacher-guides-signoff.md`'s source content for anything
+    dev-internal that shouldn't be teacher-facing at all. The second half is a
+    content audit, not a code change — cheap to scope separately from the
+    viewer UI work.
+  - **`#177` per-page school switcher for multi-school staff** — a direct
+    product consequence of coordinator management (multi-school staff) now
+    existing end-to-end (07-21) without every page that assumes single-school
+    context having caught up. `roster.html` is the reported instance; worth
+    checking whether `analysis.html`/`karte.html`/`print.html` have the same
+    gap before fixing them one at a time — this is squarely inside the
+    "second-school rollout readiness" initiative already on this roadmap
+    (Engineering & ops initiatives, above), not a new theme.
+  - **`#173` remove "copy from school," clarify `modules.html`'s audience** —
+    a real user confirming a feature isn't needed is worth acting on directly
+    (delete, don't deprecate-in-place); the naming fix (校内/kounai vs.
+    admin-only) is a one-line label change. Both are S-effort, no schema
+    impact — a good pairing with the `#181` content audit as a single
+    "cheap admin polish" batch.
+- **`F1`'s assignment-tracking gap is now partially closed by `#176`, not
+  fully — update how `FEATURE_BACKLOG.md`'s P0 list reads.** Phase 1 gives
+  teachers a place to *create* a due-dated assignment and see *inferred*
+  completion, and gives students a to-do list — genuinely the core of what F1
+  asked for. What's still missing against F1's original problem statement: a
+  dedicated "未提出・期限間近" roll-up card on `gradebook/index.html` across
+  *all* of a teacher's classes/assignments at a glance (today you'd open
+  `assign.html` per class), and *exact* (not inferred) completion once
+  `activity_results.assignment_id` lands in Phase 2. Recommend treating F1 as
+  "in progress," not closing it off the P0 list, and scoping the roll-up card
+  as the concrete next slice — it's the smallest remaining piece with the
+  highest daily-glance value, and it's now additive (data model exists) rather
+  than net-new.
+- **The Kadaiban click-handler bug (`ac9ae8d`) is the second time an
+  unscoped shared selector let one feature silently hijack another's UI —
+  worth the same one-line convention treatment as the earlier `' '`
+  lesson.** `module-units.js` (fixed 07-18) was a shared *file* two PRs both
+  edited; this was a shared *CSS class* (`.kbh-card`) two independently-built
+  features both query with `document.querySelectorAll`, with no page-level
+  registry to catch the collision until a real click misrouted a student.
+  Nothing in `CLAUDE.md` currently says "scope DOM queries to a container ID
+  when a class name might be reused across unrelated card types on the same
+  page" — a one-line addition near hard rule #1 (which already covers CSS
+  scoping, just not JS selector scoping) would cost nothing and heads off a
+  third occurrence the next time two features share a hub page.
+- **First real usage of a same-day-shipped feature is a good, currently-
+  unused signal source.** `module_assignments` went from 0 to 1 row within
+  hours of `#176` merging — before any dedicated "watch this" checklist item
+  existed for it the way Kadaiban got one at launch (07-17). Recommend the
+  same treatment: watch `module_assignments` row growth and, specifically,
+  whether `hub/index.html`'s 課題 to-do section renders correctly for the
+  assigned students and whether the inferred-completion count in
+  `assign.html` matches reality once a few real due dates pass — the concrete
+  gate before scoping Phase 2 (exact completion, edit/archive, reminders).
 
 ## Explicitly not proposing
 

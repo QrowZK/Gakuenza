@@ -53,6 +53,17 @@ picker, which is harmless.
    ```
    Font: Zen Maru Gothic for display text.
 
+   **Corollary — scope DOM query selectors too, not just CSS.** On a shared
+   hub page (`hub/index.html`), two independently-built features rendering
+   different card lists have collided on the same CSS class before: Kadaiban's
+   click-wiring used unscoped `document.querySelectorAll('.kbh-card')`, and
+   `#176`'s new 課題-assignment cards reused `.kbh-card` for styling — so
+   Kadaiban's handler also attached to assignment cards and misrouted student
+   clicks (`ac9ae8d`, 2026-07-24, caught same-day). Always scope
+   `querySelectorAll`/`querySelector` to a container ID
+   (`#kadaiban-list .kbh-card`, not `.kbh-card`) when a class name might be
+   reused by an unrelated card type on the same page.
+
 2. **Always use `HubCommon.reportActivityWithItems(sb, {schoolId,
    classId, moduleId, userId, activityRef, score, maxScore, payload,
    items})` for reporting. Never hand-roll the `activity_results`

@@ -54,7 +54,7 @@ that satisfies the need.
 
 ## Theme 1 — Teacher workflow
 
-### F1. 課題の進捗・期限ダッシュボード / Assignment progress & due-date tracking — P0
+### F1. 課題の進捗・期限ダッシュボード / Assignment progress & due-date tracking — P0, **in progress**
 - **Problem:** `class_modules.due_date` and `total_items` exist and the assign
   UI writes them, but **nothing shows a teacher who has / hasn't completed an
   assigned module, or what's overdue.** Today a teacher must eyeball raw
@@ -70,6 +70,19 @@ that satisfies the need.
   `hub/index.html` assigned-module tiles.
 - **Effort:** S–M. **Deps:** none. **Priority justification (P0):** closes an
   existing-but-unusable data path, zero schema risk, immediate daily value.
+- **Progress (2026-07-24, `#176` Phase 1):** the core of this shipped, via a
+  new `module_assignments` table rather than `class_modules.due_date` (a
+  discrete per-assignment entity, mirroring `kadaiban_assignments`, separating
+  "issued as a task" from "enabled for the class"). `gradebook/assign.html`
+  now shows each assignment with **inferred** N/M completion (an
+  `activity_results` row exists since the assignment's `due_date`/creation);
+  `hub/index.html` shows students a due-dated 課題 to-do list. **Still open
+  against the original ask:** a cross-class/cross-assignment roll-up card on
+  `gradebook/index.html` (today a teacher checks each class's `assign.html`
+  separately, not one glance) and **exact** (not inferred) completion via
+  `activity_results.assignment_id`, both deferred to `#176` Phase 2 — see
+  `docs/specs/SPEC_teacher_assignment_workflow.md`. Recommend keeping F1 open
+  at P0 until the roll-up card ships; it's now the smallest remaining piece.
 
 ### F2. 所見ドラフト補助 / Report-card comment (所見) evidence & draft helper — P1 [PII]
 - **Problem:** Japanese teachers write narrative 所見/あゆみ comments every
