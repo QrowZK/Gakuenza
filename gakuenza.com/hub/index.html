@@ -37,6 +37,11 @@
       <p class="greeting-date" id="greeting-date"></p>
     </div>
 
+    <div class="hub-section" id="assignments-section" style="display:none;">
+      <div class="section-header"><h2 class="section-title">課題</h2></div>
+      <div id="assignments-list"></div>
+    </div>
+
     <div class="hub-section" id="kadaiban-section" style="display:none;">
       <div class="section-header"><h2 class="section-title">手書きプリント</h2></div>
       <div id="kadaiban-list"></div>
@@ -233,6 +238,42 @@
       else alert('このモジュールは近日公開予定です。');
     });
   });
+
+  // ── 課題 (module assignments — discrete teacher-issued tasks, #176) ─────
+  // Distinct from the "割り当てられたモジュール" catalog below: these are the
+  // specific tasks a teacher handed out (module + optional units + due date).
+  // Students only — staff author them in the gradebook. "Done" is inferred:
+  // an activity_results row for the module dated on/after the assignment.
+  if (classIds.length) {
+    try {
+      const { data: mAsgs, error: mErr } = await sb.from('module_assignments')
+        .select('id, class_id, module_id, due_date, focus_units, target_items, created_at, modules(id, key, name, subject, launch_url)')
+        .in('class_id', classIds)
+        .order('due_date', { ascending: true, nullsFirst: false });
+      if (!mErr && mAsgs && mAsgs.length) {
+        const isDone = (a) => (activity || []).some(r => r.module_id === a.module_id && r.created_at >= a.created_at);
+        const fmtDue = (d) => { if (!d) return '期限なし'; const x = new Date(d + 'T00:00:00'); return `${x.getMonth() + 1}月${x.getDate()}日まで`; };
+        document.getElementById('assignments-list').innerHTML = `<div class="kbh-grid">${mAsgs.map(a => {
+          const m = a.modules || {};
+          const st = isDone(a)
+            ? { label: '完了',   color: 'var(--moss-deep)', bg: 'var(--moss-tint)' }
+            : { label: 'これから', color: 'var(--clay)',      bg: 'rgba(181,87,46,.12)' };
+          return `<div class="kbh-card" data-launch-url="${m.launch_url || ''}">
+            <div class="kbh-body">
+              <div class="kbh-cat"><span class="kbh-dot" style="background:${H.subjectVar(m.subject)};"></span>課題</div>
+              <div class="kbh-title">${H.escapeHtml(m.name || 'モジュール')}</div>
+              <div class="kbh-foot"><span class="kbh-due">${H.escapeHtml(fmtDue(a.due_date))}</span><span class="kbh-cta" style="background:${st.bg};color:${st.color};">${st.label}</span></div>
+            </div>
+          </div>`;
+        }).join('')}</div>`;
+        document.getElementById('assignments-section').style.display = '';
+        document.querySelectorAll('#assignments-list .kbh-card').forEach(c => c.addEventListener('click', () => {
+          const url = c.dataset.launchUrl;
+          if (url) window.location.href = url; else alert('このモジュールは近日公開予定です。');
+        }));
+      }
+    } catch (e) { console.error('[hub] module assignments surfacing failed', e); }
+  }
 
   // ── Kadaiban (手書きプリント) — surfaced alongside modules for students ────
   // Its own tables/buckets live behind RLS; a signed URL renders the thumbnail.
